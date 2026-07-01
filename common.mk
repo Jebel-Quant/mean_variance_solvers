@@ -47,7 +47,7 @@ $(DOC).pdf: $(DOC).tex $(wildcard s*.tex) $(BIB) $(wildcard tables/*.tex)
 # symlinks into ../experiment; the globs below resolve through them and copy the
 # real files, so the tarball carries no symlinks. The bibliography is flattened
 # to bib/refs.bib and the \bibliography path rewritten to match (rmt cites the
-# shared ../paper/bib/refs). This does not run LaTeX: arXiv compiles server-side,
+# shared ../matrix_free/bib/refs). This does not run LaTeX: arXiv compiles server-side,
 # so the .bib travels along and arXiv runs BibTeX itself.
 ARXIV_DIR     := arxiv-src
 ARXIV_TARBALL := $(DOC).tar.gz

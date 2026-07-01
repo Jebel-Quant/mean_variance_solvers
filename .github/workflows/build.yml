@@ -41,8 +41,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            paper/minvar_paper.pdf
-            paper_rmt/rmt_paper.pdf
+            matrix_free/minvar_paper.pdf
+            rmt/rmt_paper.pdf
             out/arxiv/minvar_paper.tar.gz
             out/arxiv/rmt_paper.tar.gz
 
@@ -50,8 +50,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p out
-          cp paper/minvar_paper.pdf out/
-          cp paper_rmt/rmt_paper.pdf out/
+          cp matrix_free/minvar_paper.pdf out/
+          cp rmt/rmt_paper.pdf out/
 
       - name: Publish to pdf
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

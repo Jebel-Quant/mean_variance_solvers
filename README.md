@@ -6,15 +6,16 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
 (University of Zurich / ADIA Lab):
 
 - **Matrix-Free Methods for Long-Only Portfolio Optimization** — under
-  [`paper/`](paper/). Casts the long-only minimum-variance problem so that
-  covariance shrinkage acts as a preconditioner, and solves it with
+  [`matrix_free/`](matrix_free/). Casts the long-only minimum-variance problem
+  so that covariance shrinkage acts as a preconditioner, and solves it with
   matrix-free iterative methods that never form the dense covariance matrix.
 - **From Marchenko–Pastur to Woodbury: Direct Solvers for Long-Only
-  Mean-Variance Portfolios** — under [`paper_rmt/`](paper_rmt/). Uses
-  random-matrix theory (Marchenko–Pastur) to motivate a low-rank-plus-diagonal
-  covariance model that a Woodbury identity turns into a fast direct solver.
+  Mean-Variance Portfolios** — under [`rmt/`](rmt/). Uses random-matrix theory
+  (Marchenko–Pastur) to motivate a low-rank-plus-diagonal covariance model that
+  a Woodbury identity turns into a fast direct solver.
 
-Both papers share one bibliography ([`paper/bib/refs.bib`](paper/bib/refs.bib))
+Both papers share one bibliography
+([`matrix_free/bib/refs.bib`](matrix_free/bib/refs.bib))
 and draw every figure and table from the same numerical experiments in
 [`experiment/`](experiment/).
 
@@ -24,7 +25,7 @@ A `Makefile` at the repository root drives everything; run `make` (or
 `make help`) for the list of targets:
 
 ```sh
-make compile   # build both papers (paper/minvar_paper.pdf and paper_rmt/rmt_paper.pdf)
+make compile   # build both papers (matrix_free/minvar_paper.pdf and rmt/rmt_paper.pdf)
 make figures   # regenerate both papers' figures and tables (runs the experiment)
 make arxiv     # assemble a self-contained arXiv source tarball per paper
 make clean     # remove both papers' LaTeX build artifacts (keeps the PDFs)
@@ -50,7 +51,7 @@ experiment.
 ```
 Makefile                 root entry point: delegates to the per-paper Makefiles
 common.mk                shared build logic (compile / arxiv / clean)
-paper/
+matrix_free/
   Makefile               builds minvar_paper.pdf (include ../common.mk)
   minvar_paper.tex       main file: preamble + \input of the sections
   s0_abstract.tex … s8_conclusions.tex   one .tex per section
@@ -58,8 +59,8 @@ paper/
   siam/                  vendored SIAM class/style (reference copy)
   graphs -> ../experiment/graphs    figure PDFs (symlink)
   tables -> ../experiment/tables    table .tex fragments (symlink)
-paper_rmt/
-  Makefile               builds rmt_paper.pdf (cites ../paper/bib/refs.bib)
+rmt/
+  Makefile               builds rmt_paper.pdf (cites ../matrix_free/bib/refs.bib)
   rmt_paper.tex          main file: preamble + \input of the sections
   s0_abstract.tex … s8_conclusions.tex   one .tex per section
   graphs -> ../experiment/graphs
