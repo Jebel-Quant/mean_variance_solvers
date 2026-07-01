@@ -54,7 +54,7 @@ common.mk                shared build logic (compile / arxiv / clean)
 matrix_free/
   Makefile               builds minvar_paper.pdf (include ../common.mk)
   minvar_paper.tex       main file: preamble + \input of the sections
-  s0_abstract.tex … s8_conclusions.tex   one .tex per section
+  sections/              one .tex per section (s0_abstract … s8_conclusions)
   bib/refs.bib           shared BibTeX database
   siam/                  vendored SIAM class/style (reference copy)
   graphs -> ../experiment/graphs    figure PDFs (symlink)
@@ -62,7 +62,7 @@ matrix_free/
 rmt/
   Makefile               builds rmt_paper.pdf (cites ../matrix_free/bib/refs.bib)
   rmt_paper.tex          main file: preamble + \input of the sections
-  s0_abstract.tex … s8_conclusions.tex   one .tex per section
+  sections/              one .tex per section (s0_abstract … s8_conclusions)
   graphs -> ../experiment/graphs
   tables -> ../experiment/tables
 experiment/              numerical experiments that generate graphs/ and tables/

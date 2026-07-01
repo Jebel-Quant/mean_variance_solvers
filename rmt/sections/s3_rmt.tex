@@ -50,10 +50,12 @@ $\Delta_k = \Lambda_k - \bar\lambda I = \mathrm{diag}(\delta_1, \ldots, \delta_k
 with $\delta_j = \lambda_j - \bar\lambda > 0$ for all $j$ (since
 $\lambda_j > \hat\lambda_+ > \hat\sigma^2 > \bar\lambda$).
 This is exactly the ``constant residual eigenvalue'' (CRE) -- or eigenvalue
-clipping -- estimator introduced by Laloux et
-al.~\cite{laloux1999}, studied in depth by Bun, Bouchaud and
-Potters~\cite{bun2017}, and widely adopted in quantitative finance following
-L\'opez de Prado~\cite{lopezdeprado2018}.
+clipping -- estimator introduced by Laloux et al.~\cite{laloux1999} and studied
+in depth by Bun, Bouchaud and Potters~\cite{bun2017}. It was later popularised
+among quantitative-finance practitioners by L\'opez de
+Prado~\cite{lopezdeprado2018}, whose accessible implementations brought the
+method to a wide audience; the estimator itself is due to the earlier
+random-matrix literature.
 
 \begin{proposition}[Spectral properties of $T_0^{\mathrm{RMT}}$]\label{prop:rmt_spectrum}
 The RMT-cleaned estimator satisfies:

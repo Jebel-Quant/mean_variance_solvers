@@ -11,9 +11,10 @@
 #           tarball (default: none — arXiv's TeX Live already ships siam.bst,
 #           the plain style, etc.).
 #
-# Section files are s*.tex at the paper root. Figures (graphs/) and tables
-# (tables/) are symlinks into ../experiment, which the experiment/ Python
-# package regenerates — see the repository-root `make figures`.
+# Section files live in sections/ (the main .tex \inputs sections/s*.tex).
+# Figures (graphs/) and tables (tables/) are symlinks into ../experiment, which
+# the experiment/ Python package regenerates — see the repository-root
+# `make figures`.
 
 LATEX     := pdflatex
 LATEXOPTS := -interaction=nonstopmode -halt-on-error
@@ -36,7 +37,7 @@ help:  ## Show this overview of available commands
 
 compile: $(DOC).pdf  ## Build the paper PDF
 
-$(DOC).pdf: $(DOC).tex $(wildcard s*.tex) $(BIB) $(wildcard tables/*.tex)
+$(DOC).pdf: $(DOC).tex $(wildcard sections/s*.tex) $(BIB) $(wildcard tables/*.tex)
 	$(LATEX) $(LATEXOPTS) $(DOC).tex
 	bibtex $(DOC)
 	$(LATEX) $(LATEXOPTS) $(DOC).tex
@@ -54,12 +55,12 @@ ARXIV_TARBALL := $(DOC).tar.gz
 
 arxiv: $(ARXIV_TARBALL)  ## Package the self-contained arXiv source tarball
 
-$(ARXIV_TARBALL): $(DOC).tex $(wildcard s*.tex) $(BIB) $(VENDOR) \
+$(ARXIV_TARBALL): $(DOC).tex $(wildcard sections/s*.tex) $(BIB) $(VENDOR) \
                   $(wildcard graphs/*.pdf) $(wildcard tables/*.tex)
 	rm -rf $(ARXIV_DIR)
-	mkdir -p $(ARXIV_DIR)/graphs $(ARXIV_DIR)/tables $(ARXIV_DIR)/bib
+	mkdir -p $(ARXIV_DIR)/sections $(ARXIV_DIR)/graphs $(ARXIV_DIR)/tables $(ARXIV_DIR)/bib
 	cp $(DOC).tex $(ARXIV_DIR)/
-	cp s*.tex $(ARXIV_DIR)/
+	cp sections/*.tex $(ARXIV_DIR)/sections/
 	cp $(BIB) $(ARXIV_DIR)/bib/refs.bib
 	cp graphs/*.pdf $(ARXIV_DIR)/graphs/
 	cp tables/*.tex $(ARXIV_DIR)/tables/
