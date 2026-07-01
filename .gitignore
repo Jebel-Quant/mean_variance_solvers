@@ -1,0 +1,25 @@
+.idea
+.DS_Store
+__pycache__/
+.venv/
+.pytest_cache/
+.benchmarks/
+
+# arXiv packaging artifacts (see `make arxiv`)
+arxiv-src/
+*.tar.gz
+out/
+
+# LaTeX build artifacts (see `make clean`)
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+*.fls
+*.fdb_latexmk
+*.thm

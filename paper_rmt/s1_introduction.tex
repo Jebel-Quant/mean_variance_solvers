@@ -1,0 +1,129 @@
+\section{Introduction}
+
+The minimum-variance portfolio is the solution to a quadratic programme whose
+inputs are a covariance estimate and a set of weight constraints. In the large-$n$
+regime of institutional equity portfolios ($n/T \approx 0.4$ for a five-year daily
+window), the sample covariance $\hat\Sigma = X^\top X/T$ is nearly singular,
+with condition number $\kappa(\hat\Sigma) \approx 106{,}000$ on S\&P~500 data.
+This ill-conditioning makes the portfolio optimisation problem numerically fragile.
+
+Random matrix theory (RMT) attributes most of this ill-conditioning to noise:
+the Marchenko--Pastur (MP) law identifies eigenvalues below the bulk edge
+$\hat\lambda_+$ as uninformative, consistent with noise, while eigenvalues above
+$\hat\lambda_+$ carry genuine factor structure. The ``constant residual eigenvalue''
+(CRE) cleaning method~\cite{laloux1999,bun2017,bouchaud2003} replaces the noise
+eigenvalues with their average $\bar\lambda$ -- preserving the trace of
+$\hat\Sigma$ -- and produces the estimator
+\[
+  T_0^{\mathrm{RMT}} = \bar\lambda I + U_k(\Lambda_k - \bar\lambda I)U_k^\top,
+\]
+where $(U_k, \Lambda_k)$ are the $k$ eigenpairs above $\hat\lambda_+$.
+On S\&P~500 data, $k = 23$ and $\kappa(T_0^{\mathrm{RMT}}) \approx 343$ --
+roughly $300$ times better conditioned than $\hat\Sigma$.
+
+Implementations of CRE cleaning in the public domain typically form
+$T_0^{\mathrm{RMT}}$ as a dense $n \times n$ matrix and pass it to a
+general-purpose solver (CVXPY, interior-point, etc.); see e.g.\ the reference
+implementations accompanying~\cite{lopezdeprado2018}. This paper exploits the
+low-rank-plus-identity structure
+$T_0^{\mathrm{RMT}} = \bar\lambda I + U_k \Delta_k U_k^\top$, which renders
+the matrix inverse available in closed form via the Woodbury identity, without
+assembling either the $n \times n$ covariance or the $n_a \times n_a$ active-set
+restriction. The result is a direct active-set portfolio solver that is
+substantially faster than both general-purpose interior-point solvers and the
+KKT-Cholesky approach of assembling the restricted system and factoring.
+Exploiting factor structure in portfolio quadratic programmes via the
+Sherman--Morrison--Woodbury identity goes back at least to
+Perold~\cite{perold1984}; the contribution here is the combination with
+RMT-determined structure, randomised preprocessing, and an end-to-end
+complexity and accuracy account.
+
+\paragraph{Contributions}
+This paper makes four contributions, each self-contained relative to the
+companion paper~\cite{fast_minimum_variance}.
+The companion paper uses a different estimator structure and a different inner
+solver; the Woodbury treatment, the crossover analysis, the rSVD preprocessing
+treatment, and the total pipeline complexity accounting developed here are absent
+from it.
+
+\emph{First}, we give a complete treatment of the randomised SVD preprocessing
+step (Section~\ref{sec:preprocessing}). The companion paper uses a dense
+eigendecomposition of $\hat\Sigma$ for simplicity; at large $n$ this
+costs $O(n^2 T + n^3)$ and re-introduces the $n^2$ storage the matrix-free
+approach aims to avoid. A randomised truncated SVD applied directly to $X$
+computes the top-$k$ eigenpairs of $\hat\Sigma$ in $O(nTk)$ time and $O(nk)$
+storage; the measured portfolio impact of the approximation is below three
+basis points in any weight. For daily rolling windows we additionally
+implement an incremental rank-two update of the tracked eigenpairs that
+avoids re-sketching altogether.
+
+\emph{Second}, we derive the exact crossover condition for Woodbury vs.\
+KKT-Cholesky (Proposition~\ref{prop:crossover}): the Woodbury inner solve
+requires fewer flops per outer step precisely when $k < n_a$, a condition
+satisfied throughout the long-only equity regime
+($k/n_a$ between roughly $0.2$ and $0.7$ in our experiments). We also account
+for the total pipeline cost over a sweep of $S$ related solves
+(Proposition~\ref{prop:pipeline}), under which the $O(nTk)$ preprocessing
+amortises to $O(nTk/S)$ per solve.
+
+\emph{Third}, we provide a direct numerical comparison of Woodbury against
+KKT-Cholesky, a tuned interior-point baseline (Clarabel called natively on
+pre-assembled data), and CVXPY on the same RMT problem
+(Section~\ref{sec:results}), together with optimality cross-checks of the
+returned weights, an exact critical-line sweep built on the same Woodbury
+kernel that traces every frontier breakpoint (Section~\ref{ssec:cla}), a
+$k$-sensitivity audit showing that the MP threshold choice
+is not a sensitive hyperparameter (Section~\ref{sec:ksensitivity}), and an
+out-of-sample backtest on two universes -- S\&P~500 and FTSE~100 -- showing
+that the cleaned estimator carries no measurable statistical penalty relative
+to standard shrinkage (Section~\ref{ssec:oos}).
+
+\emph{Fourth}, we delineate the scope of the structural trick
+(Remarks~\ref{rem:rie} and~\ref{rem:ridge}): ridge terms, diagonal loadings,
+externally specified factor models, and linear equality constraints preserve
+the Woodbury structure, whereas statistically richer cleanings -- nonlinear
+shrinkage and general rotationally invariant estimators -- do not.
+
+\paragraph{Relation to existing work}
+Laloux et al.~\cite{laloux1999} and Plerou et al.~\cite{plerou1999} introduced
+the Marchenko--Pastur threshold to financial covariance estimation; Bouchaud and
+Potters~\cite{bouchaud2003} develop the theory in detail.
+Bun, Bouchaud and Potters~\cite{bun2017} give a comprehensive treatment of CRE
+cleaning and of the statistically superior rotationally invariant estimators
+built on the eigenvector overlaps of Ledoit and
+P\'ech\'e~\cite{ledoitpeche2011}; nonlinear shrinkage is developed by Ledoit
+and Wolf~\cite{ledoit2012,ledoit2020}. Those estimators modify the full
+spectrum and are not Woodbury-compatible; this paper works with CRE precisely
+because clipping is the member of the family with exploitable algebraic
+structure (Remark~\ref{rem:rie}).
+L\'opez de Prado~\cite{lopezdeprado2018} provides accessible CRE
+implementations for practitioners, built on dense covariance assembly and
+general-purpose solvers.
+
+On the optimisation side, Perold~\cite{perold1984} exploited
+diagonal-plus-low-rank factor structure inside a large-scale portfolio QP
+solver four decades ago, and the critical line algorithm of
+Markowitz~\cite{markowitz1956} (see~\cite{niedermayer2010,cvxcla} for modern
+treatments) traces the exact long-only frontier by active-set pivoting.
+Relative to this literature our contribution is the pairing of the
+\emph{RMT-determined} low-rank structure with the active-set solve, the
+randomised-SVD preprocessing with an explicit total-pipeline complexity
+accounting, and the measured end-to-end comparison
+(Remark~\ref{rem:cla} discusses the relation to CLA).
+The randomised SVD itself is due to Halko, Martinsson and
+Tropp~\cite{halko2011} and has been applied widely to PCA and large-scale
+covariance estimation.
+
+This paper is self-contained: Algorithm~\ref{alg:woodbury} gives the complete
+primal-dual active-set solver including the Woodbury inner solve, and
+Section~\ref{sec:preprocessing} develops the rSVD preprocessing independently.
+A companion paper~\cite{fast_minimum_variance} addresses the same portfolio
+problem with an iterative inner solver and a different covariance structure.
+
+\paragraph{Outline}
+Section~\ref{sec:problem} states the problem. Section~\ref{sec:rmt} constructs
+the cleaned estimator. Section~\ref{sec:algorithm} develops the Woodbury portfolio
+algorithm and the crossover analysis. Section~\ref{sec:preprocessing} covers
+randomised SVD preprocessing. Section~\ref{sec:ksensitivity} analyses sensitivity
+to the threshold $k$. Section~\ref{sec:results} reports timing, scaling, and
+out-of-sample results. Section~\ref{sec:conclusions} concludes.

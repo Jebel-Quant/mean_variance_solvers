@@ -1,0 +1,123 @@
+\section{Problem Setup}\label{sec:problem}
+
+Let $X \in \mathbb{R}^{T \times n}$ be the demeaned return matrix for $n$ assets
+over $T$ periods. The long-only mean-variance portfolio solves
+\[
+  \min_{w}\; w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w
+  \quad\text{subject to}\quad
+  \mathbf{1}^\top w = 1,\quad w \geq 0\,,
+\]
+where $\rho \geq 0$ is a return-tilt weight, $\hat\mu$ is a vector of expected
+returns, and $T_0^{\mathrm{RMT}}$ is the RMT-cleaned covariance estimator defined
+in Section~\ref{sec:rmt}.\footnote{The symbol $T_0$ for the cleaned estimator
+follows the shrinkage-target notation of the companion
+paper~\cite{fast_minimum_variance}; it is unrelated to the sample size $T$.}
+
+\begin{remark}[Why not blend with the sample covariance?]\label{rem:blend}
+A general shrinkage estimator
+$\hat\Sigma_\alpha = (1-\alpha)\hat\Sigma + \alpha T_0^{\mathrm{RMT}}$ with
+$\alpha \in (0,1)$ would re-introduce a fraction of the bulk eigenvalues that
+the cleaning replaces. Our reason for fixing $\alpha = 1$ is algebraic, not
+statistical: only at $\alpha = 1$ does the system matrix retain the
+low-rank-plus-identity form that the Woodbury solve of
+Section~\ref{sec:algorithm} requires. For $\alpha \in (0,1)$ the matrix
+$(1-\alpha)\hat\Sigma_\mathcal{A} + \alpha T_{0,\mathcal{A}}^{\mathrm{RMT}}$
+has full-rank residual structure -- no $k \times k$ correction matrix exists --
+and the $O(n_a k^2)$ cost advantage is entirely lost. The statistical case for
+CRE cleaning itself rests on the RMT literature
+(Section~\ref{sec:rmt}); Section~\ref{ssec:oos} reports out-of-sample
+evidence that the cleaned estimator is competitive with standard shrinkage on
+the data used in this paper.
+\end{remark}
+
+\subsection{Primal-dual active-set reduction}
+
+The budget constraint $\mathbf{1}^\top w = 1$ and non-negativity $w \geq 0$
+are handled separately. Fix a set $\mathcal{A} \subseteq \{1,\ldots,n\}$ of
+active assets. The budget-constrained subproblem on $\mathcal{A}$,
+\[
+  \min_{w_\mathcal{A}:\,\mathbf{1}^\top w_\mathcal{A}=1}\;
+  w_\mathcal{A}^\top T_{0,\mathcal{A}}^{\mathrm{RMT}}\, w_\mathcal{A}
+  - \rho\,\hat\mu_\mathcal{A}^\top w_\mathcal{A}\,,
+\]
+has, by the KKT conditions, the closed-form solution
+\[
+  w^\star_\mathcal{A}
+  \;=\; \theta\, v_1 + \tfrac{\rho}{2} v_2\,,
+  \qquad
+  v_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\mathbf{1}\,,
+  \quad
+  v_2 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\hat\mu_\mathcal{A}\,,
+\]
+where the budget multiplier
+$\theta = (1 - \tfrac{\rho}{2}\,\mathbf{1}^\top v_2) / (\mathbf{1}^\top v_1)$
+is recovered analytically from $\mathbf{1}^\top w^\star_\mathcal{A} = 1$.
+
+Non-negativity is enforced by the following primal-dual outer loop. Throughout,
+the objective gradient is
+\[
+  g \;=\; 2\,T_0^{\mathrm{RMT}} w - \rho\,\hat\mu\,,
+\]
+evaluated through the low-rank form
+$T_0^{\mathrm{RMT}}w = \bar\lambda w + U_k(\Delta_k(U_k^\top w))$ at cost
+$O(nk)$ (Proposition~\ref{prop:rmt_spectrum}); the return matrix $X$ never
+enters the solve. Stationarity of the restricted subproblem implies
+$g_j = 2\theta$ for every $j \in \mathcal{A}$, so the common active-set
+gradient value recovers the multiplier exactly; the implementation uses the
+median over $\mathcal{A}$, which is exact up to roundoff.
+
+\begin{itemize}
+  \item \emph{Primal step}: if $w_{\mathcal{A},i} < -\varepsilon$ for some
+        $i \in \mathcal{A}$, remove the most negative such asset and re-solve.
+  \item \emph{Dual step}: compute $g_i$ for $i \notin \mathcal{A}$ and let
+        $\nu = \mathrm{median}_{j \in \mathcal{A}}(g_j)$.
+        If $g_i < \nu - \varepsilon$ for some excluded asset, add the most
+        violated asset to $\mathcal{A}$ and re-solve.
+  \item \emph{Termination}: stop when $w_{\mathcal{A},i} \geq -\varepsilon$ for all
+        $i \in \mathcal{A}$ and $g_i \geq \nu - \varepsilon$ for all
+        $i \notin \mathcal{A}$.
+\end{itemize}
+
+\begin{proposition}[Finite termination]\label{prop:termination}
+Under generic non-degeneracy of the KKT conditions (no two primal weights are
+simultaneously at zero; no two excluded assets are tied for the largest dual
+violation), the primal-dual outer loop terminates in finitely many iterations.
+\end{proposition}
+
+\begin{proof}
+Since $T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$
+with $\bar\lambda > 0$ and $\delta_j > 0$ for all $j$, we have
+$T_{0,\mathcal{A}}^{\mathrm{RMT}} \succ 0$ for every $\mathcal{A}$, so the
+restricted subproblem has a unique optimum. Each outer step exchanges a single
+asset. Under the non-degeneracy assumption the restricted dual objective
+strictly decreases at each complete primal-dual exchange by the standard
+parametric QP pivot argument~\cite{nocedal2006}; consequently no active set is
+visited twice. Since the $2^n$ subsets of $\{1,\ldots,n\}$ are finite, the
+algorithm terminates.
+\end{proof}
+
+\begin{remark}[Implementation safeguards]\label{rem:safeguards}
+Non-degeneracy is generic but cannot be verified a priori. The reference
+implementation therefore carries two safeguards: an iteration cap, and a check
+that the active set changed between consecutive outer steps. As an
+acceleration, assets whose weights are strongly negative
+($w_i < -10\,\varepsilon$) are dropped in bulk before the single-exchange rule
+applies; in all experiments of Section~\ref{sec:results} the safeguards never
+triggered and bulk drops did not affect the returned portfolio (the converged
+weights agree with interior-point solutions to solver accuracy,
+Section~\ref{ssec:solvers}).
+\end{remark}
+
+\begin{remark}[Tolerance scale]\label{rem:tolerance}
+The tolerance $\varepsilon$ applies to two quantities with different units:
+portfolio weights (primal step) and gradient entries (dual step). Weights are
+scale-free; gradient entries scale with $\bar\lambda$, which is of order
+$10^{-4}$ for daily returns. The default $\varepsilon = 10^{-6}$ is appropriate
+for daily return data; for data on other scales the dual tolerance should be
+taken relative to $\bar\lambda$.
+\end{remark}
+
+This paper develops the inner solve: when $T_0 = T_0^{\mathrm{RMT}}$, the
+inverse $(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}$ is available in closed form
+via the Woodbury identity (Section~\ref{sec:algorithm}), reducing the dominant
+cost per outer step from $O(n_a^2 k + n_a^3)$ to $O(n_a k^2 + k^3)$.

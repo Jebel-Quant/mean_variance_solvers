@@ -1,0 +1,302 @@
+\section{Enforcing Non-Negativity}\label{sec:primaldual}
+
+Section~\ref{sec:pd} reduces the long-only problem to solving an SPD system, leaving
+$w \geq 0$ as the sole remaining constraint. Two strategies are available.
+
+\subsection{Simplex-projection strategy}
+The first strategy treats the two constraints as a single geometric object: the
+probability simplex
+$\Delta_n = \{w \in \mathbb{R}^n : \mathbf{1}^\top w = 1,\, w \geq 0\}$.
+Rather than separating budget and non-negativity, gradient steps of the form
+\[
+  w_{k+1} = \Pi_{\Delta_n}\!\left(w_k - \tau\,\nabla f(w_k)\right)
+\]
+project directly onto $\Delta_n$ after each descent step, where $\Pi_{\Delta_n}$
+is the Euclidean projection.
+Duchi et al.\ \cite{duchi2008} and Condat~\cite{condat2016} show that $\Pi_{\Delta_n}$ can be computed in
+$O(n\log n)$ by a single sort-and-threshold pass, making each iteration cheap.
+There is no outer loop: both constraints are handled simultaneously, and the method
+terminates when the step size $\|w_{k+1} - w_k\|$ falls below a tolerance.
+
+Although $\hat\Sigma = \tilde{X}^\top\tilde{X}$ admits a stacked-matrix
+representation (Section~\ref{sec:precond}), assembling or storing $\tilde{X}$ is
+unnecessary. The gradient decomposes additively as
+\[
+  \nabla f(w) = \hat\Sigma\,w
+  = \frac{1-\alpha}{T}\,X^\top(Xw) + \alpha\,\hat\Sigma_0\,w\,,
+\]
+and each term is applied separately: the data contribution costs $O(nT)$ via two
+matrix-vector products with $X$, and the target contribution costs $O(n^2)$ for a general
+$\hat\Sigma_0$ or $O(n)$ for a scaled identity. The Lipschitz constant
+$L = \lambda_{\max}(\hat\Sigma)$, needed for the step size $\tau = L^{-1}$,
+is estimated once by power iteration on the same two-term operator, also matrix-free.
+
+\begin{algorithm}[ht]
+\caption{Simplex-projection solver (proximal gradient, matrix-free)}\label{alg:proximal}
+\begin{algorithmic}[1]
+\Require Returns matrix $X \in \mathbb{R}^{T\times n}$;\; shrinkage intensity $\alpha$;\;
+         target $\hat\Sigma_0 \in \mathbb{R}^{n\times n}$;\; tolerance $\varepsilon = 10^{-6}$
+\Ensure Weight vector $w \in \Delta_n$
+\State Define operator $\mathcal{A}$:\; $v \mapsto \tfrac{1-\alpha}{T}X^\top(Xv) + \alpha\,\hat\Sigma_0 v$
+  \hfill\textit{($\hat\Sigma$ applied matrix-free)}
+\State Estimate $L \leftarrow \lambda_{\max}(\mathcal{A})$ by power iteration
+  \hfill\textit{($O(n_{\mathrm{pow}}\cdot nT)$)}
+\State $\tau \leftarrow L^{-1}$;\; initialise $w_0 \in \mathbb{R}^n$ randomly;\; $k \leftarrow 0$
+\Loop
+  \State $g \leftarrow \mathcal{A}(w_k)$
+    \hfill\textit{(gradient, $O(nT)$)}
+  \State $w_{k+1} \leftarrow \Pi_{\Delta_n}(w_k - \tau\,g)$
+    \hfill\textit{(simplex projection, $O(n\log n)$)}
+  \If{$\|w_{k+1} - w_k\|_2 \leq \varepsilon$}
+    \textbf{ break}
+  \EndIf
+  \State $k \leftarrow k + 1$
+\EndLoop
+\State \Return $w_{k+1}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Active-set strategy}\label{subsec:activeSet}
+The second strategy separates the budget constraint from the non-negativity constraint.
+The budget-only problem is solved over a dynamically adjusted \emph{active set} of
+assets; non-negativity is then enforced iteratively without ever modifying the inner
+solve.
+
+In the \emph{primal step}, any asset with a negative weight is dropped from the active
+set and the budget-constrained SPD system is re-solved on the reduced universe. Once
+all active weights are non-negative, the \emph{dual step} checks the KKT gradient
+condition for every excluded asset: global optimality requires every excluded asset $i$
+to satisfy
+\[
+  \nabla_i f(w) \;\geq\; \lambda\;,
+  \qquad
+  \nabla_i f(w) = \tfrac{2}{T}(X^\top Xw)_i - \rho\hat\mu_i\;,
+\]
+where $\lambda$ is the budget Lagrange multiplier recovered analytically from
+Section~\ref{sec:pd}. An excluded asset that violates this condition would decrease
+portfolio variance if held at a small positive weight; it is re-added to the active set
+and the loop repeats. The loop terminates when both primal and dual feasibility hold;
+together with stationarity from the inner solve this certifies global optimality.
+
+These two conditions are precisely the complementarity system for the long-only KKT
+conditions: with the constraint multiplier $s_i = \nabla_i f(w) - \lambda$, an optimum
+requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$. The active set $\mathcal{A}$ plays
+the role of the index set on which $w$ is free and $s = 0$; primal violators are
+active assets with $w_i < 0$ and dual violators are excluded assets with $s_i < 0$.
+Toggling assets between $\mathcal{A}$ and its complement is therefore a sequence of
+\emph{principal pivots} on this linear complementarity problem (LCP), and dropping or
+adding several assets in one step is a \emph{block} principal pivot
+\cite{judice1994,kim2011}. Because $\hat\Sigma_{\mathrm{LW},\mathcal{A}} \succ 0$ for
+every $\mathcal{A}$ (Section~\ref{sec:pd}), the governing matrix is a $P$-matrix, so
+every principal submatrix is invertible and each pivot is well defined
+\cite{murty1988}.
+
+Block pivots are fast but, like all-at-once exchanges in general, can cycle: a batch
+drop can over-shoot the support and a later batch add can restore it, returning to an
+active set already visited. Algorithm~\ref{alg:elim} therefore runs the batch exchange
+as a \emph{fast path} guarded by an anti-cycling counter. Let $N$ be the total number
+of primal and dual violators at the current solve and $\bar N$ the fewest seen so far.
+A batch step is taken whenever it makes progress ($N < \bar N$) or a fixed patience
+budget $p$ has not been exhausted; otherwise the algorithm falls back to a single
+\emph{Bland-style} pivot that toggles the lowest-indexed violating asset. The
+least-index single-pivot rule is Murty's principal pivoting method, which cannot cycle
+\cite{murty1988}; it is what the finite-termination guarantee below actually rests on,
+with the batch path serving only to reach the optimum faster when it does not stall.
+This is the anti-cycling construction of J\'udice and Pires for block principal
+pivoting \cite{judice1994}, adapted to the budget-constrained minimum-variance LCP.
+
+\begin{algorithm}[ht]
+\caption{Active-set outer loop (wraps any inner solver $f$)}\label{alg:elim}
+\begin{algorithmic}[1]
+\Require Inner solver $f$;\; tolerance $\varepsilon = 10^{-6}$;\; $\alpha > 0$
+  \hfill\textit{(ensures $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ non-singular)};\; patience $p_{\max} \in \mathbb{N}$ \textit{(default $3$)}
+\Ensure Weight vector $w \in \mathbb{R}^n$;\; outer step count $s$;\; total inner iteration count $k$ \textit{(equals $s$ for direct solvers using the $k_{\mathrm{step}}=1$ sentinel)}
+\State $\mathrm{active} \leftarrow \{1,\ldots,n\}$;\; $s \leftarrow 0$;\; $k \leftarrow 0$;\; $\bar N \leftarrow n+1$;\; $p \leftarrow p_{\max}$
+  \hfill\textit{($\bar N$: fewest infeasibilities seen; $p$: batch-step budget)}
+\Loop
+  \State $(w_{\mathrm{a}},\, k_{\mathrm{step}}) \leftarrow f(\mathrm{active})$;\; $s \leftarrow s + 1$;\; $k \leftarrow k + k_{\mathrm{step}}$
+    \hfill\textit{($k_{\mathrm{step}} = 1$ sentinel for direct solvers; iterative count for CG)}
+  \State $w_i \leftarrow w_{a,i}$ for $i \in \mathrm{active}$;\; $w_i \leftarrow 0$ for $i \notin \mathrm{active}$
+  \State $g_i \leftarrow \tfrac{2}{T}(X^\top Xw)_i - \rho\hat\mu_i$;\;
+         $\lambda \leftarrow \mathrm{median}_{j \in \mathrm{active}}(g_j)$
+    \hfill\textit{(stationarity: $g_j \approx \lambda$ for $j \in \mathrm{active}$ to solver tolerance)}
+  \State $\mathcal{D} \leftarrow \{i \in \mathrm{active} : w_i < -\varepsilon\}$;\;
+         $\mathcal{V} \leftarrow \{i \notin \mathrm{active} : g_i < \lambda - \varepsilon\}$
+    \hfill\textit{(primal and dual violators)}
+  \State $\mathcal{H} \leftarrow \mathcal{D} \cup \mathcal{V}$;\; $N \leftarrow |\mathcal{H}|$
+  \If{$N = 0$}
+    \State \textbf{break} \hfill\textit{(KKT satisfied; globally optimal)}
+  \ElsIf{$N < \bar N$ \textbf{ or } $p > 0$}
+    \hfill\textit{(fast path: progress, or patience remains)}
+    \State \textbf{if} $N < \bar N$ \textbf{ then } $\bar N \leftarrow N$;\; $p \leftarrow p_{\max}$ \textbf{ else } $p \leftarrow p - 1$
+    \State $\mathrm{active} \leftarrow (\mathrm{active} \setminus \mathcal{D}) \cup \mathcal{V}$
+      \hfill\textit{(batch exchange: drop all $\mathcal{D}$, add all $\mathcal{V}$)}
+  \Else
+    \hfill\textit{(anti-cycling fallback: $p$ exhausted)}
+    \State $i^\star \leftarrow \min\{i : i \in \mathcal{H}\}$
+      \hfill\textit{(Bland least-index rule)}
+    \State \textbf{if} $i^\star \in \mathcal{D}$ \textbf{ then } $\mathrm{active} \leftarrow \mathrm{active} \setminus \{i^\star\}$
+           \textbf{ else } $\mathrm{active} \leftarrow \mathrm{active} \cup \{i^\star\}$
+      \hfill\textit{(single principal pivot)}
+  \EndIf
+\EndLoop
+\State \Return $w$, $s$, $k$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Budget multiplier}
+The $\lambda$-computation step of Algorithm~\ref{alg:elim} recovers the budget shadow price as the median
+of the active gradients. In exact arithmetic, the inner solver minimises $f$ over
+$\{w_\mathcal{A} : \mathbf{1}^\top w_\mathcal{A} = 1\}$, whose stationarity
+condition is $\tfrac{2}{T}(X_\mathcal{A}^\top X_\mathcal{A}\,w_\mathcal{A})_j = \lambda$
+for every $j \in \mathcal{A}$, so all active gradients equal $\lambda$.
+In practice CG terminates at residual tolerance $\varepsilon = 10^{-5}$, so
+the active gradients agree with $\lambda$ up to this tolerance; the median (used in the implementation for robustness; the mean gives the
+same value in exact arithmetic) recovers $\lambda$ to the same tolerance.
+
+\begin{theorem}[Finite convergence of Algorithm~\ref{alg:elim}]\label{thm:termination}
+Let $f(w) = w^\top \hat\Sigma_{\mathrm{LW}}\,w - \rho\hat\mu^\top w$ with
+$\hat\Sigma_{\mathrm{LW}} \succ 0$ (ensured by $\alpha > 0$).
+Then for any patience budget $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim}
+terminates in finitely many outer iterations and returns the unique global minimizer
+of $\min_{w}\,f(w)$ subject to $\mathbf{1}^\top w = 1,\;w \geq 0$.
+No non-degeneracy assumption is required.
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1 (well-posedness of each inner solve).}
+Because $\hat\Sigma_{\mathrm{LW}} = (1-\alpha)\hat\Sigma + \alpha T_0 \succ 0$,
+every principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, so
+$\hat\Sigma_{\mathrm{LW}}$ is a $P$-matrix \cite{murty1988}.
+The equality-constrained problem on active set $\mathcal{A}$,
+$\min_{w_\mathcal{A}:\,\mathbf{1}^\top w_\mathcal{A}=1} f_\mathcal{A}(w_\mathcal{A})$,
+has a unique minimiser; CG converges to it (Proposition~\ref{prop:cg}).
+
+\emph{Step 2 (termination implies global optimality).}
+Stationarity of $f_\mathcal{A}$ gives $g_j = \lambda$ for all $j\in\mathcal{A}$.
+Algorithm~\ref{alg:elim} exits only when $N = 0$, i.e.\ (i)~all active weights are
+non-negative and (ii)~$g_i \geq \lambda$ for every excluded $i \notin \mathcal{A}$.
+With the multiplier $s_i = g_i - \lambda$ these are exactly $w \geq 0$, $s \geq 0$,
+$w_i s_i = 0$: the KKT conditions for the long-only problem. Strict convexity of $f$
+makes them sufficient for global optimality. It therefore suffices to show the loop
+cannot run forever.
+
+\emph{Step 3 (the fallback cannot cycle).}
+Index the outer iterates and call a maximal block of consecutive iterates that take
+the \textbf{else} branch (the single Bland pivot) a \emph{fallback run}. Within a run
+$\bar N$ is constant, and each iterate performs one principal pivot on the
+lowest-indexed violating asset. This is precisely Murty's least-index principal
+pivoting method for the $P$-matrix LCP of Step~2, which generates a sequence of
+complementary bases (here, active sets) in which no basis recurs and which reaches a
+solution in finitely many pivots \cite{murty1988}. A fallback run is an initial
+segment of that sequence started from the active set left by the preceding step, so
+each run is finite, regardless of where it starts.
+
+\emph{Step 4 (only finitely many batch steps and runs).}
+The counter $N$ satisfies $0 \le N \le n$, and $\bar N$ is non-increasing and
+strictly decreases exactly when the progress branch ($N < \bar N$) fires. Hence the
+progress branch fires at most $n+1$ times. Each remaining fast-path step has
+$N \ge \bar N$ and decrements $p$; since $p$ is reset to $p_{\max}$ only on a progress
+step, at most $p_{\max}$ such steps occur between progress events. The number of
+fallback runs is likewise bounded: a run ends either at termination ($N=0$) or at a
+progress step, and there are at most $n+1$ progress steps. Combining, the algorithm
+takes at most $(n+1) + (n+2)\,p_{\max}$ fast-path steps and at most $n+2$ fallback
+runs.
+
+\emph{Step 5 (finite termination).}
+By Step~3 each of the at most $n+2$ fallback runs is finite, and by Step~4 the
+fast-path steps are finite in number. Their sum is finite, so the loop reaches $N=0$
+after finitely many outer iterations; Step~2 then certifies the returned $w$ as the
+unique global minimiser. A crude ceiling is the number of complementary bases,
+$2^n$.
+\end{proof}
+
+The $2^n$ ceiling of Step~5 establishes \emph{finiteness} only; it is not an
+efficiency estimate, and we make no claim that the worst case is approached. The
+guarantee is unconditional: the least-index fallback removes the non-degeneracy
+hypothesis that earlier active-set arguments need, and it is the fallback -- not the
+batch exchange -- that the proof rests on. In practice the outer loop never reaches
+the fallback: across both equity universes and all shrinkage levels reported here it
+terminates in $s$ between $6$ and $18$ outer steps
+(Tables~\ref{tab:sp500}--\ref{tab:ftse}), with the active set changing by only a few
+assets per step and the patience budget $p$ never exhausted, so the batch fast path
+alone certifies optimality and no cycling was observed in any run.
+
+\begin{remark}[Exact inner solver assumption]\label{rem:exact}
+Theorem~\ref{thm:termination} assumes each inner call to $f(\mathcal{A})$ returns the
+exact minimiser of $f_{\mathcal{A}}$.
+In the algorithm, CG terminates at relative residual tolerance $\varepsilon = 10^{-5}$,
+so the returned iterate is not the exact minimiser.
+The practical implication is small: the KKT dual-feasibility check in
+Algorithm~\ref{alg:elim} uses the same tolerance $\varepsilon$, so an inexact iterate
+that satisfies the check to tolerance $\varepsilon$ is accepted as optimal.
+The finite-termination argument of Steps~3--5 holds exactly in exact arithmetic and
+to working accuracy in finite precision; no cycling was observed in any reported experiment.
+\end{remark}
+
+\begin{remark}[Why the fallback is rarely triggered]\label{rem:nondeg}
+The fallback engages only when the batch exchange stalls -- when the infeasibility
+count $N$ fails to improve on its best value $\bar N$ for $p_{\max}$ consecutive
+steps. Such stalls are tied to degenerate configurations of $X$, each of which
+corresponds to a polynomial equation in its entries. A batch step fails to reduce
+$N$ only when a dropped asset is immediately re-added (or vice versa), which requires
+$g_i = \lambda$ exactly for some toggled $i$, a codimension-one condition; the related
+event $\hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1} \geq 0$ component-wise at a
+non-terminal iterate is likewise codimension-one. Both fail almost surely under any
+distribution for $X$ absolutely continuous with respect to Lebesgue measure; for
+continuous factor models or i.i.d.\ noise distributions this holds by construction.
+Under strictly positive shrinkage ($\alpha > 0$) the minimiser
+$w^\star(\mathcal{A}) = \hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1} /
+(\mathbf{1}^\top \hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1})$
+is a rational function of $X$, further constraining the degenerate set, and on real
+market data floating-point rounding provides an additional generic-position guarantee.
+Theorem~\ref{thm:termination} no longer \emph{assumes} these conditions -- the
+fallback guarantees termination unconditionally -- but they explain why $p$ was never
+exhausted in any experiment reported here, so the batch fast path alone always
+sufficed.
+\end{remark}
+
+\paragraph{Warm-starting}
+Two levels of warm-starting are available for Algorithm~\ref{alg:elim}.
+
+\emph{Within-solve warm-starting} (between outer iterations of a single solve).
+When the active set changes size, the previous CG solution lives in a different
+subspace and cannot be reused directly. One can restrict the previous full
+weight vector $w^{(k)} \in \mathbb{R}^n$ to the new active set
+$\mathcal{A}^{(k+1)}$ and renormalise:
+\[
+  x_0 = \frac{w^{(k)}_{\mathcal{A}^{(k+1)}}}
+             {\mathbf{1}^\top w^{(k)}_{\mathcal{A}^{(k+1)}}}\,.
+\]
+This approximates $\hat\Sigma_{\mathcal{A}^{(k+1)}}^{-1}\mathbf{1}$ up to a
+positive scalar, which is what CG seeks.
+The benefit is limited within a single solve because the outer loop terminates in few outer steps in practice (6--18 on S\&P~500 data; see Table~\ref{tab:sp500}).
+
+\emph{Cross-solve warm-starting} (across a sequence of related problems).
+For an efficient-frontier sweep $\rho_1 < \rho_2 < \cdots < \rho_N$, consecutive
+optimal portfolios differ by only a few assets entering or leaving the active
+set.
+Passing the previous problem's final $(\mathcal{A},\,w)$ pair as the
+initial state for the next solve simultaneously reduces outer iterations (the
+active set needs fewer primal and dual adjustments) and CG iterations (the
+initial residual is small).
+The mechanism is the same for a direct solver
+such as KKT, but KKT profits only from the warm active set: direct
+factorisation has no analogue of an initial guess.
+
+The cross-solve warm start is implemented in \texttt{solve\_cg\_warm}
+(warm active set $+$ CG initial guess) and \texttt{solve\_kkt\_warm}
+(warm active set only).  Section~\ref{sec:results} benchmarks \texttt{solve\_cg\_warm}
+against cold-started CG on a 50-point frontier sweep.
+
+\medskip
+The two strategies make different tradeoffs. The simplex-projection approach is
+single-stage and loop-free; unlike CG, it is not a Krylov method: each step applies
+the gradient operator and projects onto $\Delta_n$ without building a Krylov subspace,
+so residuals are not orthogonalised against prior directions, giving $O(\kappa)$
+convergence. The active-set loop solves a sequence of linear systems and certifies
+global optimality via the KKT check; using CG as the inner solver reduces this to
+$O(\sqrt{\kappa})$ convergence. Both methods share the same $O(nT)$ per-step cost,
+so the $\sqrt{\kappa}$ gap in iteration count translates directly to a runtime gap on
+ill-conditioned problems.
+Section~\ref{sec:solvers} develops concrete implementations of both strategies.

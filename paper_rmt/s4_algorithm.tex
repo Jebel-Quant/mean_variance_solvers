@@ -1,0 +1,229 @@
+\section{The Woodbury Portfolio Algorithm}\label{sec:algorithm}
+
+\subsection{Woodbury direct solve}
+
+The system matrix on the active set $\mathcal{A}$ is
+$T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$,
+where $U_{k,\mathcal{A}} = U_k[\mathcal{A},:] \in \mathbb{R}^{n_a \times k}$ is the restriction
+of the signal eigenvectors to the active assets and $n_a = |\mathcal{A}|$.
+The Woodbury matrix identity~\cite{golub2013}, applied with
+$A = \bar\lambda I_{n_a}$, $U = U_{k,\mathcal{A}}$, $C = \Delta_k$,
+$V = U_{k,\mathcal{A}}^\top$, gives
+
+\[
+  \bigl(T_{0,\mathcal{A}}^{\mathrm{RMT}}\bigr)^{-1}\!b
+  \;=\;
+  \frac{b}{\bar\lambda}
+  \;-\;
+  \frac{1}{\bar\lambda^2}\,
+  U_{k,\mathcal{A}}\,
+  W^{-1}
+  U_{k,\mathcal{A}}^\top b\,,
+  \qquad
+  W = \Delta_k^{-1} + \frac{1}{\bar\lambda}\,U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}
+  \;\in \mathbb{R}^{k \times k}\,.
+\]
+
+Note that after restricting to $\mathcal{A}$ the columns of $U_{k,\mathcal{A}}$
+are generally no longer orthonormal: $U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}} \neq I_k$.
+The correction matrix $W$ accounts for this; its Cholesky factorisation is used
+to evaluate $W^{-1}U_{k,\mathcal{A}}^\top b$.
+
+\begin{proposition}[Woodbury solve complexity]\label{prop:woodbury_cost}
+One application of $(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}$ costs:
+\begin{itemize}
+  \item $O(n_a k)$ for the two matrix-vector products $U_{k,\mathcal{A}}^\top b$
+        and $U_{k,\mathcal{A}} z$;
+  \item $O(n_a k^2)$ to form $W = \Delta_k^{-1} + \bar\lambda^{-1} U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
+        (a rank-$k$ outer product sum over $n_a$ columns);
+  \item $O(k^3)$ for the Cholesky factorisation of $W$.
+\end{itemize}
+The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 + k^3)$.
+\end{proposition}
+
+\subsection{Algorithm and warm-starting}
+
+\begin{algorithm}[ht]
+\caption{Woodbury portfolio solver}\label{alg:woodbury}
+\begin{algorithmic}[1]
+\Require Signal eigenpairs $(U_k, \Lambda_k) \in \mathbb{R}^{n \times k} \times \mathbb{R}^k$;
+         bulk mean $\bar\lambda$;
+         return-tilt $\rho \geq 0$; expected returns $\hat\mu$;
+         tolerance $\varepsilon = 10^{-6}$;
+         optional warm start $(\mathcal{A}_0, w_0)$
+\Ensure  Portfolio weights $w \in \mathbb{R}^n$ with $w \geq 0$, $\mathbf{1}^\top w = 1$
+\State $\mathcal{A} \leftarrow \mathcal{A}_0$ (or $\{1,\ldots,n\}$ for cold start);\;
+       $w \leftarrow w_0$ (or $\mathbf{0}$);\;
+       $\Delta_k \leftarrow \Lambda_k - \bar\lambda\mathbf{1}$
+\Loop
+  \State $U_a \leftarrow U_k[\mathcal{A}, :]$ \Comment{$n_a \times k$ restriction}
+  \State $W \leftarrow \mathrm{diag}(1/\Delta_k) + U_a^\top U_a / \bar\lambda$
+    \hfill\textit{($O(n_a k^2)$)}
+  \State $L \leftarrow \mathrm{chol}(W)$;\;
+         define $\mathrm{inv}(b) \leftarrow b/\bar\lambda - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\lambda^2$
+    \hfill\textit{($O(k^3)$ once)}
+  \State $v_1 \leftarrow \mathrm{inv}(\mathbf{1}_{n_a})$;\;
+         $v_2 \leftarrow \mathrm{inv}(\hat\mu_\mathcal{A})$ if $\rho > 0$
+    \hfill\textit{($O(n_a k)$ each)}
+  \State Recover $\theta = (1 - \tfrac{\rho}{2}\mathbf{1}^\top v_2) / (\mathbf{1}^\top v_1)$;\;
+         $w_\mathcal{A} = \theta v_1 + \tfrac{\rho}{2} v_2$
+  \If{$\exists\, i \in \mathcal{A}$ with $w_{\mathcal{A},i} < -\varepsilon$}
+    \State $\mathcal{A} \leftarrow \mathcal{A} \setminus \{\arg\min_i w_{\mathcal{A},i}\}$
+      \hfill\textit{(primal step; cf.\ Remark~\ref{rem:safeguards})}
+  \Else
+    \State $w \leftarrow 0$;\; $w[\mathcal{A}] \leftarrow w_\mathcal{A}$
+    \State $g \leftarrow 2\bigl(\bar\lambda w + U_k(\Delta_k(U_k^\top w))\bigr) - \rho\hat\mu$;\;
+           $\nu \leftarrow \mathrm{median}_{j \in \mathcal{A}}(g_j)$
+      \hfill\textit{($O(nk)$)}
+    \State $j^\star \leftarrow \arg\min_{i \notin \mathcal{A}} g_i$
+    \If{$g_{j^\star} \geq \nu - \varepsilon$} \textbf{break}
+      \hfill\textit{(KKT satisfied)}
+    \EndIf
+    \State $\mathcal{A} \leftarrow \mathcal{A} \cup \{j^\star\}$
+      \hfill\textit{(dual step)}
+  \EndIf
+\EndLoop
+\State \Return $w$
+\end{algorithmic}
+\end{algorithm}
+
+The tolerance $\varepsilon = 10^{-6}$ governs both the primal feasibility check
+(line~7: drop assets with $w < -\varepsilon$) and the dual violation threshold
+(line~12: admit assets with $g_i < \nu - \varepsilon$); see
+Remark~\ref{rem:tolerance} for its scale. This is a standard KKT tolerance for
+active-set methods~\cite{nocedal2006}.
+
+Two further features of Algorithm~\ref{alg:woodbury} deserve emphasis.
+
+\emph{The return matrix never enters the solve}. The dual-feasibility check at
+line~10 evaluates the gradient of the objective,
+$g = 2\,T_0^{\mathrm{RMT}}w - \rho\hat\mu$, through the low-rank form at cost
+$O(nk)$. Neither $\hat\Sigma$ nor $X$ is touched after preprocessing: the
+entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\lambda)$.
+
+\emph{Warm-starting profits from active-set continuity, not initial guesses}.
+For a direct solver there is no initial guess to warm-start; the Woodbury solve
+does not iterate. Warm-starting passes the previous active-set $\mathcal{A}$ and
+weight vector $w$, reducing the number of outer primal-dual steps. On the
+efficient frontier sweep with $\rho \in [0, \rho_{\max}]$ the active set changes
+by at most a few assets between adjacent $\rho$ values, so the warm solver
+typically terminates in one to two outer steps.
+
+This continuity is a structural property of parametric quadratic programming, not
+an artefact of the data-generating process. The Markowitz efficient frontier is a
+continuous piecewise-linear curve in weight space as a function of $\rho$; at each
+breakpoint, generically, exactly one asset enters or leaves the active set~\cite{markowitz1956}.
+Between breakpoints the active set is constant. Choosing a fine enough $\rho$
+grid -- e.g.\ $50$ equally spaced points -- ensures that adjacent solves share
+all but a few active assets regardless of whether the returns are synthetic or
+real, and regardless of the covariance estimator used.
+
+\begin{remark}[Relation to the critical line algorithm]\label{rem:cla}
+The same piecewise-linear structure underlies the critical line algorithm
+(CLA)~\cite{markowitz1956,niedermayer2010,cvxcla}, which traces the exact
+frontier by pivoting from breakpoint to breakpoint instead of re-solving on a
+$\rho$ grid. On a fixed active set the restricted solution is affine in
+$\rho$, $w_\mathcal{A}(\rho) = a + \rho b$ with
+$a = v_1/(\mathbf{1}^\top v_1)$ and
+$b = \tfrac12\bigl(v_2 - \tfrac{\mathbf{1}^\top v_2}{\mathbf{1}^\top v_1}v_1\bigr)$,
+and the multiplier $\nu(\rho) = 2\theta(\rho)$ is affine as well, so every
+primal exit ($w_i$ reaching zero) and dual entry ($g_i - \nu$ reaching zero)
+is the root of an affine function: the exact frontier costs one Woodbury
+solve per breakpoint. We implement this sweep with the Woodbury kernel as its
+linear algebra and validate it against the grid sweep in
+Section~\ref{ssec:cla}. The two approaches remain complementary in practice:
+CLA enumerates the exact frontier for a \emph{fixed} covariance, whereas the
+warm-started grid sweep extends unchanged to the practitioner's setting in
+which consecutive solves differ in the data (a refreshed covariance at each
+rebalance) rather than only in $\rho$.
+\end{remark}
+
+\begin{remark}[Ridge terms and other structured modifications]\label{rem:ridge}
+The Woodbury structure survives several practically relevant modifications.
+A ridge penalty $\gamma\norm{w}^2$ simply shifts the identity coefficient,
+$\bar\lambda \mapsto \bar\lambda + \gamma$. A diagonal loading
+$D + U_k\Delta_kU_k^\top$ with non-scalar $D \succ 0$ replaces $b/\bar\lambda$
+by $D^{-1}b$ at unchanged cost. Additional \emph{linear equality} constraints
+(e.g.\ sector-neutrality) enlarge the KKT system by one row per constraint;
+the inverse of the leading block is still available through Woodbury, so the
+solve cost grows only linearly in the number of constraints. What is
+\emph{not} supported is a full-rank perturbation of the bulk spectrum, as
+produced by nonlinear shrinkage (Remark~\ref{rem:rie}).
+\end{remark}
+
+\subsection{Complexity and crossover analysis}
+
+\begin{proposition}[Woodbury vs.\ KKT-Cholesky crossover]\label{prop:crossover}
+Let the KKT-Cholesky inner solve assemble
+$T_{0,\mathcal{A}}^{\mathrm{RMT}}$ explicitly via a rank-$k$ symmetric update
+($n_a^2 k$ flops to leading order) and factor by Cholesky ($n_a^3/3$ flops),
+and let the Woodbury inner solve form $W$ ($n_a k^2$ flops) and factor it
+($k^3/3$ flops). Then, writing $x = k/n_a$, the Woodbury solve requires fewer
+flops per outer step if and only if
+\[
+  n_a k^2 + \tfrac{k^3}{3} \;<\; n_a^2 k + \tfrac{n_a^3}{3}
+  \;\iff\;
+  x^3 + 3x^2 - 3x - 1 < 0
+  \;\iff\;
+  (x - 1)\,(x^2 + 4x + 1) < 0
+  \;\iff\;
+  x < 1\,,
+\]
+i.e.\ exactly when $k < n_a$. The same threshold holds with unit constants:
+$n_a k^2 + k^3 < n_a^2 k + n_a^3 \iff (x+1)^2(x-1) < 0 \iff x < 1$.
+\end{proposition}
+
+\begin{proof}
+Divide both sides by $n_a^3$ and substitute $x = k/n_a$; the cubics factor as
+displayed, and for $x > 0$ the second factor is positive in both cases.
+\end{proof}
+
+\begin{remark}[Crossover in practice]\label{rem:crossover}
+The crossover condition $k < n_a$ is satisfied throughout our experiments:
+on S\&P~500 data $k = 23$ against $n_a = 63$ at the minimum-variance solution
+($x \approx 0.37$), and on the synthetic frontier $x$ ranges from about $0.7$
+at the tightest point ($n_a = 31$) to about $0.2$ at the high-return end
+($n_a = 97$). At $x \approx 0.5$ the flop-count advantage predicted by
+Proposition~\ref{prop:crossover} is about $3\times$; the measured per-step
+advantage is larger ($5\times$ warm, Table~\ref{tab:solvers}), which is
+consistent with the Woodbury working set ($k \times k$) fitting in
+lower cache levels than the assembled $n_a \times n_a$ system, though we have
+not instrumented the memory hierarchy directly. When $n_a \leq k$ -- which
+does not occur for long-only equity portfolios in our experiments -- the
+solver should fall back to the KKT-Cholesky branch; the Woodbury solve itself
+remains valid for all $n_a \geq 1$, since
+$W = \Delta_k^{-1} + \bar\lambda^{-1}U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
+is the sum of a positive definite diagonal matrix and a positive semidefinite
+matrix, hence always invertible.
+\end{remark}
+
+\begin{proposition}[Per-solve pipeline complexity]\label{prop:pipeline}
+Let $s$ denote the number of outer active-set steps for one portfolio solve.
+The solve cost is
+\[
+  C_{\mathrm{Woodbury}}(s) \;=\; s \cdot O(n_a k^2 + k^3 + nk)\,,
+\]
+where the $O(nk)$ term is the gradient evaluation of the dual step.
+For a sweep of $S$ solves sharing the same eigenpairs $(U_k, \Lambda_k)$,
+the total pipeline cost including preprocessing is
+\[
+  C_{\mathrm{total}} \;=\; \underbrace{O(nTk)}_{\text{preprocessing}} +
+  \underbrace{S \cdot s \cdot O(n_a k^2 + k^3 + nk)}_{\text{solves}}\,,
+\]
+and the preprocessing cost amortises to $O(nTk/S)$ per solve.
+\end{proposition}
+
+\begin{proof}
+Preprocessing via randomised SVD costs $O(nT(k+p))$ for oversampling parameter $p$
+(Proposition~\ref{prop:rsvd}); setting $p = O(k)$ gives $O(nTk)$.
+Each outer step costs one Woodbury application
+(Proposition~\ref{prop:woodbury_cost}) plus one $O(nk)$ gradient evaluation.
+The pipeline cost is the sum; the amortisation claim is division by $S$.
+\end{proof}
+
+At the $n=500$ benchmark the measured preprocessing share of the total
+pipeline for a 50-point frontier sweep is between roughly $30\%$ (cold sweep)
+and $45\%$ (warm sweep); for a single solve the preprocessing dominates
+(Table~\ref{tab:scaling}). In every case the pipeline total remains well below
+the cost of the KKT-Cholesky solve alone at large $n$
+(Section~\ref{ssec:scaling}).

@@ -1,0 +1,36 @@
+name: Build and publish arXiv source
+
+# Builds a self-contained arXiv submission tarball per paper and publishes them
+# to the `arxiv` orphan branch (which only holds submission artifacts). arXiv
+# compiles the source server-side, so each tarball ships the .tex sources, the
+# BibTeX database, the figure PDFs, and the table fragments -- not the compiled
+# PDF. The assembly logic lives in each paper's Makefile (via common.mk); this
+# workflow just runs `make arxiv` (no LaTeX toolchain needed -- it only packages
+# files).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build arXiv source tarballs
+        run: make arxiv
+
+      - name: Publish to arxiv branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: arxiv
+          publish_dir: ./out
+          keep_files: true
+          commit_message: "Publish arXiv source tarballs from ${{ github.sha }}"

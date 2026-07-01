@@ -1,0 +1,71 @@
+\section{Threshold Robustness and \texorpdfstring{$k$}{k}-Sensitivity}\label{sec:ksensitivity}
+
+The Marchenko--Pastur threshold determines $k$ from data. A practical concern is
+whether the portfolio is sensitive to this choice: a threshold that incorrectly
+includes one extra noise factor (or excludes one signal factor) by a small amount
+would be problematic if the resulting portfolio changes substantially.
+
+\subsection{Cost of auditing}
+
+Auditing the sensitivity at $k \pm 1$ requires two additional Woodbury solves.
+Since the eigenpairs $(U_k, \Lambda_k)$ are already computed, these are pure solve
+costs at $O(n_a k^2 + k^3)$ each -- negligible relative to the preprocessing.
+On the benchmark dataset, the three-point audit ($k = 22, 23, 24$) adds less than
+$3$\,ms to the total pipeline. This makes the audit a costless safety check.
+
+\subsection{Analytical sensitivity}
+
+Let $w^*(k)$ denote the RMT minimum-variance portfolio with $k$ signal factors.
+To leading order -- ignoring the accompanying $O(1/(n-k))$ adjustment of the
+bulk mean $\bar\lambda$, which is at the percent level on the benchmark data --
+adding the $(k+1)$-th factor changes the system matrix by a rank-one update:
+$T_0^{\mathrm{RMT}}(k+1) \approx T_0^{\mathrm{RMT}}(k) + \delta_{k+1}\,u_{k+1}u_{k+1}^\top$,
+where $\delta_{k+1} = \lambda_{k+1} - \bar\lambda > 0$.
+By the Sherman--Morrison identity,
+\[
+  (T_0^{\mathrm{RMT}}(k+1))^{-1}
+  \approx (T_0^{\mathrm{RMT}}(k))^{-1}
+  - \frac{\delta_{k+1}}{1 + \delta_{k+1} u_{k+1}^\top (T_0^{\mathrm{RMT}}(k))^{-1} u_{k+1}}
+    \cdot
+    (T_0^{\mathrm{RMT}}(k))^{-1} u_{k+1} u_{k+1}^\top (T_0^{\mathrm{RMT}}(k))^{-1}.
+\]
+The portfolio perturbation $w^*(k+1) - w^*(k)$ is therefore controlled by
+$\delta_{k+1}$, the eigenvalue excess of the marginal factor. Since
+$\lambda_{k+1}$ lies just above $\hat\lambda_+$ by construction, $\delta_{k+1}$
+is small relative to the signal excesses $\delta_1, \ldots, \delta_k$, and the
+portfolio perturbation is correspondingly small. The empirical audit below
+includes the exact bulk-mean adjustment.
+
+\subsection{Empirical sensitivity on S\&P~500 data}
+
+Table~\ref{tab:k_sensitivity} quantifies the change for $k \in \{22, 23, 24\}$
+on the full S\&P~500 sample ($n = 494$, $T = 1213$). The maximum absolute weight
+change across all assets is $33$\,bp when one signal factor is removed
+($k = 22$) and $8$\,bp when one is added ($k = 24$); the
+$\ell_2$ weight-vector distances are $95$\,bp and $27$\,bp respectively. The
+annualised volatility of the minimum-variance portfolio changes by less than
+one basis point in either direction.
+
+\input{tables/rmt_k_sensitivity}
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{rrrcc}
+\toprule
+$k$ & Active & $\mathrm{Vol}_{\mathrm{ann}}$ (\%) &
+$\norm{w(k) - w(k^*)}_\infty$ & $\norm{w(k) - w(k^*)}_2$ \\
+\midrule
+\dataKsensitivity
+\bottomrule
+\end{tabular}
+\caption{Portfolio sensitivity to $k$ at $\rho=0$ on S\&P~500 data ($n=494$, $T=1213$).
+$k^* = 23$ is the MP threshold. All three Woodbury solves complete in under $3$\,ms
+combined (preprocessing amortised). Maximum absolute weight change: $33$\,bp.}
+\label{tab:k_sensitivity}
+\end{table}
+
+These results indicate that the MP threshold is not a sensitive hyperparameter
+for this problem: misjudging $k$ by one factor moves individual weights by a
+few tens of basis points and the portfolio volatility by less than one basis
+point. A practitioner who is uncertain whether the correct $k$ is $22$, $23$,
+or $24$ can audit all three at negligible cost.

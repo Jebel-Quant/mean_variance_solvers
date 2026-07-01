@@ -1,0 +1,118 @@
+\section{Introduction}
+
+The long-only minimum variance portfolio allocates capital across $n$ assets to minimize
+portfolio return variance subject to two constraints: the weights must sum to one (the
+portfolio is fully invested) and must be non-negative. The only input required in theory
+is the $n \times n$ covariance matrix $\Sigma$ of the $n \times 1$ vector of asset
+returns. In practice, $\Sigma$ is unknown and must be estimated from historical data.
+To this end, one uses a $T\times n$ matrix of demeaned returns $X$, where $T$ denotes
+the length of the estimation window. The classical estimator of $\Sigma$ is the sample
+covariance matrix $\hat \Sigma = X^\top X/T$.
+
+The Lagrangian for the problem
+\[
+\min_w\; w^\top \hat \Sigma w \quad \text{subject to} \quad \mathbf{1}^\top w = 1,
+\]
+where $\mathbf{1}$ denotes a conformable vector of ones, is
+\[
+\mathcal{L}(w,\lambda) = w^\top \hat \Sigma w - \lambda(\mathbf{1}^\top w - 1),
+\]
+whose stationarity condition $2 \hat \Sigma w = \lambda\mathbf{1}$ immediately gives
+$w \propto \hat \Sigma^{-1}\mathbf{1}$; this was made explicit by \cite{merton1972} in
+the context of the efficient frontier. The budget constraint is recovered by the single
+rescaling
+\[
+w = v/(\mathbf{1}^\top v), \qquad v = \hat \Sigma^{-1}\mathbf{1}.
+\]
+What has \emph{not} been exploited is this structure computationally: the standard
+pipeline still forms $\hat \Sigma = X^\top X/T$ explicitly before solving.
+
+This paper makes two contributions. First, we apply conjugate gradients (CG) to
+$\hat \Sigma v = \mathbf{1}$ \emph{matrix-free}: $\hat \Sigma = X^\top X/T$ is never
+assembled. Each CG iteration requires only two matrix-vector products with $X$, reducing
+per-iteration cost from $O(n^2)$ to $O(nT)$ and eliminating $O(n^2)$ storage (the active-set loop further reduces this to $O(kT)$, $k \leq n$; see Table~\ref{tab:complexity}).
+Non-negative weights are enforced by a primal-dual active-set loop that alternately removes
+assets with negative weight and re-adds assets violating dual feasibility, calling the CG
+solver on the modified active set at each step. Because CG is a Krylov method, it builds
+successive iterates in the Krylov subspace $\mathcal{K}_k(\hat\Sigma, \mathbf{1})$ and
+achieves $O(\sqrt\kappa)$ convergence, where $\kappa = \kappa(\hat\Sigma)$
+is the spectral condition number (Proposition~\ref{prop:cg}). This $\sqrt\kappa$ rate is the defining advantage
+of Krylov methods over general first-order schemes, which require $O(\kappa)$
+iterations without exploiting the subspace structure.
+
+Second, we show that Ledoit-Wolf shrinkage~\cite{ledoit2004}, applied at the heavier
+intensities practitioners already use for out-of-sample stability, also compresses the
+eigenvalue spread of the system matrix and accelerates CG convergence
+(Proposition~\ref{prop:shrinkage}) as a free by-product, with no additional
+preconditioning step. On S\&P~500 equity data, heavy LW shrinkage ($\alpha = 0.5$)
+reduces CG iterations from 684 to 82; the Frobenius-optimal intensity
+$\alpha_{\mathrm{LW}} \approx 0.017$ has a more modest effect (516 iterations), because
+the Frobenius loss is insensitive to the near-zero eigenvalues that drive
+ill-conditioning. The Frobenius surrogate and the conditioning number are therefore
+minimised at different $\alpha$, which might suggest a genuine statistics-versus-speed
+trade-off. A rolling-window out-of-sample study (Section~\ref{ssec:oos}) shows there is
+none: realised out-of-sample variance is minimised at $\alpha \approx 0.3$, inside the
+heavy-shrinkage range that also gives the conditioning benefit, while turnover falls
+monotonically in $\alpha$. The intensity that makes the solver fast is thus also the
+intensity a risk-conscious practitioner would choose, and the apparent tension is an
+artefact of the Frobenius surrogate rather than a property of the portfolio problem.
+The observation that heavy shrinkage conditions the solver as a by-product does not
+appear to have been made explicit in the portfolio optimisation literature.
+RMT eigenvalue cleaning~\cite{laloux1999,bun2017} decouples the two objectives more
+decisively; the Woodbury direct solver for the RMT target is developed in the companion
+paper~\cite{schmelzer2026rmt}.
+
+CG of Hestenes and Stiefel~\cite{hestenes1952} is a cornerstone of large-scale
+scientific computing; see, e.g., Golub and Van Loan~\cite{golub2013}. To the best of
+our knowledge it has not been applied to portfolio optimisation in the matrix-free form
+described here. The closest related work applies GMRES to the minimum variance problem
+when $\hat \Sigma$ is singular~\cite{bajeux2012}; that formulation still assembles
+$X^\top X$ and does not exploit the SPD structure or consider preconditioning.
+General-purpose solvers such as Clarabel~\cite{clarabel2024} and OSQP~\cite{osqp} handle
+the long-only constraint natively but require an assembled covariance matrix as input.
+Markowitz's Critical Line Algorithm~\cite{markowitz1956} solves the full
+parametric efficient frontier problem via simplex-like pivots ($O(n^2)$ per pivot,
+$O(n^3)$ total in the worst case); a clean open-source implementation is available
+in~\cite{cvxcla}. The CLA targets the entire analytical frontier rather than a
+fixed grid of solves, and does not exploit the matrix-free structure of
+$\hat\Sigma = X^\top X/T$.
+
+Computing a discrete efficient frontier via warm-started iterative solves has not,
+to the authors' knowledge, been studied as a method in its own right.
+The CLA~\cite{markowitz1956,cvxcla} traces the exact analytical frontier but
+scales as $O(n^3)$ in the worst case; a na\"{i}ve grid of independent solver calls
+does not exploit continuity in the return target $\rho$.
+The warm-start described in Section~\ref{sec:results} transfers the active-set mask
+and weight vector between adjacent $\rho$ points, so each CG restart begins near
+the optimum and the total sweep costs a small multiple of a single solve.
+Parametric warm-starting of active-set QP solvers is analysed in the numerical
+optimisation literature~\cite{nocedal2006}; combining it with a matrix-free Krylov
+inner solver on a changing active set is new.
+
+Three features of the problem make the matrix-free approach non-obvious in standard
+QP form. First, all prior solvers treat the assembled $\hat\Sigma$ as a required input;
+recognising that $v = \hat\Sigma^{-1}\mathbf{1}$ is the only quantity needed requires
+stepping outside the QP abstraction. Second, recovering the budget multiplier
+analytically -- reducing the long-only problem to a single SPD linear solve rather than
+a constrained QP -- exploits the rank-one structure of the equality constraint, which is
+not surfaced by general-purpose QP interfaces. Third, restarting a Krylov inner solver
+on a changing active-asset subset each outer step, without re-initialising unnecessarily,
+is a non-trivial integration of the active-set and iterative-solver layers.
+
+The scope is deliberately the pure long-only minimum-variance and mean-variance
+problem: the matrix-free reduction exploits its specific structure -- a single SPD
+solve with a rank-one budget constraint -- and richer constraint sets such as sector
+caps, turnover limits, or factor-exposure bounds fall outside it and are better served
+by a general-purpose QP solver (Section~\ref{sec:solvers}).
+
+For completeness, Section~\ref{sec:primaldual} also includes a simplex-projection
+first-order comparator that handles both constraints simultaneously without an outer active-set loop.
+
+The remainder of the paper is organized as follows.
+Sections~\ref{sec:problem}--\ref{sec:pd} develop the problem formulation and
+non-negativity strategies. Section~\ref{sec:precond} covers shrinkage targets and preconditioning:
+the scaled-identity LW estimator and factor-model targets (companion paper~\cite{schmelzer2026rmt} covers RMT eigenvalue cleaning).
+Section~\ref{sec:solvers} presents the concrete solver implementations and
+their asymptotic complexity. Section~\ref{sec:results} reports empirical results
+on S\&P~500 and FTSE~100 data, a scaling study, and an efficient frontier sweep,
+benchmarking against Clarabel, OSQP, and a first-order comparator.

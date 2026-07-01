@@ -1,0 +1,13 @@
+\def\dataRmtSolverComp{%
+\multicolumn{5}{l}{\textit{Synthetic, $n=500$, $T=1250$, $k=22$, 50-point sweep (total / ms per point)}} \\
+\addlinespace[2pt]
+CVXPY (Clarabel)                       &    88.5 & 1769.7 & \multicolumn{2}{c}{--} \\
+KKT-Cholesky ($k=22$)                  &  0.3233 &    6.5 &  0.0403 &    0.8 \\
+Woodbury ($k=22$)                      &  0.0168 &    0.3 &  0.0082 &    0.2 \\
+\midrule
+\multicolumn{5}{l}{\textit{S\&P~500, $n=494$, $T=1213$, $k=23$, single min-var solve (seconds / ms)}} \\
+\addlinespace[2pt]
+CVXPY (Clarabel)                       &   1.573 & 1573.2 & \multicolumn{2}{c}{--} \\
+KKT-Cholesky ($k=23$)                  &  0.0066 &    6.6 &  0.0004 &    0.4 \\
+Woodbury ($k=23$)                      &  0.0002 &    0.2 &  0.0001 &    0.1 \\
+}

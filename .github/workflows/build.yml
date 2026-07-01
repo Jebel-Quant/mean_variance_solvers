@@ -1,0 +1,64 @@
+name: Build and publish PDF
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-science \
+            texlive-publishers
+
+      - name: Compile both papers
+        run: make compile
+
+      # Build the arXiv source tarballs after `make compile` -- compile ends
+      # with `make clean`, which removes the tarballs, so this must run later.
+      - name: Build arXiv source tarballs
+        if: startsWith(github.ref, 'refs/tags/')
+        run: make arxiv
+
+      - name: Attach PDFs and arXiv source to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            paper/minvar_paper.pdf
+            paper_rmt/rmt_paper.pdf
+            out/arxiv/minvar_paper.tar.gz
+            out/arxiv/rmt_paper.tar.gz
+
+      - name: Stage PDFs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p out
+          cp paper/minvar_paper.pdf out/
+          cp paper_rmt/rmt_paper.pdf out/
+
+      - name: Publish to pdf
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: pdf
+          publish_dir: ./out
+          keep_files: true
+          commit_message: "Publish compiled PDFs (minvar, rmt) from ${{ github.sha }}"

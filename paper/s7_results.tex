@@ -1,0 +1,447 @@
+\section{Numerical Results}\label{sec:results}
+
+All experiments were run on an Apple M4 Pro (14-core CPU, 48\,GB RAM) under Python~3.12, NumPy~2.4, SciPy~1.17,
+CVXPY~1.8.2, and Clarabel~0.11.1. The iterative solvers use SciPy's default relative residual tolerance of $10^{-5}$,
+which was reached in all reported runs; reported times are the fastest of three repeated solves (best-case
+wall-clock, the usual convention for microbenchmarks as it suppresses operating-system scheduling noise; the
+relative ordering of solvers is unchanged under mean or median aggregation) and cover only the
+solve itself; construction of the shrinkage target $\hat\sigma^2 I$ is excluded, as it requires a single pass over
+$X$ and is negligible relative to any solver.
+We also include a dense baseline, ``KKT (Cholesky)'': it assembles the active-set Gram
+matrix $\hat\Sigma_{\mathcal{A}}$ explicitly and solves each outer step by a LAPACK
+Cholesky factorisation (\texttt{posv}), wrapped in the same active-set loop as CG. This
+is the natural production alternative -- assemble and factor -- and isolates the value of
+the matrix-free representation, since CG and KKT share the active-set logic and differ
+only in whether $\hat\Sigma$ is formed. It is reported only for the shrunk ($\alpha>0$)
+panels: without shrinkage the assembled matrix can be singular (it is for FTSE), where
+the dense Cholesky solve is undefined while CG still returns a least-squares iterate.
+CG is initialised from the zero vector, so its iteration counts are deterministic
+and exactly reproducible, independent of any random seed. The proximal-gradient comparator instead starts from a
+random point on the simplex and estimates its Lipschitz step by power iteration, so its iteration count varies
+mildly across runs (on the S\&P~500 problem at $\alpha=0.5$, $825 \pm 87$ over ten runs); we report the count from
+the minimum-time run. All implementations are available in the companion package
+\cite{fast_minimum_variance}.
+
+
+\subsection{S\&P~500 benchmark}
+
+The dataset consists of daily percentage returns for 494 S\&P~500 constituents over the period July~2021--May~2026
+(1213 trading days, $T/n \approx 2.5$), sourced from Yahoo Finance via the \texttt{yfinance} Python package.
+Tickers with more than 5\% missing observations are excluded; short gaps are filled by carrying the last observed
+return forward, which is equivalent to assigning zero return on non-trading days and is the standard convention
+for inactive market days.
+The return matrix $X$ is formed by demeaning the returns column-wise.
+
+\paragraph{Spectrum of $\hat\Sigma = \tfrac{1}{T}X^\top X$}
+The eigenvalue structure of the sample covariance is qualitatively different from that of a random Gaussian matrix and
+is the reason the S\&P~500 problem is a meaningful test case for the preconditioning argument. For a random $T \times n$
+matrix with i.i.d.\ $\mathcal{N}(0,\sigma^2)$ entries, the Marchenko-Pastur law predicts that the bulk of the spectrum
+lies in the interval $[\sigma^2(1-\sqrt{n/T})^2,\,\sigma^2(1+\sqrt{n/T})^2]$, giving a mild condition number that
+grows modestly with $n/T$. The equity spectrum is nothing like this.
+
+The largest eigenvalue is $\lambda_1 \approx 0.067$, corresponding to the market factor, which alone accounts for $\approx 30\%$ of
+total portfolio variance. To apply the Marchenko-Pastur law, we estimate $\sigma^2$ as the average squared entry of $X$,
+\[
+  \hat\sigma^2 = \frac{\|X\|_F^2}{nT} \approx 0.000457~,
+\]
+the natural entry-level variance of a daily percentage return. The MP upper edge $\hat\sigma^2(1+\sqrt{n/T})^2 \approx 0.00123$
+then identifies 23 eigenvalues as statistically significant factors; the remaining 471 are consistent with noise yet
+still span a wide range down to $\lambda_{\min} \approx 6 \times 10^{-7}$. The resulting condition number is
+\[
+  \kappa(\hat\Sigma) = \frac{\lambda_{\max}}{\lambda_{\min}} \approx 109{,}000~,
+\]
+far larger than the $O(10)$--$O(100)$ range typical of random matrices at this aspect ratio. The first ten
+eigenvalues account for half the total variance, while the bottom half of the spectrum contributes less than $3\%$.
+This extreme imbalance (a handful of dominant factors and a long tail of near-zero noise eigenvalues) is precisely
+what makes CG slow without preconditioning (684 iterations) and what makes shrinkage decisive: lifting
+$\lambda_{\min}$ by even a moderate $\alpha$ dramatically reduces the condition number and thus the iteration count to 82.
+
+Table~\ref{tab:sp500} reports timings and iteration counts on this dataset for the various solvers we consider.
+
+\input{tables/sp500_defs}
+\begin{table}[htbp]
+\centering
+\footnotesize
+\begin{tabular}{lccc}
+\toprule
+Method & Time (s) & Iterations & Speedup \\
+\midrule
+\multicolumn{4}{l}{\textit{Without shrinkage}} \\[2pt]
+\dataSpNoshrink
+\midrule
+\multicolumn{4}{l}{\textit{With LW shrinkage ($\alpha = 0.5$, heavy shrinkage range \cite{demiguel2009,ledoit2003jpm})}} \\[2pt]
+\dataSpLwHalf
+\midrule
+\multicolumn{4}{l}{\textit{With oracle LW shrinkage ($\alpha_{\mathrm{LW}} \approx 0.017$, \cite{ledoit2004})}} \\[2pt]
+\dataSpLwOracle
+\bottomrule
+\end{tabular}
+\caption{S\&P~500 universe: 494 assets, 1213 trading days (Jul~2021--May~2026). Speedup relative to
+\texttt{cvxpy (Clarabel)} within each panel. The heavy-shrinkage panel uses $\alpha = 0.5$,
+in the range commonly applied for out-of-sample stability; $\kappa$ falls to the
+low hundreds. The oracle LW panel uses $\alpha_{\mathrm{LW}} \approx 0.017$ with target
+$\bar\lambda I$; the more modest gain here reflects the Frobenius objective's insensitivity to
+near-zero eigenvalues.
+``Direct API'' rows call the same solver without CVXPY's
+problem-construction layer. CVXPY with LW shrinkage is slower than
+without (2.60\,s vs 1.85\,s) because LW requires passing two separate quadratic terms to
+Clarabel, increasing problem-construction overhead and interior-point iterations from 11 to 16.
+At $\alpha=0.5$, CG is $22\times$ faster than Clarabel's direct API (algorithmic gain from exploiting SPD structure matrix-free) and $661\times$ faster than CVXPY-wrapped Clarabel (total, including problem-construction overhead).
+``Iterations'' counts inner solver iterations (CG, Proximal, Clarabel, OSQP).
+The OAS estimator \cite{chen2010} ($\alpha_{\mathrm{OAS}} \approx 0.010$, same target) gives
+results nearly identical to the oracle LW panel and is omitted.
+$^\dagger$Proximal gradient is included as a matrix-free first-order comparator, not a Krylov method.}
+\label{tab:sp500}
+\end{table}
+
+The real-data results reveal two effects. First, without shrinkage the equity system is hard to solve iteratively:
+CG requires 684 iterations ($156\times$ speedup). OSQP (direct API, 0.070\,s)
+is comparable to Clarabel's direct API (0.070\,s) and takes 225 iterations; going through CVXPY adds roughly $9\times$ overhead for OSQP
+($0.61$\,s) and $26\times$ for Clarabel ($1.85$\,s). Proximal gradient (not a Krylov method) requires $\sim\!6{,}000$
+steps at $\kappa \approx 109{,}000$ and is the slowest solver in this panel. The strong factor structure of equity
+returns concentrates variance along a few eigendirections, inflating the condition number and making first-order
+iterative methods slow without shrinkage.
+
+Second, shrinkage benefits all solvers, and the scale of the benefit is strongly $\alpha$-dependent.
+At $\alpha=0.5$ -- in the range of heavier shrinkage levels commonly used in portfolio
+construction for out-of-sample stability \cite{demiguel2009,ledoit2003jpm} -- $\kappa$ falls to
+the low hundreds, CG iterations drop to~82, and the speedup grows to $661\times$ (CG).
+The active-set outer steps also fall, from 18 to~6: shrinkage moves the unconstrained minimum-variance
+portfolio closer to equal weights, so fewer assets receive negative weight in the primal step and the
+active set stabilises sooner.
+OSQP also benefits strongly: iterations fall from 225 to~100 and time from 0.070\,s to 0.038\,s.
+The dense KKT (Cholesky) baseline solves the same $\alpha=0.5$ system in $0.0073$\,s over 6 outer
+steps; matrix-free CG is a further $1.9\times$ faster ($0.0039$\,s) and, as Section~\ref{sec:results}
+shows, the margin widens with $n$. Since the two share the active-set loop and differ only in whether
+$\hat\Sigma$ is assembled, this isolates the not-forming-$\hat\Sigma$ representation, rather than the
+choice of factorisation, as the source of the advantage.
+Proximal gradient falls from $\sim\!6{,}000$ steps ($0.23$\,s) to $\sim\!800$ steps ($0.037$\,s);
+it remains at least $9\times$ slower than CG because its $O(\kappa)$ count exceeds CG's $O(\sqrt{\kappa})$
+even after shrinkage.
+
+The oracle $\alpha_{\mathrm{LW}} \approx 0.017$ gives a more modest gain: CG iterations fall from
+684 to~516 (a one-quarter reduction) and the speedup reaches only $165\times$ (CG).
+This reflects the structural mismatch between the Frobenius objective that produces the oracle and the
+condition number that governs solver speed: the oracle is largely blind to the near-zero noise eigenvalues
+that cause ill-conditioning.
+Note that all iteration counts depend on the factor structure of equity returns and may differ in other market regimes.
+
+\subsection{FTSE 100 robustness check}
+
+Table~\ref{tab:ftse} repeats the benchmark on FTSE 100 constituents
+(86 assets, 1698 trading days, Oct~2019--May~2026; daily percentage returns
+downloaded via \texttt{yfinance}, 10\% missing-data threshold applied).
+The FTSE 100 universe has a markedly different spectral character from the
+S\&P~500: with $n/T \approx 0.051$ (vs $0.41$ for the S\&P~500) the
+sample covariance is well-estimated and the condition number without
+shrinkage is $\kappa \approx 516$, roughly 200$\times$ lower than the
+S\&P~500 counterpart ($\kappa \approx 109{,}000$). The LW oracle intensity
+is $\alpha_{\mathrm{LW}} \approx 0.025$, and heavy shrinkage ($\alpha = 0.5$)
+compresses $\kappa$ to~27 -- an order of magnitude lower than the
+S\&P~500 at the same $\alpha$.
+
+\input{tables/ftse_defs}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Method & Time (s) & Iterations & Speedup \\
+\midrule
+\multicolumn{4}{l}{\textit{Without shrinkage ($\kappa \approx 516$)}} \\[2pt]
+\dataFtseNoshrink
+\midrule
+\multicolumn{4}{l}{\textit{With LW shrinkage ($\alpha = 0.5$, $\kappa \approx 27$)}} \\[2pt]
+\dataFtseLwHalf
+\bottomrule
+\end{tabular}
+\caption{FTSE 100 universe: 86 assets, 1698 trading days (Oct~2019--May~2026).
+Speedup relative to \texttt{cvxpy (Clarabel)} within each panel.
+``Iterations'' counts inner solver iterations (CG, Proximal, Clarabel, OSQP).
+With $n/T \approx 0.051$ the sample covariance is well-estimated and $\kappa$
+is already moderate; heavy shrinkage ($\alpha=0.5$) reduces it further to~27,
+at which point CG converges in only 42 iterations. The ordering of methods
+and the qualitative speedup pattern match Table~\ref{tab:sp500} despite
+the different market and factor structure.
+$^\dagger$Proximal gradient is included as a matrix-free first-order comparator.}
+\label{tab:ftse}
+\end{table}
+
+The speedup pattern mirrors the S\&P~500 results of Table~\ref{tab:sp500}
+despite the different market, time period, and spectral regime. Without
+shrinkage, CG is $72\times$ faster than CVXPY ($870$ iterations);
+at $\alpha=0.5$ the speedup reaches $560\times$ with only $42$ CG iterations.
+Proximal gradient ($22\times$ without shrinkage, $114\times$ at $\alpha=0.5$)
+remains consistently slower than CG, as the $O(\kappa)$ vs $O(\sqrt\kappa)$
+gap predicts. One ordering does change: at $\alpha=0.5$ the dense KKT (Cholesky)
+baseline is the fastest solver here ($711\times$), narrowly ahead of CG ($560\times$).
+This is the expected crossover -- with only $n=86$ assets the $O(k^3)$ factorisation
+is cheap and the condition $\kappa < k^2$ (Section~\ref{sec:solvers}) tips in favour of
+the direct solve; the matrix-free advantage emerges as $n$ grows, as the scaling study
+(Section~\ref{sec:results}) confirms. At $n=86$ the absolute
+speedups are also dominated by the fixed problem-construction overhead of the CVXPY
+reference rather than by asset count, so the FTSE panel should be read as confirming
+the \emph{ordering} of the solvers, not the magnitude of the S\&P~500 speedups.
+
+\subsection{Out-of-sample reconciliation of the two objectives}\label{ssec:oos}
+
+Sections~\ref{sec:shrinkage} and the benchmarks above establish that the
+\emph{conditioning} of the system improves monotonically in the shrinkage
+intensity $\alpha$, whereas the \emph{Frobenius} loss that produces the LW
+oracle is minimised at a small $\alpha$ (here $\alpha_{\mathrm{LW}}\approx0.017$).
+Taken alone, this looks like a trade-off between statistical accuracy and solver
+speed. It is not. The Frobenius loss is only a surrogate for what an investor
+actually cares about, the realised out-of-sample variance, and the two are
+minimised at very different intensities.
+
+To show this we run a rolling-window backtest on the S\&P~500 universe
+($n=494$). At each rebalance we estimate $\hat\Sigma_{\mathrm{LW}}$ on a trailing
+window of $L=504$ trading days ($n/L\approx0.98$, the high-dimensional regime in
+which shrinkage matters), solve the long-only minimum-variance portfolio, hold it
+for $H=21$ trading days, and record the realised daily portfolio returns; rolling
+forward gives $33$ non-overlapping out-of-sample months. The per-window LW oracle
+intensity averages $\bar\alpha_{\mathrm{LW}}=0.043$ (range $0.019$--$0.067$). We
+sweep a grid of fixed $\alpha$ and report, for each, annualised out-of-sample
+volatility, Sharpe ratio, average one-way turnover per rebalance (drift-adjusted),
+and the mean CG iteration count of the solve (Table~\ref{tab:oos}).
+
+\input{tables/oos_defs}
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{rrrrr}
+\toprule
+$\alpha$ & OOS vol (\% ann.) & Sharpe & Turnover (\%) & CG iters \\
+\midrule
+\dataOos
+\bottomrule
+\end{tabular}
+\caption{Rolling-window out-of-sample minimum-variance backtest on the S\&P~500
+($n=494$, estimation window $L=504$ days, monthly rebalance, $33$ out-of-sample
+months). ``OOS vol'' is the annualised standard deviation of realised daily
+portfolio returns; turnover is the average one-way drift-adjusted change in weights
+per rebalance; ``CG iters'' is the mean inner CG iteration count of the solve at that
+$\alpha$. Realised out-of-sample volatility is essentially flat across
+$\alpha\in[0.01,0.5]$ and is minimised at $\alpha=0.30$, inside the heavy-shrinkage
+range; turnover and CG iterations both fall monotonically in $\alpha$.}
+\label{tab:oos}
+\end{table}
+
+The realised out-of-sample volatility is essentially flat across two orders of
+magnitude of $\alpha$, ranging only from $9.66\%$ to $9.78\%$ for
+$\alpha\in[0.01,0.5]$, and is \emph{minimised at $\alpha=0.30$} ($9.66\%$) -- squarely
+inside the heavy-shrinkage range, far from the Frobenius oracle
+$\bar\alpha_{\mathrm{LW}}\approx0.04$. Heavy shrinkage $\alpha=0.5$ delivers
+$9.74\%$, statistically indistinguishable from the oracle-scale $\alpha=0.017$
+($9.77\%$) and marginally better, while requiring only $90$ CG iterations against $587$
+at $\alpha=0.017$, a $6.5\times$ reduction. Turnover falls monotonically from
+$14.4\%$ at $\alpha=0.01$ to $9.1\%$ at $\alpha=0.5$, so the heavy-shrinkage portfolio
+is also the cheaper one to trade. Only beyond $\alpha\approx0.5$ does out-of-sample
+risk begin to rise as the estimate is pulled too far toward the scaled identity.
+
+The volatility differences across the practical range are not statistically
+significant, which is the point: a moving-block bootstrap (block length $21$,
+$2000$ resamples) gives heavily overlapping $95\%$ confidence intervals
+($[8.4,\,11.8]\%$ at $\alpha=0.017$ versus $[8.1,\,12.1]\%$ at $\alpha=0.5$), and the
+\emph{paired} difference $\mathrm{vol}(0.5)-\mathrm{vol}(0.017)$ has bootstrap mean
+$-0.04$ percentage points with $95\%$ interval $[-0.40,\,+0.37]$ straddling zero
+($P(\alpha{=}0.5\text{ worse})=0.41$). Heavy shrinkage is thus statistically
+indistinguishable from the Frobenius oracle out-of-sample, at a fraction of the
+iteration cost. The conclusion is also robust to the estimation window: repeating the
+backtest with a shorter $L=252$ days (the rank-deficient regime $n/L\approx1.96$) moves
+the out-of-sample optimum only to $\alpha=0.20$ -- still well inside the heavy-shrinkage
+range -- with $\alpha=0.5$ and the oracle again indistinguishable ($10.5\%$ each).
+
+The picture (Figure~\ref{fig:oos}) is therefore the opposite of a trade-off: the
+intensity that makes the system well-conditioned and the solver fast is also the
+intensity that minimises realised out-of-sample risk while lowering turnover. The apparent
+statistics-versus-speed tension is an artefact of using the in-sample Frobenius loss
+as the statistical objective; measured against the quantity investors actually
+optimise, heavy shrinkage and good conditioning coincide. This is the empirical
+counterpart to the reconciliation argued analytically in
+Section~\ref{sec:shrinkage}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\linewidth]{graphs/minvar_oos.pdf}
+\caption{Realised out-of-sample annualised volatility (left axis, solid; shaded band
+is the $95\%$ moving-block bootstrap confidence interval) and mean CG iteration count
+(right axis, log scale, dashed) versus shrinkage intensity $\alpha$ for the rolling
+S\&P~500 backtest of Table~\ref{tab:oos}. Out-of-sample risk is minimised inside the
+heavy-shrinkage range where the iteration count is already small; the two objectives
+are aligned, not opposed.}
+\label{fig:oos}
+\end{figure}
+
+\subsection{Scaling with problem size}
+
+Figure~\ref{fig:scaling} uses synthetic data from the \texttt{simulate\_equity\_returns}
+generator, whose model is
+\[
+  X = F B^\top + E,
+\]
+where $F \in \mathbb{R}^{T\times k}$ are factor returns ($k = \max(3,\lfloor n/10\rfloor)$),
+$B \in \mathbb{R}^{n\times k}$ are factor loadings, and $E$ is idiosyncratic noise.
+The market factor (column 1 of $F$) has daily volatility $1\%$ and loadings
+$\beta_i \sim \mathrm{Uniform}(0.4,0.8)$. The remaining $k{-}1$ style/industry factors
+have volatility $0.5\%$ and sparse loadings (Bernoulli$\tfrac{1}{2}$ mask, $\mathcal{N}(0,0.04)$
+on active entries). Idiosyncratic noise has per-asset daily volatility
+$\sigma_i \sim \mathrm{Uniform}(0.5\%,1.5\%)$.
+This produces a dominant market eigenvalue, secondary factor eigenvalues, and a long
+noise tail, qualitatively matching real equity spectra.
+
+The condition number grows with $n$ for two reasons. For $n < T = 1250$: the market
+factor's contribution to $\lambda_{\max}$ grows with $n$ while $\lambda_{\min}$ is
+pinned by the idiosyncratic floor, widening the spectral spread. For $n > T$: the
+unshrunk sample covariance becomes rank-deficient (at most $T$ non-zero eigenvalues),
+so the condition number is infinite without shrinkage; LW shrinkage lifts the zero
+eigenvalues but the effective $\kappa$ continues to grow. Both effects are distinct
+from i.i.d.\ Gaussian data, which gives $\kappa = O(1)$ at fixed $T/n$ by the
+Marchenko-Pastur law.
+
+Figure~\ref{fig:scaling} fixes the lookback window at $T = 1250$ (five years of daily
+returns) and varies $n$, representing the practical constraint that the estimation window
+is determined by data availability, not by portfolio size.
+
+CG operates on the $k$-column submatrix of $\tilde{X}$ at each outer step, where $k$ is
+the number of assets currently held at positive weight; the first step at $k = n$
+dominates the total time. At $\alpha = 0.5$ the active set at convergence holds
+$k \approx 120$, $200$, and $350$ assets at $n = 500$, $1000$, and $3000$ respectively.
+For fixed $\alpha > 0$, $\kappa_{\mathrm{active}}$ is bounded above by
+Corollary~\ref{cor:si}, so CG's cost scales asymptotically as $O(nT)$; the observed
+growth in Figure~\ref{fig:scaling} is steeper than $O(n)$ because $\kappa_{\mathrm{active}}$
+increases with $n$ under the factor structure (the dominant market eigenvalue grows while
+the idiosyncratic floor is fixed), but remains substantially subquadratic;
+a log-log least-squares fit over the seven grid points with $n \in [300,\,3000]$
+(single seed, $\texttt{rng}=n$) gives an empirical exponent of $1.7$ ($R^2 = 0.98$),
+between linear and quadratic scaling.
+At $n=3000$ CG takes $0.081$\,s, against $0.215$\,s for the dense KKT (Cholesky) baseline:
+the two are within $1.9\times$ at $n=500$ but CG pulls $2.6\times$ ahead by $n=3000$, the
+matrix-free margin widening with $n$ exactly as the $O(kT)$-versus-$O(k^2 T)$ per-step costs
+predict.
+
+The decisive separation is between the Krylov solvers and proximal gradient: at $n=3000$
+proximal gradient takes $1.53$\,s versus $0.081$\,s for CG, a factor of $19\times$,
+reflecting the $O(\kappa)$ versus $O(\sqrt\kappa)$ iteration-count gap under realistic
+equity-like spectra.
+
+Figure~\ref{fig:iters} uses the rank-deficient setting $T = 250 < n = 500$, in which $X^\top X$ has at most $T$ non-zero
+eigenvalues and the unshrunk sample covariance is singular. This regime is practically relevant: asset universes with
+more instruments than trading days arise when securities with limited common history are pooled, or when a large
+cross-section is combined with a short lookback window. Without shrinkage, the KKT system is singular and the iterative
+solvers do not converge; every point in the figure has $\alpha > 0$. The preconditioning effect of shrinkage is strongest
+precisely here: iteration counts fall steeply as $\alpha$ increases from zero, reaching the practical operating point at
+moderate $\alpha$ values well below unity.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\linewidth]{graphs/minvar_scaling.pdf}
+\caption{Wall-clock time vs number of assets $n$ (log--log scale, $T = 1250$
+fixed) for CG with LW shrinkage ($\alpha = 0.5$), the dense KKT (Cholesky) baseline,
+and the simplex-projection comparator.
+Data are generated from a latent factor model.
+Reference slopes $O(n)$ and $O(n^2)$ are anchored to the CG-LW curve at $n = 500$;
+CG-LW tracks well below $O(n^2)$ and pulls steadily ahead of the dense KKT baseline as
+$n$ grows, while the simplex-projection method tracks closer to
+$O(n^2)$ as its $O(\kappa)$ iteration count grows with the condition number.}
+\label{fig:scaling}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\linewidth]{graphs/minvar_iters.pdf}
+\caption{CG iteration counts vs shrinkage intensity $\alpha$ at fixed $n=500$,
+$T=250$ (rank-deficient, factor-model data). Larger $\alpha$ compresses the
+eigenvalue spectrum and reduces $\kappa(\hat\Sigma_{\mathrm{LW}})$, directly
+reducing the $O(\sqrt\kappa)$ CG iteration count.}
+\label{fig:iters}
+\end{figure}
+
+\subsection{Efficient frontier}
+
+The efficient frontier for a long-only mean-variance investor consists of all
+portfolios that minimise variance for a given expected return.
+Parameterising by the return-tilt weight $\rho \geq 0$,
+\[
+  w^\star(\rho)
+  = \arg\min_{w \in \Delta_n}\;
+    w^\top \hat\Sigma_{\mathrm{LW}}\, w - \rho\,\hat\mu^\top w\,,
+\]
+sweeping $\rho$ from $0$ (pure minimum variance) to $\rho_{\max}$ traces the
+upper branch of the frontier. Section~\ref{sec:pd} shows that each solve reduces
+to one or two SPD systems: $v_1 = \hat\Sigma_{\mathrm{LW}}^{-1}\mathbf{1}$ and,
+when $\rho > 0$, $v_2 = \hat\Sigma_{\mathrm{LW}}^{-1}\hat\mu$. Without the
+non-negativity constraint every frontier portfolio is the linear combination
+$w^\star(\rho) \propto v_1 + \tfrac{\rho}{2}(v_2 - \langle v_2\rangle v_1)$,
+so the unconstrained frontier follows from exactly two CG solves regardless of
+how many points are requested. With the long-only constraint $w \geq 0$ the
+active set shifts as $\rho$ changes and each point requires a separate
+active-set loop. Consecutive solves share a similar active set, so the
+\emph{warm-start} strategy passes the previous active-set mask and weight
+vector as the initial state for the next $\rho$; the CG initial guess is
+set to the previous solution restricted to the new active set (see
+Section~\ref{sec:primaldual}).
+
+\paragraph{Experiment}
+We generate a factor-model return matrix $X \in \mathbb{R}^{1250 \times 500}$
+using \texttt{simulate\allowbreak\_equity\allowbreak\_returns} with seed 42.
+Expected returns are constructed as $\hat\mu_i = \beta_i \cdot r_m$, where
+$\beta_i \sim \mathrm{Uniform}(0.4,\,0.8)$ and
+$r_m = 0.10/250$ is a daily market premium corresponding to a $10\%$ annual
+return. We use LW shrinkage at $\alpha = 0.5$
+(the heavy-shrinkage panel of Table~\ref{tab:sp500}).
+We compute $N_\rho = 50$ frontier points at $\rho \in [0,\,2]$ and record
+total wall-clock time for each sweep strategy.
+
+\paragraph{Results}
+Figure~\ref{fig:frontier} shows the resulting efficient frontier in
+annualised risk-return space, with each LW point coloured by the number of
+active assets. The
+minimum-variance portfolio under LW shrinkage (orange star, $\rho = 0$)
+holds $130$ active assets at $4.9\%$ annualised volatility; as $\rho$
+increases the active set shrinks to ${\approx}\,31$ assets at $\rho = 2$.
+Table~\ref{tab:frontier} reports 50-point sweep times for all solvers.
+
+\input{tables/frontier_def}
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{Cold start} & \multicolumn{2}{c}{Warm start} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Solver & Total (s) & ms/point & Total (s) & ms/point \\
+\midrule
+\dataFrontier
+\bottomrule
+\end{tabular}
+\caption{50-point efficient frontier sweep ($n=500$, $T=1250$, factor-model
+synthetic data). ``Cold start'' solves each $\rho$ independently;
+``warm start'' passes the active-set mask and weight vector from the previous
+$\rho$ point. OSQP and proximal gradient have no warm-start API for
+the active-set initialisation used here.
+Timings are for factor-model synthetic data ($n=500$, $T=1250$); the S\&P~500 universe
+is comparable in size and gives qualitatively identical results.
+Cold CG (LW) is $313\times$ faster than CVXPY; warm CG (LW) is $1{,}455\times$
+faster.}
+\label{tab:frontier}
+\end{table}
+
+Cold-started CG (LW, $\alpha=0.5$) completes the sweep in $0.239$\,s
+($4.8$\,ms per point); warm-starting reduces this to $0.052$\,s
+($1.0$\,ms per point), a $4.6\times$ improvement.
+OSQP ($2.4$\,s) and proximal gradient ($1.5$\,s) are respectively $10\times$ and
+$6\times$ slower than cold CG (LW) because their per-step cost does not
+decrease as the active set contracts. CVXPY's interior-point loop ($75.0$\,s
+total, or $1.5$\,s per point) makes a na\"{\i}ve loop over CVXPY solves
+impractical for any application requiring repeated frontier computation.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\linewidth]{graphs/minvar_frontier.pdf}
+\caption{Efficient frontier for $n = 500$ assets and $T = 1250$ daily
+returns (factor-model synthetic data). Coloured points: LW shrinkage
+$\alpha = 0.5$; colour encodes active-asset count.
+The orange star marks the minimum-variance portfolio (warm-started CG).
+Sweep timings appear in Table~\ref{tab:frontier}.}
+\label{fig:frontier}
+\end{figure}

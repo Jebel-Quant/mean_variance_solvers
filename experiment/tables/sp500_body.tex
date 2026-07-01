@@ -1,0 +1,30 @@
+cvxpy (Clarabel)                    &    2.156 &     11 &    1.0x \\
+cvxpy (OSQP)                        &    0.670 &    100 &    3.2x \\
+Clarabel (direct API)               &   0.0758 &     11 &   28.4x \\
+OSQP (direct API)                   &   0.0746 &    225 &   28.9x \\
+CG (SPD)                            &   0.0118 &    684 &  182.0x \\
+Proximal gradient$^\dagger$         &    0.218 &   5941 &    9.9x \\
+\midrule
+\multicolumn{4}{l}{\textit{With LW shrinkage ($\alpha = 0.5$, heavy shrinkage range \cite{demiguel2009,ledoit2003jpm})}} \\[2pt]
+cvxpy (Clarabel)                    &    2.762 &     16 &    1.0x \\
+cvxpy (OSQP)                        &    0.649 &     75 &    4.3x \\
+Clarabel (direct API)               &   0.0982 &     16 &   28.1x \\
+OSQP (direct API)                   &   0.0411 &    100 &   67.1x \\
+CG (SPD)                            &   0.0045 &     82 &  614.7x \\
+Proximal gradient$^\dagger$         &   0.0414 &    844 &   66.7x \\
+\midrule
+\multicolumn{4}{l}{\textit{With oracle LW shrinkage ($\alpha_{\mathrm{LW}} \approx 0.017$, \cite{ledoit2004})}} \\[2pt]
+cvxpy (Clarabel)                    &    1.994 &     11 &    1.0x \\
+CG (SPD)                            &   0.0150 &    516 &  132.7x \\
+Proximal gradient$^\dagger$         &    0.237 &   4989 &    8.4x \\
+\midrule
+\multicolumn{4}{l}{\textit{With RMT eigenvalue cleaning ($\alpha = 1$, $k=23$ signal factors \cite{laloux1999}; see caption)}} \\[2pt]
+cvxpy (Clarabel)                    &    1.636 &      7 &    1.0x \\
+CG (SPD)                            &   0.0030 &     67 &  541.1x \\
+Proximal gradient$^\dagger$         &   0.0459 &   1227 &   35.7x \\
+\midrule
+\multicolumn{4}{l}{\textit{Oracle LW + RMT preconditioning ($\alpha_{\mathrm{LW}} \approx 0.017$, $k=23$; see Section~\ref{ssec:pcg})}} \\[2pt]
+cvxpy (Clarabel)                    &    2.011 &     11 &    1.0x \\
+CG (SPD)                            &   0.0139 &    516 &  144.5x \\
+PCG (RMT precond)                   &   0.0145 &    439 &  138.9x \\
+\bottomrule

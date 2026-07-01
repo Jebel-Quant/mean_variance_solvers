@@ -1,0 +1,47 @@
+\begin{abstract}
+The long-only mean-variance portfolio -- minimising variance for a given return target
+subject to a budget constraint and non-negative weights -- is routinely solved by
+assembling an $n\times n$ sample covariance matrix and dispatching it to a
+general-purpose quadratic program. Both steps are unnecessary: the covariance matrix
+is not a primitive of the problem. It is a computational detour.
+
+The detour is avoidable. The portfolio weights require only $v = \hat\Sigma^{-1}\mathbf{1}$;
+conjugate gradients computes this matrix-free, evaluating each product $\hat\Sigma\,v$
+as two $O(nT)$ passes over $X$ without ever forming $\hat\Sigma = X^\top X/T$.
+Non-negativity is enforced by a primal-dual active-set outer loop that alternately
+removes assets with negative weight (primal step) and re-adds assets that violate
+dual feasibility (dual step), restarting the inner solver on the modified active set
+each time. The mean-variance
+problem with a return tilt $\rho$ reduces to two such solves with the budget multiplier
+recovered analytically. The $O(\sqrt\kappa)$ iteration count of CG, where
+$\kappa = \kappa(\hat\Sigma)$ is the spectral condition number, contrasts sharply with
+the $O(\kappa)$ rate of projected-gradient methods that do not exploit Krylov structure.
+
+Ledoit-Wolf shrinkage~\cite{ledoit2004}, already standard practice for statistical
+reasons, also compresses $\kappa$ and reduces solver iterations as a free by-product.
+The effect is modest at the statistically optimal intensity
+($\alpha_{\mathrm{LW}} \approx 0.017$), because the Frobenius objective is insensitive
+to the near-zero eigenvalues that drive ill-conditioning. At the heavier intensities
+practitioners apply for out-of-sample stability ($\alpha \approx 0.3$--$0.5$) the
+conditioning benefit is decisive and requires no additional preconditioning step.
+That practitioners applying heavy shrinkage are simultaneously conditioning their
+solver has not been made explicit in the portfolio optimisation literature.
+RMT eigenvalue cleaning~\cite{laloux1999,bun2017} provides a more decisive resolution,
+decoupling the two objectives; the Woodbury direct solver for the RMT target is
+developed in the companion paper~\cite{schmelzer2026rmt}.
+
+We benchmark against general-purpose QP solvers (Clarabel interior-point, OSQP operator-splitting) and a non-Krylov
+first-order baseline. On S\&P~500 equity data CG requires 684 iterations without
+shrinkage, falling to 82 under heavy LW shrinkage ($\alpha=0.5$). Called head-to-head
+against the same solvers through their native APIs the algorithmic gain is roughly
+an order of magnitude; against those solvers wrapped in a general modelling layer the
+end-to-end gap is larger still, as it also absorbs problem-construction overhead.
+CG's runtime grows substantially subquadratically in $n$ while
+interior-point methods scale as $O(n^3)$ per iteration, and warm-starting across the
+return-tilt sweep traces a 50-point long-only efficient frontier orders of magnitude
+faster than a na\"{i}ve loop over a modelling layer.
+A rolling-window out-of-sample study on the same universe shows that the heavy-shrinkage
+regime which makes the solver fast is also the regime that minimises realised
+out-of-sample variance while lowering turnover: the statistical and numerical objectives, far from
+conflicting, are reconciled at the intensities practitioners already use.
+\end{abstract}

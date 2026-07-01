@@ -1,0 +1,51 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{authblk}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{remark}{Remark}[section]
+
+\title{Matrix-Free Methods for Long-Only Portfolio Optimization}
+
+\author[1]{Thomas Schmelzer}
+\author[2]{Martin Stoll}
+\author[3,4]{Michael Wolf}
+
+\affil[1]{\small Jebel Quant Research, Abu Dhabi}
+\affil[2]{\small Faculty of Mathematics, TU Chemnitz}
+\affil[3]{\small Department of Economics, University of Zurich}
+\affil[4]{\small ADIA Lab, Abu Dhabi}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\input{s0_abstract}
+
+\input{s1_introduction}
+\input{s2_problem}
+\input{s3_pd}
+\input{s4_nonneg}
+\input{s5_shrinkage}
+\input{s6_methods}
+\input{s7_results}
+\input{s8_conclusions}
+
+\bibliographystyle{siam}
+\bibliography{bib/refs}
+
+\end{document}

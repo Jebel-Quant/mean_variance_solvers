@@ -1,0 +1,70 @@
+\section{Conclusions}\label{sec:conclusions}
+
+The sample covariance of equity returns mixes a small number of well-estimated
+signal eigenvalues with several hundred poorly estimated noise eigenvalues.
+Replacing the noise eigenvalues with their average -- the trace-preserving CRE
+cleaning prescribed by the Marchenko--Pastur
+analysis~\cite{laloux1999,bun2017} -- reduces the condition number by a factor
+of roughly $300$ on S\&P~500 data, and its low-rank-plus-identity form admits
+an exact direct solve via the Woodbury identity.
+
+This paper makes three algorithmic contributions and one empirical contribution.
+
+\emph{Direct Woodbury portfolio solver}. The primal-dual active-set loop requires
+an inner solve of $T_{0,\mathcal{A}}^{\mathrm{RMT}} w = b$ at each outer step.
+The naive approach assembles the $n_a \times n_a$ active-set system matrix and
+solves by Cholesky at cost $O(n_a^2 k + n_a^3)$ per step. The Woodbury
+identity reduces this to $O(n_a k^2 + k^3)$ by working with the $k \times k$
+correction matrix $W$ instead -- cheaper in flops precisely when $k < n_a$
+(Proposition~\ref{prop:crossover}), which holds throughout the long-only
+equity regime. The measured wall-clock advantage is $5\times$ warm and
+$19\times$ cold vs KKT-Cholesky on a $50$-point synthetic frontier sweep, and
+more than $20\times$ cold on a real S\&P~500 minimum-variance solve. Against
+interior-point solvers the advantage is two orders of magnitude (Clarabel
+called natively) and over three orders of magnitude (CVXPY out of the box).
+The returned weights agree with interior-point solutions to solver accuracy
+and attain marginally lower objective values. The same Woodbury kernel powers
+an exact critical-line sweep that traces all $144$ frontier breakpoints for
+the cost of a $50$-point grid (Section~\ref{ssec:cla}).
+
+\emph{Randomised SVD preprocessing}. Computing the top-$k$ eigenpairs of
+$\hat\Sigma$ via a dense eigendecomposition costs $O(n^2 T + n^3)$ and requires
+$O(n^2)$ storage. A randomised truncated SVD applied directly to the return
+matrix $X$ computes the same eigenpairs in $O(nTk)$ time and $O(nk)$ storage;
+the measured portfolio impact of the approximation is below $3$\,bp in any
+weight, an order of magnitude below the $k \pm 1$ threshold uncertainty
+(Section~\ref{sec:ksensitivity}). At $n=3000$, randomised preprocessing is
+$25\times$ faster than dense, and the full pipeline (rSVD + Woodbury solve)
+is $4\times$ faster than the KKT-Cholesky solve alone -- with no
+preprocessing charged to the latter. For daily rolling windows an incremental
+rank-two update of the tracked eigenpairs replaces the re-sketch at a
+$23\times$ lower per-day cost, with median portfolio drift of $7$\,bp over
+$100$ days (Section~\ref{sec:preprocessing}).
+
+\emph{Scope of the structural trick}. Ridge terms, diagonal loadings,
+externally specified factor models, and linear equality constraints preserve
+the Woodbury structure (Remark~\ref{rem:ridge}); nonlinear shrinkage and
+general rotationally invariant estimators~\cite{ledoitpeche2011,ledoit2012,bun2017}
+do not, because they modify the full spectrum. CRE clipping is the member of
+the RMT cleaning family that trades a known statistical refinement for an
+exploitable algebraic structure.
+
+\emph{Empirical validation}. The MP threshold is an insensitive
+hyperparameter: misjudging $k$ by one factor moves portfolio weights by tens
+of basis points and volatility by less than one basis point, and the
+three-point audit costs milliseconds. Rolling out-of-sample backtests on two
+universes -- the high-dimensional S\&P~500 ($n/L \approx 0.98$) and the
+well-sampled FTSE~100 ($n/L \approx 0.17$) -- show the CRE portfolio within
+$0.1$ volatility points of linear shrinkage at the practitioner and oracle
+intensities (and lowest outright on the FTSE), with all minimum-variance
+strategies roughly a third less volatile than equal weight: the estimator
+that enables the fast solver carries no measurable out-of-sample penalty in
+either regime.
+
+\paragraph{Practical recommendations}
+For $n \leq 500$, either preprocessing path is practical; use dense if simplicity
+matters. For $n > 1000$, use randomised SVD. For any sweep of $S \geq 2$ solves
+(efficient frontier, rebalance sequence, sensitivity audit), the
+preprocessing cost amortises to $O(nTk/S)$ per solve. The Woodbury solver is
+preferred over KKT-Cholesky whenever $k < n_a$, which holds throughout the
+parameter regime of long-only institutional equity portfolios.

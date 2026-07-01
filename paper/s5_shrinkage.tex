@@ -1,0 +1,137 @@
+\section{Shrinkage Targets and Preconditioning}\label{sec:shrinkage}
+\label{sec:precond}
+
+\subsection{Linear Shrinkage}\label{ssec:lw}
+
+The sample covariance matrix $\hat \Sigma = \frac{1}{T}X^\top X$ is a poor estimator
+of the true covariance matrix $\Sigma$ when $n$ is not small relative to $T$: its
+smallest eigenvalues are severely downward-biased and the condition number generally
+far exceeds that of $\Sigma$.
+Ledoit and Wolf \cite{ledoit2004} propose \emph{linear shrinkage}: replacing
+$\hat\Sigma$ with a convex combination of itself and a symmetric positive definite
+\emph{shrinkage target} $T_0 = R^\top R$,
+\[
+  \hat\Sigma_{\text{LW}} = (1-\alpha)\,\hat\Sigma + \alpha\, R^\top R,
+\]
+where $\alpha \in (0,1)$ is the shrinkage intensity.
+Shrinkage moves every sample eigenvalue toward the spectrum of $T_0$: eigenvalues far from the target shrink
+more, reducing the condition number of the system matrix.
+The intensity $\alpha$ can be chosen analytically. The classical choice
+$R = \sqrt{\bar\lambda}\,I$ with $\bar\lambda = \|X\|_F^2/(nT)$ gives the
+scaled-identity target $\bar\lambda I$, recovering the original LW estimator, with
+$\alpha$ set by minimising a consistent estimator of the expected Frobenius loss
+\cite{ledoit2004}. The Oracle Approximating Shrinkage (OAS) estimator
+\cite{chen2010} uses the same target $\bar\lambda I$ but a refined formula that
+achieves lower mean squared error when $n/T$ is non-negligible.
+For the S\&P~500 data ($n/T \approx 0.41$), the two formulas give
+$\alpha_{\mathrm{LW}} \approx 0.017$ and $\alpha_{\mathrm{OAS}} \approx 0.010$,
+both small because the Frobenius objective is dominated by the large signal
+eigenvalues and is largely insensitive to the near-zero noise eigenvalues that
+drive poor conditioning. Because both oracle estimates use the same target and
+yield nearly identical solver behaviour, Section~\ref{sec:results} reports only the
+LW oracle alongside $\alpha = 0.5$, representative of the heavier shrinkage
+levels routinely applied in portfolio construction for out-of-sample
+stability \cite{demiguel2009,ledoit2003jpm}.
+
+\begin{proposition}[Condition number under linear shrinkage]\label{prop:shrinkage}
+  Let $\alpha \in (0,1)$, $R^\top R$ SPD. Setting
+  $\hat\Sigma_{\mathrm{LW}} = (1-\alpha)\hat\Sigma + \alpha R^\top R$,
+  Weyl's inequality \cite{hornjohnson2013} gives
+  \[
+    \kappa(\hat\Sigma_{\mathrm{LW}})
+    \;\leq\;
+    \frac{(1-\alpha)\lambda_{\max}(\hat\Sigma) + \alpha\lambda_{\max}(R^\top R)}
+         {\alpha\lambda_{\min}(R^\top R)}\,.
+  \]
+  The bound is strictly decreasing in $\alpha$; as $\alpha \to 1$ it approaches
+  $\kappa(R^\top R)$, which equals $1$ for $R = \sqrt{\bar\lambda}\,I$.
+\end{proposition}
+
+\begin{corollary}[Scaled-identity target]\label{cor:si}
+  For $T_0 = \bar\lambda I$ with $\bar\lambda = \mathrm{tr}(\hat\Sigma)/n$,
+  substituting $\lambda_{\max}(T_0) = \lambda_{\min}(T_0) = \bar\lambda$ into
+  Proposition~\ref{prop:shrinkage} gives
+  \[
+    \kappa(\hat\Sigma_{\mathrm{LW}}) \;\leq\;
+    \frac{1-\alpha}{\alpha}\cdot\frac{\lambda_{\max}(\hat\Sigma)}{\bar\lambda} + 1\,.
+  \]
+  The bound is $O\!\bigl((1-\alpha)/\alpha\bigr)$ and depends on the data only through
+  $\lambda_{\max}(\hat\Sigma)/\bar\lambda$; no knowledge of $\lambda_{\min}(\hat\Sigma)$
+  is required. The constant $\lambda_{\max}(\hat\Sigma)/\bar\lambda$ is also the
+  condition number of the RMT-clipped target $T_0^{\mathrm{RMT}}$ (companion~\cite{schmelzer2026rmt}):
+  the rate at which scaled-identity shrinkage improves conditioning is governed by
+  the spectral dominance of the largest factor.
+\end{corollary}
+On S\&P~500 data the bound is near-tight: at $\alpha=0.5$ it gives
+$\kappa(\hat\Sigma_{\mathrm{LW}}) \leq \lambda_{\max}(\hat\Sigma)/\bar\lambda + 1 \approx 147$,
+matching the empirical value.
+The bound saturates because $\lambda_{\min}(\hat\Sigma) \approx 6\times10^{-7} \ll \alpha\bar\lambda \approx 2.3\times10^{-4}$,
+so $\lambda_{\min}(\hat\Sigma_{\mathrm{LW}}) \approx \alpha\bar\lambda$, which is precisely
+the denominator assumed by Weyl's inequality.
+
+
+For CG applied to $\hat\Sigma_{\mathrm{LW}}\,v = \mathbf{1}$,
+Corollary~\ref{cor:si} makes the $\alpha$-dependence explicit: the condition number
+bound is $O((1-\alpha)/\alpha)$, so doubling $\alpha$ from $0.017$ to $0.034$ roughly
+halves $\kappa$, independent of the noise-eigenvalue floor $\lambda_{\min}(\hat\Sigma)$.
+Nonlinear shrinkage \cite{ledoit2020} applies a
+different coefficient to each sample eigenvalue, achieving a smaller Frobenius loss
+when $n/T$ is non-negligible. The resulting estimator is still a fixed SPD matrix, and
+the matrix-free solvers accept any such target through their dense-target path; what it
+does \emph{not} admit is the augmented stacked-matrix form $\tilde{X}$, because it is not
+a scaled identity plus low-rank update of $\hat\Sigma$. Its target term therefore costs
+$O(n^2)$ per application rather than the $O(nk)$ of a factor target -- the matrix-free
+property is retained, only the linear-time target application is lost.
+
+\paragraph{Matrix-free implementation}
+We apply linear shrinkage by augmenting the return matrix rather than forming
+$\hat\Sigma_{\text{LW}}$ explicitly. Setting $c = 1-\alpha$, the stacked matrix
+\[
+  \tilde{X} = \begin{pmatrix} \sqrt{c/T}\;X \\ \sqrt{\alpha}\;R \end{pmatrix}
+\]
+satisfies $\tilde{X}^\top\tilde{X} = \frac{c}{T}X^\top X + \alpha R^\top R
+= \hat\Sigma_{\text{LW}}$, so any of the solvers in Section~\ref{sec:solvers} can be
+applied to $\tilde{X}$ and produce exactly the LW-shrinkage portfolio weights.
+The augmented-system trick is standard in ridge regression and Tikhonov
+regularisation~\cite{golub2013}; the contributions here are (i)~applying it to
+portfolio optimisation to enable fully matrix-free solvers and (ii)~the
+quantitative identification of LW shrinkage as a preconditioning parameter
+via the $\alpha$-dependent bound of Corollary~\ref{cor:si}.
+
+\paragraph{Conditioning as a by-product}
+Heavy LW intensities ($\alpha \approx 0.3$--$0.5$), already applied by practitioners
+for out-of-sample stability, also compress $\kappa$ substantially as a free by-product
+-- a connection not previously made explicit in the portfolio optimisation literature.
+The mechanism is structural: the LW oracle $\alpha^* = \beta^2/\delta^2$ is small
+because $\delta^2 = \|\hat\Sigma - \bar\lambda I\|_F^2$ is dominated by the large,
+well-estimated eigenvalues (the market factor alone contributes
+$(\lambda_1 - \bar\lambda)^2 \approx (0.067)^2$ to $\delta^2$), while each near-zero
+noise eigenvalue contributes only $\bar\lambda^2 \approx 2\times10^{-7}$.
+The near-zero eigenvalues -- sole cause of $\kappa \approx 109{,}000$ -- receive
+negligible correction from the oracle; Corollary~\ref{cor:si} quantifies this: at
+$\alpha^* \approx 0.017$ the bound gives $\kappa \lesssim 8{,}500$, barely below the
+unshrunk value. Reaching the practical operating range requires $(1-\alpha)/\alpha =
+O(1)$, i.e.\ $\alpha \geq 0.3$, at which point the two objectives are reconciled by
+the same cross-validation practitioners already perform.
+
+\paragraph{Factor-model targets}
+Practitioners frequently replace the scaled-identity target $\bar\lambda I$ with a structured estimate
+$T_0 = B B^\top + D$, where $B \in \mathbb{R}^{n \times k}$ holds the loadings of
+$k \ll n$ statistical or commercial risk factors (e.g.\ principal components of $X$,
+Fama-French factors, or Barra model factors) and $D$ is a diagonal idiosyncratic-variance
+matrix. This target is a drop-in replacement in the stacked-matrix construction: writing
+\[
+  R = \begin{pmatrix} B^\top \\ D^{1/2} \end{pmatrix}
+\]
+gives $R^\top R = B B^\top + D$, and $\hat\Sigma_{\mathrm{LW}}$ is formed as before
+without any modification to the solvers. Because the factor structure clusters
+eigenvalues of $\hat\Sigma_{\mathrm{LW}}$ more tightly than a scaled identity,
+Proposition~\ref{prop:shrinkage} yields a smaller $\kappa$ bound at the same $\alpha$,
+and CG converges in fewer iterations (Proposition~\ref{prop:cg}). The matrix-vector
+product $\hat\Sigma_{\mathrm{LW}}\,v$ remains $O(nT)$: the factor and diagonal terms
+cost $O(nk)$ and $O(n)$, both dominated by the $O(nT)$ data term. The only additional
+input required is the estimated $B$ and $D$, a step already present in any
+factor-model workflow and orthogonal to the computational contribution of this paper.
+
+The stacked-matrix construction extends beyond the scaled-identity family to any
+SPD shrinkage target $T_0$.
