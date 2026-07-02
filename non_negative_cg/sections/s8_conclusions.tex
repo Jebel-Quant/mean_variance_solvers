@@ -1,0 +1,21 @@
+\section{Conclusions}
+
+Conjugate gradients solves SPD systems; it does not, unaided, respect $x \geq 0$. This note
+supplies the missing layer. The bound-constrained quadratic $\min_{x\geq0}
+\tfrac{1}{2}x^\top A x - b^\top x$ -- and its least-squares and equality-augmented variants --
+reduces, on any fixed free set, to an unconstrained SPD solve that CG performs matrix-free;
+non-negativity is enforced around it by a primal-dual active-set loop whose asset toggles are
+the principal pivots of $\mathrm{LCP}(A,\,{-b})$. Because $A \succ 0$ is a $P$-matrix,
+guarding a fast block-pivot path with a least-index Bland fallback yields unconditional finite
+termination at the unique global minimiser (Theorem~\ref{thm:termination}), with no
+non-degeneracy assumption. The inner solver retains CG's $O(\sqrt\kappa)$ Krylov rate, a factor
+$\sqrt\kappa$ ahead of the loop-free projected-gradient comparator, and a regularising split
+$A_\alpha = (1-\alpha)A + \alpha R^\top R$ simultaneously compresses $\kappa$ and secures the
+$P$-matrix property, so it both accelerates the inner solve and licenses the termination proof.
+
+The construction is deliberately application-agnostic: it takes an SPD operator (or a
+rectangular $M$ with $A = M^\top M$), a right-hand side, and an optional normalisation, and
+returns the non-negative minimiser. The companion papers~\cite{schmelzer2026matrixfree,%
+schmelzer2026rmt} instantiate it as their computational kernel and report quantitative
+benchmarks on structured operators; the guarantees and complexity recorded here hold for any
+SPD $A$.

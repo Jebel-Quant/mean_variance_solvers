@@ -1,0 +1,80 @@
+\section{Introduction}
+
+The conjugate gradient method (CG) of Hestenes and Stiefel~\cite{hestenes1952} is the
+canonical Krylov solver for a symmetric positive definite (SPD) linear system $A x = b$;
+see, e.g., Golub and Van Loan~\cite{golub2013} or Greenbaum~\cite{greenbaum1997}. It builds
+its iterates in the Krylov subspace $\mathcal{K}_k(A, b)$ and converges at the
+$O(\sqrt\kappa)$ rate, where $\kappa = \kappa(A)$ is the spectral condition number
+(Proposition~\ref{prop:cg}). What CG does \emph{not} do is respect an inequality: it solves
+equations, not constrained programs. This note is about the gap between the two -- how to
+make CG deliver the solution of the bound-constrained quadratic
+\begin{equation}\label{eq:bqp}
+  \min_{x \in \mathbb{R}^n}\; f(x) = \tfrac{1}{2}\,x^\top A x - b^\top x
+  \quad\text{subject to}\quad x \geq 0,
+  \qquad A \succ 0,
+\end{equation}
+without giving up its per-iteration cost or its Krylov convergence rate.
+
+Problem~\eqref{eq:bqp} is the strictly convex non-negative quadratic program. When
+$A = M^\top M$ is the Gram matrix of $M \in \mathbb{R}^{m\times n}$ and $b = M^\top d$, its
+minimiser is the solution of the non-negative least-squares (NNLS) problem
+$\min_{x\geq 0}\|Mx - d\|_2^2$, the setting of Lawson and Hanson~\cite{lawson1974}. Without
+the constraint, the minimiser is simply $x = A^{-1}b$, which is exactly what CG computes; the
+constraint $x \geq 0$ is what stands between that clean solve and the answer. We also treat
+the \emph{equality-augmented} variant, in which a single linear normalisation
+$\mathbf{1}^\top x = \beta$ is imposed alongside $x \geq 0$, because it arises whenever the
+solution is required to lie on an affine slice of the non-negative orthant and because its
+multiplier can be eliminated analytically (Section~\ref{sec:reduction}).
+
+This note studies the constraint-handling layer directly. Its contribution is a
+\emph{primal-dual active-set} outer loop that wraps CG: it solves the unconstrained system
+over a working set of \emph{free} variables, releases any variable that returns negative
+(the primal step), re-admits any bound variable whose reduced gradient is negative (the dual
+step), and restarts CG on the modified free set each time. We make three points about this
+construction. First, the variable toggles are precisely the \emph{principal pivots} of the
+linear complementarity problem (LCP) $(A,\,{-b})$, and $A \succ 0$ makes it a $P$-matrix, so
+every principal submatrix is invertible and each pivot is well
+defined~\cite{murty1988,judice1994,kim2011}. Second, guarding a fast block-pivot path with a
+least-index Bland-style fallback yields \emph{unconditional} finite termination at the unique
+global minimiser, with no non-degeneracy hypothesis (Theorem~\ref{thm:termination}). Third,
+integrating a Krylov inner solver with a changing free set -- restarting CG on each reduced
+system and warm-starting it across a parametric family of problems -- is what turns the
+finite-termination guarantee into a fast solver in practice.
+
+The inner solve preserves two properties that matter for speed. It is \emph{matrix-free}:
+when $A = M^\top M$, the action $v \mapsto A_{\mathcal{F}}v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}v)$
+on the free set $\mathcal{F}$ is evaluated as two products with $M_{\mathcal{F}}$, so $A$ is
+never assembled and no $O(n^2)$ storage is incurred. And its iteration count is governed by
+$\kappa$, so any preconditioner that compresses the spectrum accelerates it. A ridge/Tikhonov
+splitting $A \mapsto A_\alpha = (1-\alpha)A + \alpha R^\top R$ with $R^\top R \succ 0$ does
+both: it lowers $\kappa$ (Proposition~\ref{prop:regcond}) and, by keeping every principal
+submatrix strictly positive definite, secures the $P$-matrix property the finite-termination
+proof relies on (Section~\ref{sec:conditioning}).
+
+For contrast we analyse a loop-free comparator that enforces the constraint at every step: a
+\emph{projected-gradient} method that takes a gradient step and projects onto the feasible set
+-- the non-negative orthant for~\eqref{eq:bqp}, or the affine simplex slice
+$\Delta_\beta = \{x : \mathbf{1}^\top x = \beta,\, x \geq 0\}$ for the equality-augmented
+variant, the latter computed in $O(n\log n)$ by a sort-and-threshold
+pass~\cite{duchi2008,condat2016}. It is single-stage and simple, but it is not a Krylov
+method: it does not orthogonalise residuals against prior search directions and converges at
+the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop
+(Section~\ref{sec:nonneg}).
+
+The two ingredients are individually classical -- active-set and block-principal-pivoting
+methods for the non-negative and complementarity problems~\cite{lawson1974,judice1994,kim2011,%
+murty1988,nocedal2006}, and CG with preconditioning for SPD systems~\cite{hestenes1952,%
+golub2013,greenbaum1997,benzi2005}. What this note isolates is their combination: a
+matrix-free Krylov inner solver driven through a changing active set with an unconditional
+finite-termination guarantee, and warm-started across a parametric sweep. The algorithm is
+the computational kernel of the companion papers~\cite{schmelzer2026matrixfree,%
+schmelzer2026rmt}, which instantiate it on large structured problems; here it is developed and
+analysed on its own, independent of any application.
+
+Section~\ref{sec:problem} states the problem and its KKT/complementarity structure;
+Section~\ref{sec:reduction} reduces it to a sequence of unconstrained SPD solves, records the
+matrix-free CG operator and its convergence rate, and eliminates the equality multiplier
+analytically; Section~\ref{sec:nonneg} develops the active-set loop and the projected-gradient
+comparator and proves finite termination; Section~\ref{sec:conditioning} treats regularisation
+and preconditioning; and Section~\ref{sec:results} records the complexity of each method and
+discusses its behaviour on synthetic SPD test problems.

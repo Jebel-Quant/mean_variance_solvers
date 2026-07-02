@@ -1,7 +1,7 @@
 # mean_variance_solvers
 
-LaTeX source for two companion working papers on fast, matrix-free solvers for
-the long-only minimum-variance / mean-variance portfolio problem, by Thomas
+LaTeX source for a set of companion working papers on fast, matrix-free solvers
+for the long-only minimum-variance / mean-variance portfolio problem, by Thomas
 Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
 (University of Zurich / ADIA Lab):
 
@@ -13,8 +13,17 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
   Mean-Variance Portfolios** — under [`rmt/`](rmt/). Uses random-matrix theory
   (Marchenko–Pastur) to motivate a low-rank-plus-diagonal covariance model that
   a Woodbury identity turns into a fast direct solver.
+- **Non-Negative Conjugate Gradients** — under
+  [`non_negative_cg/`](non_negative_cg/). A domain-neutral technical note that
+  isolates the computational kernel shared by the two papers above: solving the
+  bound-constrained SPD quadratic `min_{x≥0} ½xᵀAx − bᵀx` (and its
+  least-squares / equality-augmented variants) by wrapping matrix-free
+  conjugate gradients in a primal-dual active-set loop, with an unconditional
+  finite-termination guarantee and an operator abstraction that admits dense,
+  Gram, factor/Woodbury, and regularised backends. It contains no finance
+  material; the other two papers are, in its terms, two backends of one solver.
 
-Both papers share one bibliography
+All three papers share one bibliography
 ([`matrix_free/bib/refs.bib`](matrix_free/bib/refs.bib))
 and draw every figure and table from the same numerical experiments in
 [`experiment/`](experiment/).
@@ -65,6 +74,11 @@ rmt/
   sections/              one .tex per section (s0_abstract … s8_conclusions)
   graphs -> ../experiment/graphs
   tables -> ../experiment/tables
+non_negative_cg/
+  Makefile               builds nncg_paper.pdf (cites ../matrix_free/bib/refs.bib)
+  nncg_paper.tex         main file: preamble + \input of the sections
+  sections/              one .tex per section (s0_abstract … s8_conclusions)
+                         (domain-neutral: no experiment figures/tables, no symlinks)
 experiment/              numerical experiments that generate graphs/ and tables/
   experiment*.py         PEP 723 scripts (real-data, synthetic, OOS, RMT)
   fetch_*.py             download the raw S&P 500 / FTSE 100 return data
