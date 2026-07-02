@@ -82,6 +82,24 @@ papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt}, which instantiate it on 
 structured problems; here it is developed and analysed on its own, independent of any
 application.
 
+Driving CG through a changing set of free variables has a lineage of its own, and the
+distinction from it is worth drawing precisely. Bertsekas' projected Newton
+method~\cite{bertsekas1982}, Mor\'e and Toraldo's GPCG~\cite{moretoraldo1991}, and Dost\'al's
+proportioning and MPRGP algorithms~\cite{dostal1997,dostalschoberl2005} are \emph{feasible-point}
+methods: every iterate satisfies the bounds, the working face changes through gradient
+projections, and the switches between projection and CG phases are governed by
+sufficient-decrease or proportioning tests, with convergence rates in terms of $\kappa$ and
+finite identification of the optimal face guaranteed under a non-degeneracy
+(strict-complementarity) assumption. The loop developed here is instead a
+\emph{complementary-basis} method: its iterates are infeasible between outer steps, the free
+set changes by principal pivots driven by signs alone -- no line search, no decrease test --
+and termination is combinatorial, resting on Murty's least-index rule, which is what removes
+the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast
+NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations
+cross-products, but still assembles $M^\top M$ and solves each working-set system by dense
+factorisation; the present method forms neither, reaching $A$ only through the two operator
+applications of Section~\ref{sec:operators}.
+
 Section~\ref{sec:problem} states the problem and its KKT/complementarity structure;
 Section~\ref{sec:reduction} reduces it to a sequence of unconstrained SPD solves, records the
 matrix-free CG operator and its convergence rate, and eliminates the equality multipliers
