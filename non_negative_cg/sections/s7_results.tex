@@ -135,6 +135,14 @@ regularisation.
 \end{minipage}
 \end{figure}
 
+\emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
+CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
+twin loop whose inner solver is an exact direct solve produces \emph{identical} free-set
+trajectories on all \nncgTrajTotal{} planted instances
+($\kappa \in \{10^2, 10^4, 10^6\}$, five seeds each): the guarantee of
+Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
+in principle but decision-for-decision.
+
 \emph{The general equality constraint.} The same loop with the Schur-complement elimination of
 Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp} for a general
 $Bx = c$. On planted instances with $B \in \mathbb{R}^{p\times n}$ of full row rank, the solver

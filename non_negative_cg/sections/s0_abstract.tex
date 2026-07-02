@@ -21,7 +21,10 @@ concerns termination: guarding a fast block-pivot path with a least-index Bland 
 prove the loop reaches the unique global minimiser in finitely many outer steps with
 \emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}) -- removing the hypothesis
 that classical block-principal-pivoting termination arguments require, while a synthetic study
-shows the fallback is provably necessary yet never entered on generic data. A loop-free
+shows the fallback is provably necessary yet never entered on generic data. The guarantee is
+robust to inexactness: once CG's residual tolerance is tied to the decision threshold, the
+inexact loop provably visits the same free sets as the exact one
+(Lemma~\ref{lem:inexact}). A loop-free
 projected-gradient comparator, which enforces the constraints simultaneously but forgoes the
 Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alongside it.
 

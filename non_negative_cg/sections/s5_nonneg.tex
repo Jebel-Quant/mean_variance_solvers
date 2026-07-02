@@ -137,12 +137,86 @@ $s_i = 0$ exactly for some toggled $i$ -- a codimension-one, hence non-generic,
 condition~\cite{judice1994}; block principal pivoting therefore converges in a handful of outer
 steps on typical data, with the fast path alone certifying optimality.
 
-\begin{remark}[Inexact inner solves]\label{rem:exact}
 Theorem~\ref{thm:termination} assumes each inner call returns the exact minimiser of
-$f_{\mathcal{F}}$. CG is run to a relative residual tolerance $\varepsilon$, so the returned
-iterate is inexact; because the dual-feasibility test of line~5 uses the same $\varepsilon$, an
-iterate accurate to $\varepsilon$ is accepted. The finite-termination argument holds exactly in
-exact arithmetic and to working accuracy in finite precision.
+$f_{\mathcal{F}}$; CG returns an iterate accurate only to its residual tolerance. The
+following lemma closes that gap: once the residual is tight enough relative to the test
+threshold $\varepsilon$, every primal and dual sign decision of Algorithm~\ref{alg:elim}
+coincides with the decision the exact solve would make, so the inexact loop inherits the
+theorem wholesale.
+
+\begin{lemma}[Inexact inner solves]\label{lem:inexact}
+For a free set $\mathcal{F}$ let $\hat x(\mathcal{F})$ denote the exact solution
+of~\eqref{eq:innerspd} extended by zeros to $\mathbb{R}^n$, and
+$\hat s(\mathcal{F}) = A\,\hat x(\mathcal{F}) - b$ its reduced gradient. Define the
+\emph{decision margin}
+\[
+  \mu \;=\; \min_{\mathcal{F} \subseteq \{1,\dots,n\}} \min\Big(
+    \big\{\, |\hat x_i(\mathcal{F})| : i \in \mathcal{F},\ \hat x_i(\mathcal{F}) \neq 0 \,\big\}
+    \,\cup\,
+    \big\{\, |\hat s_i(\mathcal{F})| : i \notin \mathcal{F},\ \hat s_i(\mathcal{F}) \neq 0 \,\big\}
+  \Big),
+\]
+the smallest nonzero magnitude any primal or dual test can encounter; $\mu > 0$ as a minimum
+of finitely many positive numbers. Suppose the test tolerance satisfies
+$0 < \varepsilon < \mu$ and every inner CG call is stopped at a residual
+$\rho = \lVert b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}} \rVert_2$ obeying
+\begin{equation}\label{eq:inexactcond}
+  \rho\;\frac{1 + \lambda_{\max}(A)}{\lambda_{\min}(A)}
+  \;<\; \min\big(\varepsilon,\ \mu - \varepsilon\big).
+\end{equation}
+Then at every outer step the violator sets $\mathcal{D}, \mathcal{V}$ of
+Algorithm~\ref{alg:elim} computed from the CG iterate coincide with those computed from the
+exact solve on the same free set. The inexact loop therefore traverses exactly the free-set
+sequence of the exact loop, Theorem~\ref{thm:termination} applies verbatim, and the returned
+iterate satisfies $\lVert \tilde x - x^\star \rVert_\infty \le \rho/\lambda_{\min}(A)$.
+\end{lemma}
+
+\begin{proof}
+Write $r = b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}}$, so
+$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. Cauchy interlacing
+gives $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence
+\[
+  \delta_x \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_\infty
+  \;\le\; \lVert A_{\mathcal{F}}^{-1} r \rVert_2
+  \;\le\; \rho/\lambda_{\min}(A).
+\]
+For a bound index $i \notin \mathcal{F}$ the reduced gradients differ by
+$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$,
+and $\lVert A_{i,\mathcal{F}} \rVert_2 \le \lVert A \rVert_2 = \lambda_{\max}(A)$, so
+$\delta_s := \max_i |\tilde s_i - \hat s_i| \le \lambda_{\max}(A)\,\rho/\lambda_{\min}(A)$.
+Both perturbations are bounded by
+$\delta := \rho\,(1+\lambda_{\max}(A))/\lambda_{\min}(A) < \min(\varepsilon, \mu-\varepsilon)$
+by~\eqref{eq:inexactcond}.
+
+Fix $i \in \mathcal{F}$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$; either
+way $\tilde x_i \ge -\delta > -\varepsilon$, so the inexact test does not flag $i$, matching
+the exact test. If $\hat x_i < 0$ then $\hat x_i \le -\mu$ by the definition of $\mu$, so
+$\tilde x_i \le -\mu + \delta < -\varepsilon$: both tests flag $i$. The identical case split
+with $\hat s_i$ and $\delta_s$ handles the dual test. Hence
+$\tilde{\mathcal{D}} = \hat{\mathcal{D}}$ and $\tilde{\mathcal{V}} = \hat{\mathcal{V}}$ at
+this step; since both loops start from $\mathcal{F} = \{1,\dots,n\}$ and the counters
+$\bar N, p$ are functions of the violator sequence, induction gives the same free-set
+trajectory and the same stopping step. At termination the exact iterate is $x^\star$
+(Theorem~\ref{thm:termination}), so
+$\lVert \tilde x - x^\star \rVert_\infty = \delta_x \le \rho/\lambda_{\min}(A)$, the off-set
+entries being zero in both.
+\end{proof}
+
+\begin{remark}[Reading the margin condition]\label{rem:inexact}
+Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
+excluded: the threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
+lemma -- like the theorem it protects -- needs no non-degeneracy assumption. Moreover, since
+$\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
+with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
+algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a
+\emph{relative} residual $\varepsilon_{\mathrm{cg}}$, then
+$\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$ and
+condition~\eqref{eq:inexactcond} becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone.
+(iii) The margin $\mu$ is not computable a priori -- the lemma is a license, not a recipe: it
+guarantees that \emph{some} finite tolerance reproduces the exact trajectory, and in practice
+a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffices
+(Section~\ref{ssec:synthetic} verifies trajectory-for-trajectory agreement at
+$\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$).
 \end{remark}
 
 \subsection{Projected-gradient comparator}\label{ssec:proj}

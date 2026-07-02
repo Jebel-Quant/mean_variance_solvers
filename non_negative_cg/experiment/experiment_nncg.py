@@ -134,11 +134,13 @@ def cg(matvec, rhs, tol=1e-8, maxit=100000):
 # Active-set / block-principal-pivoting loop (Algorithm 4.1)
 # ---------------------------------------------------------------------------
 
-def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3):
+def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False):
     """Minimise 1/2 x^T A x - b^T x over x >= 0 by the active-set loop.
 
     Each free-block solve is matrix-free CG on v -> A_F v; A is never refactorised.
-    Returns a dict of x and the outer/inner/fallback counters of the loop.
+    inner="exact" swaps in a direct dense solve (used to verify the inexactness
+    lemma: the CG-driven loop must visit the same free sets). track=True records
+    the free-set trajectory. Returns a dict of x and the loop counters.
     """
     n = len(b)
     free = np.ones(n, dtype=bool)  # F = {1..n} initially
@@ -146,11 +148,17 @@ def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3):
     N_bar = n + 1
     patience = p_max
     outer = inner_total = fallback = 0
+    traj = [] if track else None
 
     while True:
         idx = np.flatnonzero(free)
+        if track:
+            traj.append(tuple(idx.tolist()))
         A_FF = A[np.ix_(idx, idx)]  # sliced view drives the matrix-free mat-vec
-        xF, k_step = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol)
+        if inner == "exact":
+            xF, k_step = np.linalg.solve(A_FF, b[idx]), 1
+        else:
+            xF, k_step = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol)
         outer += 1
         inner_total += k_step
 
@@ -178,7 +186,7 @@ def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3):
             i_star = int(viol.min())
             free[i_star] = not free[i_star]
 
-    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback}
+    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback, "traj": traj}
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +447,31 @@ print(f"\nEquality-augmented solver recovers the planted optimum to {eq_err:.1e}
       f" across p in {{1,3,10}} (p=1 reproduces the single-normalisation case).")
 
 
+# ===========================================================================
+# Panel E: inexactness lemma -- CG vs exact inner solves visit the same free sets
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Trajectory agreement: CG inner solve vs exact inner solve  (Lemma)")
+print("=" * 72)
+
+print(f"{'kappa':>9}  {'seed':>5}  {'outer(CG)':>10}  {'outer(exact)':>13}  {'same traj':>10}")
+traj_total = traj_agree = 0
+for kap in (1e2, 1e4, 1e6):
+    for sd in SEEDS:
+        A, b, x_star, _ = make_problem(N, kap, seed=sd)
+        r_cg = solve_nnqp(A, b, track=True)
+        r_ex = solve_nnqp(A, b, inner="exact", track=True)
+        same = r_cg["traj"] == r_ex["traj"]
+        traj_total += 1
+        traj_agree += same
+        print(f"{kap:>9.0e}  {sd:>5}  {r_cg['outer']:>10}  {r_ex['outer']:>13}  {str(same):>10}")
+
+print(f"\nCG-driven loop visits the exact loop's free sets on {traj_agree}/{traj_total} "
+      f"instances (cg_tol=1e-10, test tol=1e-8), as the inexactness lemma licenses.")
+
+
 # ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
@@ -548,5 +581,7 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgRatioSlope}}{{{ratio_slope:.2f}}}\n")
     fh.write(f"\\newcommand{{\\nncgKappaMax}}{{10^{{{int(round(np.log10(KAPPAS_PG[-1])))}}}}}\n")
     fh.write(f"\\newcommand{{\\nncgEqErr}}{{{eq_err:.0e}}}\n")
+    fh.write(f"\\newcommand{{\\nncgTrajAgree}}{{{traj_agree}}}\n")
+    fh.write(f"\\newcommand{{\\nncgTrajTotal}}{{{traj_total}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")
