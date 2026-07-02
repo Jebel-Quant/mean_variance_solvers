@@ -50,34 +50,148 @@ $O(\sqrt\kappa)$ dominates projected gradient's $O(\kappa)$ whenever $\kappa$ is
 when the regularising split compresses $\kappa$ to $O(1)$ do the inner counts become
 comparable, at which point projected gradient's loop-free simplicity is attractive.
 
+The equality-augmented problem~\eqref{eq:eqp} multiplies the inner cost of an outer step by the
+$p+1$ right-hand sides that share the operator $A_{\mathcal{F}}$
+(Section~\ref{sec:reduction}), plus an $O(p^3)$ dense Schur solve that is negligible for the
+small $p$ of typical balance conditions; the asymptotics in $n$, $m$, and $\kappa$ are
+otherwise those of Table~\ref{tab:complexity}.
+
 \subsection{Behaviour on synthetic SPD problems}\label{ssec:synthetic}
 
-The propositions pin down how the solver behaves on a controlled family of test problems.
-Take $A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a prescribed spectrum
-$\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_n)$ of target condition number $\kappa$
-(equivalently $A = M^\top M$ for a random $M$ with the desired singular values), and plant a
-non-negative solution $x^\star \geq 0$ with a chosen support size $|\{i : x^\star_i > 0\}|$ by
-setting $b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$. Three qualitative
-predictions follow directly and are what the companion benchmarks confirm on their structured
-operators:
+We test the propositions on a controlled family with a known optimum. Take
+$A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a geometric spectrum
+$\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_n)$ on $[1,\kappa]$ of prescribed condition
+number $\kappa$ (equivalently $A = M^\top M$ for a random $M$ with the chosen singular values),
+and plant a non-negative solution $x^\star \geq 0$ of a chosen support by setting
+$b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$; then $(x^\star, s^\star)$ is
+the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below use $n=200$
+(support $50\%$) averaged over five seeds, with the smaller $n=120$ where the projected-gradient
+$O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
+NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the comparator
+directly from their definitions. The geometric spectrum is the honest choice: its clustering
+lets CG converge faster than the worst-case bound, so the measured growth is an
+\emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a fitted exponent.
 
-\begin{itemize}
-  \item \emph{Inner count tracks $\sqrt\kappa$.} By Proposition~\ref{prop:cg} the CG
-  iterations to a fixed tolerance grow like $\sqrt\kappa$, so the regularising
-  split~\eqref{eq:regsplit} -- which lowers $\kappa$ at rate $O((1-\alpha)/\alpha)$
-  (Proposition~\ref{prop:regcond}) -- reduces the count steeply as $\alpha$ increases from
-  zero. The effect is largest in the rank-deficient regime $m < n$, where the unsplit system
-  is singular and only $\alpha > 0$ makes CG well posed.
-  \item \emph{Outer count is small.} Block principal pivoting adjusts the free set by a few
-  indices per step and, being non-cyclic through the Bland fallback
-  (Theorem~\ref{thm:termination}), reaches the correct support in a number of outer steps that
-  scales with how far the initial full set is from the optimal support, not with $n$; the
-  patience budget is essentially never exhausted on generic data.
-  \item \emph{CG beats projected gradient by $\sqrt\kappa$.} At matched per-step cost the two
-  matrix-free methods separate by exactly the $O(\sqrt\kappa)$-versus-$O(\kappa)$ factor of
-  Propositions~\ref{prop:cg} and~\ref{prop:proj}, the gap widening with $\kappa$ and closing
-  under heavy regularisation.
-\end{itemize}
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_synthetic}
+\caption{Active-set solve of~\eqref{eq:bqp} on the synthetic family ($n=200$, support $50\%$,
+mean over five seeds). Outer steps stay in single digits and grow only weakly with $\kappa$;
+the total CG inner count grows sublinearly in $\kappa$ (slope $\nncgCGslope$ in $\log$--$\log$,
+$R^2 = \nncgCGrtwo$, against the $O(\sqrt\kappa)$ worst case); the least-index Bland fallback is
+never triggered on this generic data, so the fast block-pivot path certifies optimality by
+itself. The solver recovers the planted $x^\star$ to $\nncgMaxErr$.}
+\label{tab:nncg_synthetic}
+\end{table}
+
+Three predictions of the analysis are borne out.
+
+\emph{(i) Inner count is bounded by $\sqrt\kappa$; regularisation lowers it.}
+Figure~\ref{fig:nncg_kappa} shows the total CG inner iterations rising with $\kappa$ but
+staying under the $O(\sqrt\kappa)$ envelope of Proposition~\ref{prop:cg} (measured slope
+$\nncgCGslope < \tfrac12$, the clustered spectrum buying CG its superlinear phase). The
+regularising split~\eqref{eq:regsplit} with $R^\top R = I$ compresses $\kappa$ at rate
+$O((1-\alpha)/\alpha)$ (Proposition~\ref{prop:regcond}) and drives the count down monotonically
+as $\alpha$ increases (Figure~\ref{fig:nncg_reg}); the effect is largest in the rank-deficient
+regime $m < n$, where only $\alpha > 0$ makes the system well posed
+(Table~\ref{tab:nncg_rankdef} below).
+
+\emph{(ii) Outer count is small and the fallback is dormant.}
+Across $\kappa \in [10, 10^6]$ the active-set loop terminates in at most $\nncgMaxOuter$ outer
+steps (Table~\ref{tab:nncg_synthetic}), adjusting the free set by a few indices per step and
+reaching the correct support in a count that tracks its distance from the initial full set, not
+$n$. The patience budget is never exhausted -- the Bland fallback of
+Theorem~\ref{thm:termination} guarantees termination but is not entered on generic data, exactly
+the codimension-one argument of Section~\ref{sec:nonneg}.
+
+\emph{(iii) CG beats projected gradient by a widening $\sqrt\kappa$ factor.}
+Figure~\ref{fig:nncg_cgpg} plots both matrix-free methods at matched per-step cost. Both run
+faster than their worst-case bounds on the clustered spectrum, but projected gradient's growth
+exponent is about twice CG's, so their ratio grows as $\kappa^{\nncgRatioSlope}$ -- essentially
+the predicted $\sqrt\kappa$ -- from parity at $\kappa=10$ to $\nncgPGratio\times$ at
+$\kappa = \nncgKappaMax$. This is the $O(\sqrt\kappa)$-versus-$O(\kappa)$ separation of
+Propositions~\ref{prop:cg} and~\ref{prop:proj}, widening with $\kappa$ and closing under heavy
+regularisation.
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{graphs/nncg_kappa}
+  \caption{CG inner count vs.\ $\kappa$, under the $O(\sqrt\kappa)$ envelope.}
+  \label{fig:nncg_kappa}
+\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{graphs/nncg_cg_vs_pg}
+  \caption{Krylov vs.\ first order: $O(\sqrt\kappa)$ vs.\ $O(\kappa)$.}
+  \label{fig:nncg_cgpg}
+\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{graphs/nncg_reg}
+  \caption{Regularising split: count falls as $\kappa(A_\alpha)$ shrinks.}
+  \label{fig:nncg_reg}
+\end{minipage}
+\end{figure}
+
+\emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
+regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
+$M \in \mathbb{R}^{100\times 200}$, so every free block with $|\mathcal{F}| > m = 100$ is
+singular -- including the initial one, since the loop starts from
+$\mathcal{F} = \{1,\dots,n\}$. The failure at $\alpha = 0$ is instructive in its anatomy.
+When the planted support lies \emph{below} the rank, the first inner solve can never meet its
+tolerance (the residual stalls at the component of $b_{\mathcal{F}}$ outside the range of
+$A_{\mathcal{F}}$, so the iteration cap is hit and the iterate carries no certificate), yet
+the uncertified signs may still identify the support, after which the shrunken free blocks
+are regular: the loop then reaches the optimum on \nncgRankConvLow{} of five seeds -- at an
+order of magnitude more inner iterations -- and fails to converge on the remainder. When the
+optimal support \emph{exceeds} the rank, the final free block is itself singular, no
+certificate is ever available, and the loop converges on \nncgRankConvHigh{} of five seeds.
+Any $\alpha > 0$ restores the $P$-matrix premise of Theorem~\ref{thm:termination}, and with
+it both reliability and speed: every run converges, recovering the planted optimum to
+$\nncgRankOkErr$. The point is sharpened rather than softened by the partial successes at
+$\alpha = 0$: what regularisation buys is not merely conditioning but the \emph{guarantee} --
+without it, termination is luck.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_rankdef}
+\caption{The rank-deficient regime ($n = 200$, $m = 100$, five seeds; CG capped at $2000$
+iterations per solve, $30$ outer steps). ``Capped solves'' counts runs whose first inner
+solve hit the iteration cap without meeting its tolerance. At $\alpha = 0$ the loop is
+unreliable below the rank and fails uniformly above it; any $\alpha > 0$ converges on every
+seed with an order of magnitude fewer inner iterations.}
+\label{tab:nncg_rankdef}
+\end{table}
+
+\emph{Preconditioning.} Section~\ref{sec:conditioning}'s claim that a preconditioner slots
+into the loop unchanged is tested on operators with a well-conditioned core and a badly
+scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
+and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
+Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the spread
+(\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
+plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
+$\kappa(A) \approx \nncgPcgKappa$): a factor of $\nncgPcgRatio$ recovered by a
+preconditioner that costs one vector division per iteration.
+
+\emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
+CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
+twin loop whose inner solver is an exact direct solve produces \emph{identical} free-set
+trajectories on all \nncgTrajTotal{} planted instances
+($\kappa \in \{10^2, 10^4, 10^6\}$, five seeds each): the guarantee of
+Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
+in principle but decision-for-decision.
+
+\emph{The general equality constraint.} The same loop with the Schur-complement elimination of
+Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp} for a general
+$Bx = c$. On planted instances with $B \in \mathbb{R}^{p\times n}$ of full row rank, the solver
+recovers the optimum to $\nncgEqErr$ and meets the equality to machine precision for
+$p \in \{1, 3, 10\}$, with the inner cost scaling as the $p+1$ shared right-hand sides
+anticipated in Section~\ref{sec:reduction}; the case $p=1$ reproduces the single-normalisation
+solve exactly.
 
 Quantitative wall-clock studies on structured operators arising in applications -- including
 scaling with problem size and warm-started parametric sweeps -- are reported in the companion

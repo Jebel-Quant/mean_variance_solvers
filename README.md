@@ -24,9 +24,12 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
   material; the other two papers are, in its terms, two backends of one solver.
 
 All three papers share one bibliography
-([`matrix_free/bib/refs.bib`](matrix_free/bib/refs.bib))
-and draw every figure and table from the same numerical experiments in
-[`experiment/`](experiment/).
+([`matrix_free/bib/refs.bib`](matrix_free/bib/refs.bib)). The two finance papers
+draw every figure and table from the same numerical experiments in
+[`experiment/`](experiment/); the non-negativity note is self-contained and
+draws its synthetic-study figures and tables from its own
+[`non_negative_cg/experiment/`](non_negative_cg/experiment/) (NumPy only, no
+finance data).
 
 ## Building
 
@@ -34,8 +37,8 @@ A `Makefile` at the repository root drives everything; run `make` (or
 `make help`) for the list of targets:
 
 ```sh
-make compile   # build both papers (matrix_free/minvar_paper.pdf and rmt/rmt_paper.pdf)
-make figures   # regenerate both papers' figures and tables (runs the experiment)
+make compile   # build every paper (minvar_paper.pdf, rmt_paper.pdf, nncg_paper.pdf)
+make figures   # regenerate every paper's figures and tables (finance experiment + nncg study)
 make arxiv     # assemble a self-contained arXiv source tarball per paper
 make clean     # remove both papers' LaTeX build artifacts (keeps the PDFs)
 ```
@@ -78,7 +81,9 @@ non_negative_cg/
   Makefile               builds nncg_paper.pdf (cites ../matrix_free/bib/refs.bib)
   nncg_paper.tex         main file: preamble + \input of the sections
   sections/              one .tex per section (s0_abstract … s8_conclusions)
-                         (domain-neutral: no experiment figures/tables, no symlinks)
+  experiment/            self-contained synthetic study (experiment_nncg.py, NumPy only)
+  graphs/                generated figure PDFs (committed; `make figures`)
+  tables/                generated table + \newcommand fragments (committed)
 experiment/              numerical experiments that generate graphs/ and tables/
   experiment*.py         PEP 723 scripts (real-data, synthetic, OOS, RMT)
   fetch_*.py             download the raw S&P 500 / FTSE 100 return data

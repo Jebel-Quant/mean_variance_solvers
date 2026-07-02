@@ -12,7 +12,7 @@ The active-set method maintains a free set $\mathcal{F}$, solves~\eqref{eq:inner
 equality-augmented form) on $\mathcal{F}$ by CG, and adjusts $\mathcal{F}$ toward
 feasibility. In the \emph{primal step} any free variable that returned negative is pushed to
 the bound and dropped from $\mathcal{F}$. Once all free variables are non-negative, the
-\emph{dual step} inspects the reduced gradient $s = Ax - b$ (minus $\lambda\mathbf{1}$ in the
+\emph{dual step} inspects the reduced gradient $s = Ax - b$ (minus $B^\top\lambda$ in the
 equality-augmented case, with $\lambda$ from Section~\ref{sec:reduction}) at every bound
 variable: a bound index $i$ with $s_i < 0$ would lower $f$ if released, so it is re-admitted
 to $\mathcal{F}$. The loop terminates when no variable violates either test, i.e.\ when
@@ -50,7 +50,7 @@ principal pivoting~\cite{judice1994}.
     \hfill\textit{($k_{\mathrm{step}}$: CG iterations; $1$ for a direct inner solve)}
   \State $x_i \leftarrow (x_{\mathcal{F}})_i$ for $i \in \mathcal{F}$;\; $x_i \leftarrow 0$ for $i \notin \mathcal{F}$
   \State $s_i \leftarrow (Ax)_i - b_i$
-    \hfill\textit{(reduced gradient; subtract $\lambda$ in the equality-augmented case)}
+    \hfill\textit{(reduced gradient; subtract $(B^\top\lambda)_i$ in the equality-augmented case)}
   \State $\mathcal{D} \leftarrow \{i \in \mathcal{F} : x_i < -\varepsilon\}$;\;
          $\mathcal{V} \leftarrow \{i \notin \mathcal{F} : s_i < -\varepsilon\}$
     \hfill\textit{(primal and dual violators)}
@@ -80,14 +80,20 @@ Let $f(x) = \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$. Then for any pa
 $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim} terminates in finitely many outer
 iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$. No
 non-degeneracy assumption is required. The same holds for the equality-augmented
-problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $\lambda\mathbf{1}$.
+problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $B^\top\lambda$,
+provided $B_{\mathcal{F}}$ retains full row rank on every free set the loop visits (automatic
+for $p=1$; generic once $|\mathcal{F}| \geq p$).
 \end{theorem}
 
 \begin{proof}
 \emph{Step 1 (each inner solve is well posed).}
 Because $A \succ 0$, every principal submatrix $A_{\mathcal{F}}$ is SPD, so $A$ is a
 $P$-matrix~\cite{murty1988}, and the system $A_{\mathcal{F}}x_{\mathcal{F}} = b_{\mathcal{F}}$
-has a unique solution to which CG converges (Proposition~\ref{prop:cg}).
+has a unique solution to which CG converges (Proposition~\ref{prop:cg}). In the
+equality-augmented case the free-set solve is the saddle system~\eqref{eq:saddle}; with
+$A_{\mathcal{F}} \succ 0$ and $B_{\mathcal{F}}$ of full row rank its Schur complement $S$ is
+SPD, so~\eqref{eq:saddle} has the unique solution recovered by the $p+1$ SPD solves of
+Section~\ref{sec:reduction}.
 
 \emph{Step 2 (termination implies global optimality).}
 Free-set stationarity gives $s_i = 0$ for $i \in \mathcal{F}$. The loop exits only when
@@ -131,12 +137,86 @@ $s_i = 0$ exactly for some toggled $i$ -- a codimension-one, hence non-generic,
 condition~\cite{judice1994}; block principal pivoting therefore converges in a handful of outer
 steps on typical data, with the fast path alone certifying optimality.
 
-\begin{remark}[Inexact inner solves]\label{rem:exact}
 Theorem~\ref{thm:termination} assumes each inner call returns the exact minimiser of
-$f_{\mathcal{F}}$. CG is run to a relative residual tolerance $\varepsilon$, so the returned
-iterate is inexact; because the dual-feasibility test of line~5 uses the same $\varepsilon$, an
-iterate accurate to $\varepsilon$ is accepted. The finite-termination argument holds exactly in
-exact arithmetic and to working accuracy in finite precision.
+$f_{\mathcal{F}}$; CG returns an iterate accurate only to its residual tolerance. The
+following lemma closes that gap: once the residual is tight enough relative to the test
+threshold $\varepsilon$, every primal and dual sign decision of Algorithm~\ref{alg:elim}
+coincides with the decision the exact solve would make, so the inexact loop inherits the
+theorem wholesale.
+
+\begin{lemma}[Inexact inner solves]\label{lem:inexact}
+For a free set $\mathcal{F}$ let $\hat x(\mathcal{F})$ denote the exact solution
+of~\eqref{eq:innerspd} extended by zeros to $\mathbb{R}^n$, and
+$\hat s(\mathcal{F}) = A\,\hat x(\mathcal{F}) - b$ its reduced gradient. Define the
+\emph{decision margin}
+\[
+  \mu \;=\; \min_{\mathcal{F} \subseteq \{1,\dots,n\}} \min\Big(
+    \big\{\, |\hat x_i(\mathcal{F})| : i \in \mathcal{F},\ \hat x_i(\mathcal{F}) \neq 0 \,\big\}
+    \,\cup\,
+    \big\{\, |\hat s_i(\mathcal{F})| : i \notin \mathcal{F},\ \hat s_i(\mathcal{F}) \neq 0 \,\big\}
+  \Big),
+\]
+the smallest nonzero magnitude any primal or dual test can encounter; $\mu > 0$ as a minimum
+of finitely many positive numbers. Suppose the test tolerance satisfies
+$0 < \varepsilon < \mu$ and every inner CG call is stopped at a residual
+$\rho = \lVert b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}} \rVert_2$ obeying
+\begin{equation}\label{eq:inexactcond}
+  \rho\;\frac{1 + \lambda_{\max}(A)}{\lambda_{\min}(A)}
+  \;<\; \min\big(\varepsilon,\ \mu - \varepsilon\big).
+\end{equation}
+Then at every outer step the violator sets $\mathcal{D}, \mathcal{V}$ of
+Algorithm~\ref{alg:elim} computed from the CG iterate coincide with those computed from the
+exact solve on the same free set. The inexact loop therefore traverses exactly the free-set
+sequence of the exact loop, Theorem~\ref{thm:termination} applies verbatim, and the returned
+iterate satisfies $\lVert \tilde x - x^\star \rVert_\infty \le \rho/\lambda_{\min}(A)$.
+\end{lemma}
+
+\begin{proof}
+Write $r = b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}}$, so
+$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. Cauchy interlacing
+gives $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence
+\[
+  \delta_x \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_\infty
+  \;\le\; \lVert A_{\mathcal{F}}^{-1} r \rVert_2
+  \;\le\; \rho/\lambda_{\min}(A).
+\]
+For a bound index $i \notin \mathcal{F}$ the reduced gradients differ by
+$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$,
+and $\lVert A_{i,\mathcal{F}} \rVert_2 \le \lVert A \rVert_2 = \lambda_{\max}(A)$, so
+$\delta_s := \max_i |\tilde s_i - \hat s_i| \le \lambda_{\max}(A)\,\rho/\lambda_{\min}(A)$.
+Both perturbations are bounded by
+$\delta := \rho\,(1+\lambda_{\max}(A))/\lambda_{\min}(A) < \min(\varepsilon, \mu-\varepsilon)$
+by~\eqref{eq:inexactcond}.
+
+Fix $i \in \mathcal{F}$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$; either
+way $\tilde x_i \ge -\delta > -\varepsilon$, so the inexact test does not flag $i$, matching
+the exact test. If $\hat x_i < 0$ then $\hat x_i \le -\mu$ by the definition of $\mu$, so
+$\tilde x_i \le -\mu + \delta < -\varepsilon$: both tests flag $i$. The identical case split
+with $\hat s_i$ and $\delta_s$ handles the dual test. Hence
+$\tilde{\mathcal{D}} = \hat{\mathcal{D}}$ and $\tilde{\mathcal{V}} = \hat{\mathcal{V}}$ at
+this step; since both loops start from $\mathcal{F} = \{1,\dots,n\}$ and the counters
+$\bar N, p$ are functions of the violator sequence, induction gives the same free-set
+trajectory and the same stopping step. At termination the exact iterate is $x^\star$
+(Theorem~\ref{thm:termination}), so
+$\lVert \tilde x - x^\star \rVert_\infty = \delta_x \le \rho/\lambda_{\min}(A)$, the off-set
+entries being zero in both.
+\end{proof}
+
+\begin{remark}[Reading the margin condition]\label{rem:inexact}
+Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
+excluded: the threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
+lemma -- like the theorem it protects -- needs no non-degeneracy assumption. Moreover, since
+$\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
+with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
+algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a
+\emph{relative} residual $\varepsilon_{\mathrm{cg}}$, then
+$\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$ and
+condition~\eqref{eq:inexactcond} becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone.
+(iii) The margin $\mu$ is not computable a priori -- the lemma is a license, not a recipe: it
+guarantees that \emph{some} finite tolerance reproduces the exact trajectory, and in practice
+a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffices
+(Section~\ref{ssec:synthetic} verifies trajectory-for-trajectory agreement at
+$\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$).
 \end{remark}
 
 \subsection{Projected-gradient comparator}\label{ssec:proj}
@@ -146,10 +226,14 @@ The second strategy enforces the constraint at every step. Projected gradient it
   x_{k+1} = \Pi_C\!\left(x_k - \tau\,\nabla f(x_k)\right),
   \qquad \nabla f(x) = A x - b,
 \]
-where $C$ is the feasible set -- the non-negative orthant for~\eqref{eq:bqp}, so
-$\Pi_C(y) = \max(y, 0)$ componentwise, or the affine simplex slice $\Delta_\beta$ for the
-equality-augmented problem~\eqref{eq:eqp}, projected onto in $O(n\log n)$ by a single
-sort-and-threshold pass~\cite{duchi2008,condat2016}. The step size is $\tau = 1/L$ with
+where $C$ is the feasible set. For~\eqref{eq:bqp} it is the non-negative orthant, so
+$\Pi_C(y) = \max(y, 0)$ componentwise; for the single normalisation $\mathbf{1}^\top x=\beta$,
+$x\geq0$ it is the simplex slice $\Delta_\beta$, projected onto in $O(n\log n)$ by a single
+sort-and-threshold pass~\cite{duchi2008,condat2016}. For a general equality system $Bx=c$,
+however, the projection onto $\mathcal{P} = \{x\geq0: Bx=c\}$ is itself a non-negative
+quadratic program with no closed form, so projected gradient loses its per-step simplicity --
+one reason the active-set loop, whose cost rises only by the $p$ extra right-hand sides of
+Section~\ref{sec:reduction}, is the method of choice once $p>1$. The step size is $\tau = 1/L$ with
 $L = \lambda_{\max}(A)$, estimated once by power iteration on the same (matrix-free) operator.
 There is no outer loop and no linear solve: each step is one gradient evaluation -- two products
 with $M$ when $A = M^\top M$ -- plus a projection.

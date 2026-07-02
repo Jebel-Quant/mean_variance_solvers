@@ -15,7 +15,10 @@ inner solve touches $A$ through only two operations:
   $x_{\mathcal{B}} = 0$.
 \end{itemize}
 A full product $\mathrm{matvec}\colon x \mapsto Ax$ is convenient for a residual check but is
-not otherwise required. Capturing exactly this contract as an operator protocol -- the same
+not otherwise required. The equality-augmented problem~\eqref{eq:eqp} adds only the column
+selections $v \mapsto B_{\mathcal{F}}v$ and $w \mapsto B_{\mathcal{F}}^\top w$ used to form the
+$p+1$ right-hand sides and the Schur complement of Section~\ref{sec:reduction}; these act on
+the given $B$ and are independent of which backend implements $A$. Capturing exactly this contract as an operator protocol -- the same
 device by which the critical-line algorithm reaches its covariance through a small
 interface~\cite{schmelzer2026cla,cvxcla} -- lets the solver run unchanged on any object that
 implements it. Several backends do, each realising the two operations at a different cost.

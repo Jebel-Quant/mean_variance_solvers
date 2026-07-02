@@ -6,7 +6,8 @@ quadratic
 \[
   \min_{x \geq 0}\; \tfrac{1}{2}\,x^\top A x - b^\top x, \qquad A \succ 0,
 \]
-and its equality-augmented and least-squares variants, that enforces $x \geq 0$ by wrapping
+and its equality-augmented (a general linear system $Bx = c$) and least-squares variants, that
+enforces $x \geq 0$ by wrapping
 CG in an outer active-set loop while retaining CG's $O(\sqrt\kappa)$ Krylov convergence,
 where $\kappa = \kappa(A)$ is the spectral condition number.
 
@@ -15,12 +16,17 @@ working set of \emph{free} variables, releases any that come back negative (the 
 step), re-admits any bound variable whose reduced gradient is negative (the dual step), and
 restarts CG on the modified free set each time. These toggles are exactly the principal
 pivots of the linear complementarity problem $(A,\,{-b})$; because $A$ is a $P$-matrix,
-every principal submatrix is invertible and each pivot is well defined. Guarding a fast
-block-pivot path with a least-index Bland fallback, we prove that the loop terminates at the
-unique global minimiser in finitely many outer steps, with \emph{no} non-degeneracy
-assumption (Theorem~\ref{thm:termination}). A loop-free projected-gradient comparator, which
-enforces the constraints simultaneously but forgoes the Krylov subspace and so converges at
-the slower $O(\kappa)$ rate, is analysed alongside it.
+every principal submatrix is invertible and each pivot is well defined. The central result
+concerns termination: guarding a fast block-pivot path with a least-index Bland fallback, we
+prove the loop reaches the unique global minimiser in finitely many outer steps with
+\emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}) -- removing the hypothesis
+that classical block-principal-pivoting termination arguments require, while a synthetic study
+shows the fallback is provably necessary yet never entered on generic data. The guarantee is
+robust to inexactness: once CG's residual tolerance is tied to the decision threshold, the
+inexact loop provably visits the same free sets as the exact one
+(Lemma~\ref{lem:inexact}). A loop-free
+projected-gradient comparator, which enforces the constraints simultaneously but forgoes the
+Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alongside it.
 
 Each inner solve is matrix-free. When $A = M^\top M$ arises as a Gram matrix, the operator
 $v \mapsto M^\top(M v)$ is applied without ever forming $A$, so CG on the normal equations
