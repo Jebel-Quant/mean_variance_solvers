@@ -1,0 +1,85 @@
+\section{Complexity and Numerical Behaviour}\label{sec:results}
+
+\subsection{Complexity}\label{ssec:complexity}
+
+Table~\ref{tab:complexity} collects the asymptotic cost of solving~\eqref{eq:bqp} by each
+method, for $A = M^\top M$ with $M \in \mathbb{R}^{m\times n}$, condition number
+$\kappa = \kappa(A_\alpha)$ after the regularising split, tolerance $\varepsilon$, free-set
+size $k = |\mathcal{F}| \leq n$, and $s$ active-set outer steps. ``Extra memory'' is storage
+beyond the operator; the matrix-free rows never form $A$ and need only $O(n)$ working memory.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Method & Per-step cost & Iterations & Extra memory & Forms $A$ \\
+\midrule
+Interior point (dense QP)          & $O(n^3)$        & $O(\log 1/\varepsilon)$          & $O(n^2)$ & Yes \\
+Dense Cholesky $+$ active set       & $O(k^2 m)$      & $s$                             & $O(k^2)$ & Yes \\
+CG matrix-free $+$ active set        & $O(km)$         & $s \cdot O(\sqrt\kappa)$        & $O(n)$   & No  \\
+Factor / Woodbury $+$ active set     & $O(kr^2 + r^3)$ & $s$                             & $O(nr)$  & No  \\
+Projected gradient (matrix-free)     & $O(nm)$         & $O(\kappa)$                     & $O(n)$   & No  \\
+\bottomrule
+\end{tabular}
+\caption{Asymptotic cost of solving the non-negative quadratic~\eqref{eq:bqp} with
+$A = M^\top M$, $M \in \mathbb{R}^{m \times n}$. Here $k = |\mathcal{F}| \leq n$ is the
+free-set size, $s$ the number of active-set outer steps, $\kappa = \kappa(A_\alpha)$ the
+condition number after the split~\eqref{eq:regsplit}, and $r$ the factor rank of a
+diagonal-plus-low-rank operator (Section~\ref{sec:operators}). The last four rows share the
+active-set loop and differ only in the backend~(Section~\ref{sec:operators}): matrix-free CG
+and the Woodbury factor solve both avoid assembling $A$, the former iteratively at
+$O(\sqrt\kappa)$ inner steps, the latter by an exact rank-$r$ inverse. The active-set rows differ only in the
+inner solve: matrix-free CG applies $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ at $O(km)$ and
+never assembles the Gram matrix, whereas dense Cholesky forms and factorises
+$A_{\mathcal{F}}$ at $O(k^2 m)$; the matrix-free advantage grows with $k$. The CG
+``Iterations'' column counts $s \cdot O(\sqrt\kappa)$ inner iterations in total; because the
+loop starts at $\mathcal{F} = \{1,\dots,n\}$, the first solve at $k = n$ dominates and is
+governed by the full $\kappa$ bounded in Proposition~\ref{prop:regcond}. Projected gradient
+avoids the linear solve entirely but pays $O(\kappa)$, a factor $\sqrt\kappa$ more inner
+iterations than CG at the same per-step cost.}
+\label{tab:complexity}
+\end{table}
+
+Two comparisons are structural. Within the active-set family, matrix-free CG and dense
+Cholesky share the outer loop and differ only in whether $A_{\mathcal{F}}$ is assembled; the
+$O(km)$-versus-$O(k^2 m)$ gap means CG pulls ahead as the free set grows, while dense Cholesky
+can win when $k$ is small or $\kappa$ is large enough that CG needs many inner iterations
+(the crossover is near $\kappa \sim k^2$). Between the two matrix-free methods, CG's
+$O(\sqrt\kappa)$ dominates projected gradient's $O(\kappa)$ whenever $\kappa$ is large; only
+when the regularising split compresses $\kappa$ to $O(1)$ do the inner counts become
+comparable, at which point projected gradient's loop-free simplicity is attractive.
+
+\subsection{Behaviour on synthetic SPD problems}\label{ssec:synthetic}
+
+The propositions pin down how the solver behaves on a controlled family of test problems.
+Take $A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a prescribed spectrum
+$\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_n)$ of target condition number $\kappa$
+(equivalently $A = M^\top M$ for a random $M$ with the desired singular values), and plant a
+non-negative solution $x^\star \geq 0$ with a chosen support size $|\{i : x^\star_i > 0\}|$ by
+setting $b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$. Three qualitative
+predictions follow directly and are what the companion benchmarks confirm on their structured
+operators:
+
+\begin{itemize}
+  \item \emph{Inner count tracks $\sqrt\kappa$.} By Proposition~\ref{prop:cg} the CG
+  iterations to a fixed tolerance grow like $\sqrt\kappa$, so the regularising
+  split~\eqref{eq:regsplit} -- which lowers $\kappa$ at rate $O((1-\alpha)/\alpha)$
+  (Proposition~\ref{prop:regcond}) -- reduces the count steeply as $\alpha$ increases from
+  zero. The effect is largest in the rank-deficient regime $m < n$, where the unsplit system
+  is singular and only $\alpha > 0$ makes CG well posed.
+  \item \emph{Outer count is small.} Block principal pivoting adjusts the free set by a few
+  indices per step and, being non-cyclic through the Bland fallback
+  (Theorem~\ref{thm:termination}), reaches the correct support in a number of outer steps that
+  scales with how far the initial full set is from the optimal support, not with $n$; the
+  patience budget is essentially never exhausted on generic data.
+  \item \emph{CG beats projected gradient by $\sqrt\kappa$.} At matched per-step cost the two
+  matrix-free methods separate by exactly the $O(\sqrt\kappa)$-versus-$O(\kappa)$ factor of
+  Propositions~\ref{prop:cg} and~\ref{prop:proj}, the gap widening with $\kappa$ and closing
+  under heavy regularisation.
+\end{itemize}
+
+Quantitative wall-clock studies on structured operators arising in applications -- including
+scaling with problem size and warm-started parametric sweeps -- are reported in the companion
+papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt}, whose numerical sections instantiate
+Algorithm~\ref{alg:elim} with the matrix-free CG inner solver analysed here.

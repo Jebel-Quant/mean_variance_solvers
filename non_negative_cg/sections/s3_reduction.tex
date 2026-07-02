@@ -1,0 +1,75 @@
+\section{Reduction to Unconstrained SPD Solves}\label{sec:reduction}
+
+Fix a candidate free set $\mathcal{F} \subseteq \{1,\dots,n\}$ and set $x_i = 0$ for
+$i \notin \mathcal{F}$. On $\mathcal{F}$ the bound-constrained problem~\eqref{eq:bqp} reduces
+to the \emph{unconstrained} strictly convex quadratic
+\[
+  \min_{x_{\mathcal{F}}}\; \tfrac{1}{2}\,x_{\mathcal{F}}^\top A_{\mathcal{F}}\,x_{\mathcal{F}}
+    - b_{\mathcal{F}}^\top x_{\mathcal{F}},
+\]
+whose stationarity condition is the SPD linear system
+\begin{equation}\label{eq:innerspd}
+  A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}}.
+\end{equation}
+The active-set loop of Section~\ref{sec:nonneg} solves a sequence of such systems, one per
+outer step, and the inequality $x \geq 0$ is imposed by which indices $\mathcal{F}$ contains,
+never inside the linear solve. The inner solver is CG.
+
+\paragraph{Matrix-free operator.}
+CG accesses $A_{\mathcal{F}}$ only through the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never as
+an explicit matrix. When $A = M^\top M$ this factors as
+$A_{\mathcal{F}}\,v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
+$M_{\mathcal{F}} = M_{:,\mathcal{F}}$: two products with the $m \times |\mathcal{F}|$ submatrix
+at $O(m\,|\mathcal{F}|)$, so the Gram matrix is never formed and no $O(n^2)$ storage is used --
+the standard CG-on-the-normal-equations arrangement~\cite{golub2013,paige1975,choi2006} applied
+to a column subset that changes between outer steps. This mat-vec is one of the two operations
+the whole method requires of $A$; Section~\ref{sec:operators} isolates that contract and lists
+the backends that implement it. When a variable is released in the primal step, the operator is
+rebuilt on the reduced free set and CG restarts on the smaller system.
+
+\begin{proposition}[CG convergence~{\cite{greenbaum1997}}]\label{prop:cg}
+  Let $A_{\mathcal{F}}$ be SPD with spectral condition number
+  $\kappa = \kappa(A_{\mathcal{F}})$, and let $x_k$ denote the $k$-th CG iterate
+  for~\eqref{eq:innerspd}. Then
+  \[
+    \frac{\lVert e_k\rVert_{A_{\mathcal{F}}}}{\lVert e_0\rVert_{A_{\mathcal{F}}}}
+    \;\leq\;
+    2\!\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{\!k},
+  \]
+  where $\lVert e\rVert_{A_{\mathcal{F}}} = (e^\top A_{\mathcal{F}}\,e)^{1/2}$ is the
+  $A_{\mathcal{F}}$-energy norm of the error $e = x_{\mathcal{F}} - x_k$.
+\end{proposition}
+
+The rate is $O(\sqrt\kappa)$: reaching a fixed relative energy-norm tolerance takes
+$O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations. Because $A \succ 0$ forces every
+$A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and
+Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the
+count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather
+than a plain gradient iteration: the projected-gradient comparator of
+Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
+
+\paragraph{Eliminating the equality multiplier.}
+For the equality-augmented problem~\eqref{eq:eqp}, stationarity on the free set is
+$A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}} + \lambda\mathbf{1}$, an SPD system with an
+unknown scalar $\lambda$ on the right-hand side. Rather than enlarge the system to the
+$(|\mathcal{F}|+1)\times(|\mathcal{F}|+1)$ saddle-point form~\cite{benzi2005}, split it by
+linearity into two SPD solves,
+\[
+  v_0 = A_{\mathcal{F}}^{-1} b_{\mathcal{F}},
+  \qquad
+  v_1 = A_{\mathcal{F}}^{-1}\mathbf{1},
+\]
+so that $x_{\mathcal{F}} = v_0 + \lambda v_1$. The normalisation
+$\mathbf{1}^\top x_{\mathcal{F}} = \beta$ then fixes the multiplier in closed form,
+\[
+  \lambda = \frac{\beta - \mathbf{1}^\top v_0}{\mathbf{1}^\top v_1},
+  \qquad
+  x_{\mathcal{F}} = v_0 + \lambda v_1,
+\]
+with $\mathbf{1}^\top v_1 = \mathbf{1}^\top A_{\mathcal{F}}^{-1}\mathbf{1} > 0$ since
+$A_{\mathcal{F}} \succ 0$. The pure-normalisation case $b = 0$, $\beta = 1$ collapses to a
+single solve, $x_{\mathcal{F}} = v_1 / (\mathbf{1}^\top v_1)$. Thus each outer step costs one
+or two matrix-free CG solves; the multiplier is recovered analytically and never appears in
+the linear system, keeping every inner solve SPD and directly amenable to
+Proposition~\ref{prop:cg}. The two right-hand sides share the operator $A_{\mathcal{F}}$ and
+can be solved by a block-CG or by two independent CG runs.

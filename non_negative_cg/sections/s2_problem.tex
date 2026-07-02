@@ -1,0 +1,54 @@
+\section{Problem and Complementarity Structure}\label{sec:problem}
+
+We consider the strictly convex non-negative quadratic program~\eqref{eq:bqp},
+\[
+  \min_{x \geq 0}\; f(x) = \tfrac{1}{2}\,x^\top A x - b^\top x,
+  \qquad A = A^\top \succ 0,\quad b \in \mathbb{R}^n,
+\]
+together with its two structural specialisations. In the \emph{least-squares} form
+$A = M^\top M$ and $b = M^\top d$ for $M \in \mathbb{R}^{m\times n}$ of full column rank, so
+that $f(x) = \tfrac{1}{2}\|Mx - d\|_2^2 - \tfrac{1}{2}\|d\|_2^2$ and~\eqref{eq:bqp} is
+NNLS~\cite{lawson1974}. In the \emph{equality-augmented} form a single normalisation
+$\mathbf{1}^\top x = \beta$ is imposed as well,
+\begin{equation}\label{eq:eqp}
+  \min_{x}\; \tfrac{1}{2}\,x^\top A x - b^\top x
+  \quad\text{subject to}\quad \mathbf{1}^\top x = \beta,\; x \geq 0,
+\end{equation}
+which constrains $x$ to the affine slice $\Delta_\beta$ of the non-negative orthant.
+
+\paragraph{Optimality and complementarity.}
+Because $f$ is strictly convex and the feasible set of~\eqref{eq:bqp} is a non-empty closed
+convex cone, a unique minimiser exists and the Karush-Kuhn-Tucker (KKT) conditions are
+necessary and sufficient. Introducing a multiplier $s \geq 0$ for $x \geq 0$, stationarity of
+the Lagrangian $\tfrac{1}{2}x^\top A x - b^\top x - s^\top x$ gives the reduced gradient
+$s = \nabla f(x) = A x - b$, and the KKT system is the linear complementarity problem
+$\mathrm{LCP}(A,\,{-b})$:
+\begin{equation}\label{eq:lcp}
+  s = A x - b, \qquad x \geq 0, \qquad s \geq 0, \qquad x_i\,s_i = 0 \ \ \forall i.
+\end{equation}
+Complementary slackness partitions the indices into a \emph{free} set
+$\mathcal{F} = \{i : x_i > 0\}$, on which $s_i = 0$ and hence $(Ax)_i = b_i$, and a
+\emph{bound} set $\mathcal{B} = \{i : x_i = 0\}$, on which $s_i = (Ax)_i - b_i \geq 0$. A
+bound variable with $s_i < 0$ would lower $f$ if released to a small positive value; a free
+variable with $x_i < 0$ is infeasible and must be pushed to the bound. These two violations
+drive the primal and dual steps of Section~\ref{sec:nonneg}.
+
+For the equality-augmented problem~\eqref{eq:eqp} the Lagrangian carries an additional term
+$-\lambda(\mathbf{1}^\top x - \beta)$, so the reduced gradient becomes
+$s = A x - b - \lambda\mathbf{1}$ and the free-set stationarity reads
+$(Ax)_i = b_i + \lambda$ for $i \in \mathcal{F}$: every free coordinate's gradient equals the
+common shadow price $\lambda$ of the normalisation. Section~\ref{sec:reduction} shows that
+$\lambda$ need not be carried as an unknown in the linear solve; it is recovered in closed form
+from two SPD solves.
+
+\paragraph{The $P$-matrix property.}
+Since $A \succ 0$, every principal submatrix $A_{\mathcal{F}} = A_{\mathcal{F},\mathcal{F}}$
+is itself SPD and hence invertible with $\det A_{\mathcal{F}} > 0$; a matrix all of whose
+principal minors are positive is a $P$-matrix~\cite{murty1988}. Two consequences follow, both
+used later. The linear system $A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}}$ solved on
+any candidate free set is well posed, so CG applies at every outer step
+(Section~\ref{sec:reduction}). And $\mathrm{LCP}(A,\,{-b})$ with a $P$-matrix has a unique
+solution reachable by principal pivoting~\cite{murty1988,judice1994}, which is the backbone of
+the finite-termination guarantee in Section~\ref{sec:nonneg}. When $A$ is only positive
+semidefinite -- as in a rank-deficient least-squares problem, $m < n$ -- the regularisation of
+Section~\ref{sec:conditioning} restores $A \succ 0$ and with it the $P$-matrix property.

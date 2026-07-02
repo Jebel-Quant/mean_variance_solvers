@@ -1,0 +1,197 @@
+\section{Enforcing Non-Negativity}\label{sec:nonneg}
+
+Section~\ref{sec:reduction} reduces each candidate free set to an SPD solve, leaving
+$x \geq 0$ as the sole remaining constraint. Two strategies enforce it. The first, an
+active-set loop, wraps the CG solver unchanged and certifies global optimality through the
+complementarity system~\eqref{eq:lcp}; the second, projected gradient, handles the constraint
+inside every step but forgoes the Krylov rate.
+
+\subsection{Active-set / block-principal-pivoting loop}\label{ssec:activeset}
+
+The active-set method maintains a free set $\mathcal{F}$, solves~\eqref{eq:innerspd} (or its
+equality-augmented form) on $\mathcal{F}$ by CG, and adjusts $\mathcal{F}$ toward
+feasibility. In the \emph{primal step} any free variable that returned negative is pushed to
+the bound and dropped from $\mathcal{F}$. Once all free variables are non-negative, the
+\emph{dual step} inspects the reduced gradient $s = Ax - b$ (minus $\lambda\mathbf{1}$ in the
+equality-augmented case, with $\lambda$ from Section~\ref{sec:reduction}) at every bound
+variable: a bound index $i$ with $s_i < 0$ would lower $f$ if released, so it is re-admitted
+to $\mathcal{F}$. The loop terminates when no variable violates either test, i.e.\ when
+$x \geq 0$, $s \geq 0$ and complementary slackness hold to tolerance -- exactly the KKT
+system~\eqref{eq:lcp}, which for the strictly convex $f$ certifies the unique global minimiser.
+
+Toggling an index between $\mathcal{F}$ and $\mathcal{B}$ is a \emph{principal pivot} on
+$\mathrm{LCP}(A,\,{-b})$; dropping or adding several indices at once is a \emph{block}
+principal pivot~\cite{judice1994,kim2011}. Because $A \succ 0$ is a $P$-matrix, every
+principal submatrix is invertible and each pivot is well defined~\cite{murty1988}. Block
+pivots are fast but, like any all-at-once exchange, can cycle: a batch drop can over-shoot the
+support and a later batch add restore it, revisiting a free set already seen.
+Algorithm~\ref{alg:elim} therefore runs the batch exchange as a \emph{fast path} guarded by an
+anti-cycling counter. Let $N$ be the current number of primal and dual violators and $\bar N$
+the fewest seen so far. A batch step is taken whenever it makes progress ($N < \bar N$) or a
+patience budget $p$ is unspent; otherwise the algorithm falls back to a single
+\emph{Bland-style} pivot on the lowest-indexed violator. The least-index single pivot is
+Murty's principal pivoting method, which cannot cycle~\cite{murty1988}; it is what the
+finite-termination guarantee rests on, the batch path serving only to reach the optimum faster
+when it does not stall. This is the anti-cycling construction of J\'udice and Pires for block
+principal pivoting~\cite{judice1994}.
+
+\begin{algorithm}[ht]
+\caption{Active-set outer loop (wraps the CG inner solver $f$)}\label{alg:elim}
+\begin{algorithmic}[1]
+\Require Inner solver $f$ returning $(x_{\mathcal{F}}, k_{\mathrm{step}})$ for free set $\mathcal{F}$;\;
+         SPD $A$ (or its mat-vec) and $b$;\; tolerance $\varepsilon$;\;
+         patience $p_{\max} \in \mathbb{N}$ \textit{(default $3$)}
+\Ensure Minimiser $x \in \mathbb{R}^n$ of~\eqref{eq:bqp};\; outer steps $s$;\; total inner iterations $k$
+\State $\mathcal{F} \leftarrow \{1,\ldots,n\}$;\; $s \leftarrow 0$;\; $k \leftarrow 0$;\;
+       $\bar N \leftarrow n+1$;\; $p \leftarrow p_{\max}$
+\Loop
+  \State $(x_{\mathcal{F}},\, k_{\mathrm{step}}) \leftarrow f(\mathcal{F})$;\;
+         $s \leftarrow s + 1$;\; $k \leftarrow k + k_{\mathrm{step}}$
+    \hfill\textit{($k_{\mathrm{step}}$: CG iterations; $1$ for a direct inner solve)}
+  \State $x_i \leftarrow (x_{\mathcal{F}})_i$ for $i \in \mathcal{F}$;\; $x_i \leftarrow 0$ for $i \notin \mathcal{F}$
+  \State $s_i \leftarrow (Ax)_i - b_i$
+    \hfill\textit{(reduced gradient; subtract $\lambda$ in the equality-augmented case)}
+  \State $\mathcal{D} \leftarrow \{i \in \mathcal{F} : x_i < -\varepsilon\}$;\;
+         $\mathcal{V} \leftarrow \{i \notin \mathcal{F} : s_i < -\varepsilon\}$
+    \hfill\textit{(primal and dual violators)}
+  \State $\mathcal{H} \leftarrow \mathcal{D} \cup \mathcal{V}$;\; $N \leftarrow |\mathcal{H}|$
+  \If{$N = 0$}
+    \State \textbf{break} \hfill\textit{(KKT~\eqref{eq:lcp} satisfied; globally optimal)}
+  \ElsIf{$N < \bar N$ \textbf{ or } $p > 0$}
+    \hfill\textit{(fast path: progress, or patience remains)}
+    \State \textbf{if} $N < \bar N$ \textbf{ then } $\bar N \leftarrow N$;\; $p \leftarrow p_{\max}$ \textbf{ else } $p \leftarrow p - 1$
+    \State $\mathcal{F} \leftarrow (\mathcal{F} \setminus \mathcal{D}) \cup \mathcal{V}$
+      \hfill\textit{(batch exchange: drop all $\mathcal{D}$, add all $\mathcal{V}$)}
+  \Else
+    \hfill\textit{(anti-cycling fallback: $p$ exhausted)}
+    \State $i^\star \leftarrow \min\{i : i \in \mathcal{H}\}$
+      \hfill\textit{(Bland least-index rule)}
+    \State \textbf{if} $i^\star \in \mathcal{D}$ \textbf{ then } $\mathcal{F} \leftarrow \mathcal{F} \setminus \{i^\star\}$
+           \textbf{ else } $\mathcal{F} \leftarrow \mathcal{F} \cup \{i^\star\}$
+      \hfill\textit{(single principal pivot)}
+  \EndIf
+\EndLoop
+\State \Return $x$, $s$, $k$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}[Finite convergence of Algorithm~\ref{alg:elim}]\label{thm:termination}
+Let $f(x) = \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$. Then for any patience budget
+$p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim} terminates in finitely many outer
+iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$. No
+non-degeneracy assumption is required. The same holds for the equality-augmented
+problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $\lambda\mathbf{1}$.
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1 (each inner solve is well posed).}
+Because $A \succ 0$, every principal submatrix $A_{\mathcal{F}}$ is SPD, so $A$ is a
+$P$-matrix~\cite{murty1988}, and the system $A_{\mathcal{F}}x_{\mathcal{F}} = b_{\mathcal{F}}$
+has a unique solution to which CG converges (Proposition~\ref{prop:cg}).
+
+\emph{Step 2 (termination implies global optimality).}
+Free-set stationarity gives $s_i = 0$ for $i \in \mathcal{F}$. The loop exits only when
+$N = 0$: (i) all free $x_i \geq 0$ and (ii) all bound $s_i \geq 0$. These are exactly
+$x \geq 0$, $s \geq 0$, $x_i s_i = 0$ -- the KKT system~\eqref{eq:lcp}. Strict convexity of
+$f$ makes them sufficient for the unique global minimiser; it therefore suffices to show the
+loop cannot run forever.
+
+\emph{Step 3 (the fallback cannot cycle).}
+Call a maximal block of consecutive iterates taking the \textbf{else} branch (the single Bland
+pivot) a \emph{fallback run}. Within a run $\bar N$ is constant, and each iterate performs one
+principal pivot on the lowest-indexed violator. This is precisely Murty's least-index
+principal pivoting method for the $P$-matrix LCP of Step~2, which generates a sequence of
+complementary bases (here, free sets) in which no basis recurs and which reaches the solution
+in finitely many pivots~\cite{murty1988}. A fallback run is an initial segment of that
+sequence started from the free set left by the preceding step, so each run is finite,
+wherever it starts.
+
+\emph{Step 4 (only finitely many batch steps and runs).}
+The counter satisfies $0 \le N \le n$, and $\bar N$ is non-increasing, strictly decreasing
+exactly when the progress branch ($N < \bar N$) fires; hence that branch fires at most $n+1$
+times. Each remaining fast-path step has $N \ge \bar N$ and decrements $p$, and $p$ resets only
+on a progress step, so at most $p_{\max}$ such steps occur between progress events. The number
+of fallback runs is likewise bounded: a run ends at termination ($N=0$) or at a progress step,
+and there are at most $n+1$ progress steps. Thus the algorithm takes at most
+$(n+1) + (n+2)\,p_{\max}$ fast-path steps and at most $n+2$ fallback runs.
+
+\emph{Step 5 (finite termination).}
+By Step~3 each of the at most $n+2$ fallback runs is finite, and by Step~4 the fast-path steps
+are finite in number; their sum is finite, so the loop reaches $N=0$ after finitely many outer
+iterations, and Step~2 certifies the returned $x$ as the unique global minimiser. A crude
+ceiling is the number of complementary bases, $2^n$.
+\end{proof}
+
+The $2^n$ ceiling establishes \emph{finiteness} only; it is not an efficiency estimate. The
+guarantee is unconditional: the least-index fallback removes the non-degeneracy hypothesis that
+earlier active-set arguments need, and it is the fallback -- not the batch exchange -- that the
+proof rests on. In practice the fallback is rarely reached, because a batch step fails to
+reduce $N$ only when a dropped index is immediately re-added (or vice versa), which forces
+$s_i = 0$ exactly for some toggled $i$ -- a codimension-one, hence non-generic,
+condition~\cite{judice1994}; block principal pivoting therefore converges in a handful of outer
+steps on typical data, with the fast path alone certifying optimality.
+
+\begin{remark}[Inexact inner solves]\label{rem:exact}
+Theorem~\ref{thm:termination} assumes each inner call returns the exact minimiser of
+$f_{\mathcal{F}}$. CG is run to a relative residual tolerance $\varepsilon$, so the returned
+iterate is inexact; because the dual-feasibility test of line~5 uses the same $\varepsilon$, an
+iterate accurate to $\varepsilon$ is accepted. The finite-termination argument holds exactly in
+exact arithmetic and to working accuracy in finite precision.
+\end{remark}
+
+\subsection{Projected-gradient comparator}\label{ssec:proj}
+
+The second strategy enforces the constraint at every step. Projected gradient iterates
+\[
+  x_{k+1} = \Pi_C\!\left(x_k - \tau\,\nabla f(x_k)\right),
+  \qquad \nabla f(x) = A x - b,
+\]
+where $C$ is the feasible set -- the non-negative orthant for~\eqref{eq:bqp}, so
+$\Pi_C(y) = \max(y, 0)$ componentwise, or the affine simplex slice $\Delta_\beta$ for the
+equality-augmented problem~\eqref{eq:eqp}, projected onto in $O(n\log n)$ by a single
+sort-and-threshold pass~\cite{duchi2008,condat2016}. The step size is $\tau = 1/L$ with
+$L = \lambda_{\max}(A)$, estimated once by power iteration on the same (matrix-free) operator.
+There is no outer loop and no linear solve: each step is one gradient evaluation -- two products
+with $M$ when $A = M^\top M$ -- plus a projection.
+
+\begin{proposition}[Projected-gradient convergence~{\cite{nesterov2004}}]\label{prop:proj}
+  Let $A \succ 0$, so $f$ is $\mu$-strongly convex and $L$-smooth with
+  $\mu = \lambda_{\min}(A)$ and $L = \lambda_{\max}(A)$, and let
+  $x^\star = \arg\min_{x \in C} f(x)$. Projected gradient with $\tau = 1/L$ satisfies
+  \[
+    \|x_k - x^\star\|^2 \;\leq\; \left(1 - \tfrac{1}{\kappa(A)}\right)^{\!k}\|x_0 - x^\star\|^2,
+    \qquad k \geq 0.
+  \]
+\end{proposition}
+\begin{proof}[Proof sketch]
+$x^\star = \Pi_C(x^\star - \tau\nabla f(x^\star))$ is a fixed point; non-expansiveness of
+$\Pi_C$ and co-coercivity of the $L$-smooth gradient give
+$\|x_{k+1}-x^\star\|^2 \le \|x_k-x^\star\|^2 - \tau(2-\tau L)\langle \nabla f(x_k)-\nabla f(x^\star),\,x_k-x^\star\rangle$.
+Setting $\tau = 1/L$ makes $2-\tau L = 1$, and $\mu$-strong convexity bounds the inner product
+below by $\mu\|x_k-x^\star\|^2$, so $\|x_{k+1}-x^\star\|^2 \le (1-\mu/L)\|x_k-x^\star\|^2$.
+\end{proof}
+
+The iteration count scales as $O(\kappa)$, against $O(\sqrt\kappa)$ for the CG inner loop
+(Proposition~\ref{prop:cg}). Both methods pay the same per-step cost -- one operator
+application -- so the $\sqrt\kappa$ gap in iteration counts is a runtime gap on
+ill-conditioned problems. Nesterov acceleration would lift the projected-gradient rate to
+$O(\sqrt\kappa)$, but CG attains that rate \emph{optimally} within the Krylov subspace: each
+iterate minimises $f$ over $\mathcal{K}_k(A_{\mathcal{F}}, b_{\mathcal{F}})$, a strictly richer
+search space than two-point momentum, and typically with a smaller constant. Plain projected
+gradient is therefore the honest first-order comparator, isolating the Krylov advantage; a
+FISTA variant~\cite{beck2009} narrows the constant but not the asymptotic gap. The trade-off
+is otherwise in the other direction: projected gradient is loop-free and needs no
+complementarity certificate, so it is the simpler method when $\kappa$ is small or moderate
+accuracy suffices.
+
+\subsection{Warm-starting}\label{ssec:warm}
+
+For a parametric family of problems -- e.g.\ a sequence $b(\theta_1), b(\theta_2), \dots$ of
+right-hand sides, or a swept normalisation $\beta$ -- consecutive minimisers usually differ in
+only a few active constraints. Passing the previous problem's $(\mathcal{F}, x)$ pair as the
+initial state of the next solve reduces both the outer count (the free set needs fewer primal
+and dual adjustments) and the inner count (CG starts from a small initial residual, its guess
+being the previous solution restricted to the new free set and renormalised). A direct inner
+solver profits only from the warm free set, having no analogue of an initial guess; the
+matrix-free CG inner solver profits from both, which is where the parametric sweeps of the
+companion papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} obtain their largest speed-ups.

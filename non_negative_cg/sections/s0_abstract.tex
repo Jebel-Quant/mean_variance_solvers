@@ -1,0 +1,35 @@
+\begin{abstract}
+The conjugate gradient method (CG) solves a symmetric positive definite (SPD) linear
+system $A x = b$; it does not, on its own, respect the inequality $x \geq 0$. This note
+develops \emph{non-negative conjugate gradients}: a solver for the bound-constrained
+quadratic
+\[
+  \min_{x \geq 0}\; \tfrac{1}{2}\,x^\top A x - b^\top x, \qquad A \succ 0,
+\]
+and its equality-augmented and least-squares variants, that enforces $x \geq 0$ by wrapping
+CG in an outer active-set loop while retaining CG's $O(\sqrt\kappa)$ Krylov convergence,
+where $\kappa = \kappa(A)$ is the spectral condition number.
+
+The wrapper is a primal-dual active-set method. It solves the unconstrained system over a
+working set of \emph{free} variables, releases any that come back negative (the primal
+step), re-admits any bound variable whose reduced gradient is negative (the dual step), and
+restarts CG on the modified free set each time. These toggles are exactly the principal
+pivots of the linear complementarity problem $(A,\,{-b})$; because $A$ is a $P$-matrix,
+every principal submatrix is invertible and each pivot is well defined. Guarding a fast
+block-pivot path with a least-index Bland fallback, we prove that the loop terminates at the
+unique global minimiser in finitely many outer steps, with \emph{no} non-degeneracy
+assumption (Theorem~\ref{thm:termination}). A loop-free projected-gradient comparator, which
+enforces the constraints simultaneously but forgoes the Krylov subspace and so converges at
+the slower $O(\kappa)$ rate, is analysed alongside it.
+
+Each inner solve is matrix-free. When $A = M^\top M$ arises as a Gram matrix, the operator
+$v \mapsto M^\top(M v)$ is applied without ever forming $A$, so CG on the normal equations
+costs two products with $M$ per iteration and no $O(n^2)$ storage. Because the inner rate is
+governed by $\kappa$, any regularisation or preconditioner that compresses the spectrum --
+including the ridge/Tikhonov splitting $A \mapsto (1-\alpha)A + \alpha R^\top R$ that also
+guarantees the $P$-matrix property -- reduces the iteration count directly. We record the
+per-step and total complexity of the method against dense factorisation and first-order
+baselines, and discuss its behaviour on synthetic SPD test problems. The algorithm is used
+as the computational kernel of the companion papers~\cite{schmelzer2026matrixfree,%
+schmelzer2026rmt}.
+\end{abstract}
