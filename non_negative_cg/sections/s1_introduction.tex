@@ -2,7 +2,8 @@
 
 The conjugate gradient method (CG) of Hestenes and Stiefel~\cite{hestenes1952} is the
 canonical Krylov solver for a symmetric positive definite (SPD) linear system $A x = b$;
-see, e.g., Golub and Van Loan~\cite{golub2013} or Greenbaum~\cite{greenbaum1997}. It builds
+see, e.g., Golub and Van Loan~\cite{golub2013}, Greenbaum~\cite{greenbaum1997}, or Trefethen
+and Bau~\cite{trefethenbau1997}. It builds
 its iterates in the Krylov subspace $\mathcal{K}_k(A, b)$ and converges at the
 $O(\sqrt\kappa)$ rate, where $\kappa = \kappa(A)$ is the spectral condition number
 (Proposition~\ref{prop:cg}). What CG does \emph{not} do is respect an inequality: it solves
@@ -70,7 +71,7 @@ the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop
 Both building blocks are individually classical -- active-set and block-principal-pivoting
 methods for the non-negative and complementarity problems~\cite{lawson1974,judice1994,kim2011,%
 murty1988,nocedal2006}, and CG with preconditioning for SPD systems~\cite{hestenes1952,%
-golub2013,greenbaum1997,benzi2005}. What is \emph{not} classical is the termination result:
+golub2013,greenbaum1997,trefethenbau1997,benzi2005}. What is \emph{not} classical is the termination result:
 block principal pivoting is classically shown to terminate only under a non-degeneracy
 assumption, and the least-index Bland fallback removes it (Theorem~\ref{thm:termination}),
 giving an unconditional guarantee that the synthetic study of Section~\ref{sec:results} then
