@@ -44,9 +44,11 @@ $(DOC).pdf: $(DOC).tex $(wildcard sections/s*.tex) $(BIB) $(wildcard tables/*.te
 	$(LATEX) $(LATEXOPTS) $(DOC).tex
 	$(MAKE) clean
 
-# Assemble a self-contained source tree and tar it. graphs/ and tables/ are
-# symlinks into ../experiment; the globs below resolve through them and copy the
-# real files, so the tarball carries no symlinks. The bibliography is flattened
+# Assemble a self-contained source tree and tar it. When a paper has figures or
+# tables, graphs/ and tables/ are symlinks into ../experiment; the globs below
+# resolve through them and copy the real files, so the tarball carries no
+# symlinks. A paper with neither (e.g. nncg) has no such symlinks, so those
+# copies are guarded and simply skipped. The bibliography is flattened
 # to bib/refs.bib and the \bibliography path rewritten to match (rmt cites the
 # shared ../matrix_free/bib/refs). This does not run LaTeX: arXiv compiles server-side,
 # so the .bib travels along and arXiv runs BibTeX itself.
@@ -58,12 +60,16 @@ arxiv: $(ARXIV_TARBALL)  ## Package the self-contained arXiv source tarball
 $(ARXIV_TARBALL): $(DOC).tex $(wildcard sections/s*.tex) $(BIB) $(VENDOR) \
                   $(wildcard graphs/*.pdf) $(wildcard tables/*.tex)
 	rm -rf $(ARXIV_DIR)
-	mkdir -p $(ARXIV_DIR)/sections $(ARXIV_DIR)/graphs $(ARXIV_DIR)/tables $(ARXIV_DIR)/bib
+	mkdir -p $(ARXIV_DIR)/sections $(ARXIV_DIR)/bib
 	cp $(DOC).tex $(ARXIV_DIR)/
 	cp sections/*.tex $(ARXIV_DIR)/sections/
 	cp $(BIB) $(ARXIV_DIR)/bib/refs.bib
-	cp graphs/*.pdf $(ARXIV_DIR)/graphs/
-	cp tables/*.tex $(ARXIV_DIR)/tables/
+	@if ls graphs/*.pdf >/dev/null 2>&1; then \
+		mkdir -p $(ARXIV_DIR)/graphs && cp graphs/*.pdf $(ARXIV_DIR)/graphs/; \
+	fi
+	@if ls tables/*.tex >/dev/null 2>&1; then \
+		mkdir -p $(ARXIV_DIR)/tables && cp tables/*.tex $(ARXIV_DIR)/tables/; \
+	fi
 	@[ -z "$(VENDOR)" ] || cp $(VENDOR) $(ARXIV_DIR)/
 	sed -i.bak 's|\\bibliography{[^}]*}|\\bibliography{bib/refs}|' $(ARXIV_DIR)/$(DOC).tex
 	rm -f $(ARXIV_DIR)/$(DOC).tex.bak
