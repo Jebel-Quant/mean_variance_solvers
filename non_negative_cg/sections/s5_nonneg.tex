@@ -278,7 +278,46 @@ right-hand sides, or a swept normalisation $\beta$ -- consecutive minimisers usu
 only a few active constraints. Passing the previous problem's $(\mathcal{F}, x)$ pair as the
 initial state of the next solve reduces both the outer count (the free set needs fewer primal
 and dual adjustments) and the inner count (CG starts from a small initial residual, its guess
-being the previous solution restricted to the new free set and renormalised). A direct inner
+being the previous solution restricted to the new free set). The support-stable case admits a
+clean statement.
+
+\begin{proposition}[Warm starts across a support-stable step]\label{prop:warm}
+Let $b' = b + \delta$ and suppose the free set $\mathcal{F}$ returned by
+Algorithm~\ref{alg:elim} for $b$ is also optimal for $b'$, i.e.\ the exact solve
+$\hat x_{\mathcal{F}} = A_{\mathcal{F}}^{-1} b'_{\mathcal{F}}$ is non-negative and its reduced
+gradient satisfies $s \geq 0$ on the bound set. Then Algorithm~\ref{alg:elim} started from
+$\mathcal{F}$ terminates in a \emph{single} outer step, and its one CG solve, warm-started at
+the previous solution $x_{\mathcal{F}}$, reaches energy-norm accuracy $\tau$ in at most
+\[
+  k \;\leq\; \left\lceil \frac{\sqrt{\kappa}+1}{2}\,
+  \ln\!\frac{2\,\lVert \delta \rVert_2}{\tau\sqrt{\lambda_{\min}(A)}} \right\rceil
+  \quad\text{iterations:}
+\]
+the inner count scales with the logarithm of the \emph{parameter step} $\lVert\delta\rVert$,
+not of the solution norm.
+\end{proposition}
+
+\begin{proof}
+The single solve on $\mathcal{F}$ returns $\hat x_{\mathcal{F}} \geq 0$ with $s \geq 0$ on the
+bound set, so both violator sets of line~5 are empty, the loop exits, and Step~2 of
+Theorem~\ref{thm:termination}'s proof certifies the global minimiser. For the iteration
+bound, the warm start's initial error is
+$e_0 = \hat x_{\mathcal{F}} - x_{\mathcal{F}} = A_{\mathcal{F}}^{-1}\delta_{\mathcal{F}}$,
+whose energy norm is
+$\lVert e_0 \rVert_{A_{\mathcal{F}}} = (\delta_{\mathcal{F}}^\top A_{\mathcal{F}}^{-1}
+\delta_{\mathcal{F}})^{1/2} \leq \lVert\delta\rVert_2 / \sqrt{\lambda_{\min}(A)}$ by Cauchy
+interlacing. Proposition~\ref{prop:cg} gives
+$\lVert e_k \rVert_{A_{\mathcal{F}}} \leq 2\rho^k \lVert e_0 \rVert_{A_{\mathcal{F}}}$ with
+$\rho = (\sqrt\kappa - 1)/(\sqrt\kappa + 1)$, and
+$\ln(1/\rho) \geq 2/(\sqrt\kappa + 1)$; solving $2\rho^k\lVert e_0\rVert \leq \tau$ for $k$
+yields the bound.
+\end{proof}
+
+When the support does drift, no comparable a-priori bound is available -- the loop is not
+monotone in the free set, as the adversarial family of Section~\ref{ssec:synthetic} makes
+plain -- but the empirical picture is simple: the warm-started outer count tracks the support
+drift $|\mathcal{F} \,\triangle\, \mathcal{F}'|$ and collapses to one whenever the drift is
+zero, exactly as the proposition prescribes (Section~\ref{ssec:synthetic}). A direct inner
 solver profits only from the warm free set, having no analogue of an initial guess; the
 matrix-free CG inner solver profits from both, which is where the parametric sweeps of the
 companion papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} obtain their largest speed-ups.

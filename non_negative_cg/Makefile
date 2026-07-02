@@ -16,3 +16,4 @@ include ../common.mk
 
 figures:  ## Regenerate the synthetic-study figures (graphs/) and tables (tables/)
 	cd experiment && uv run experiment_nncg.py
+	cd experiment && uv run experiment_nncg_bench.py

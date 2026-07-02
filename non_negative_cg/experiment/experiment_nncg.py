@@ -4,14 +4,14 @@ Self-contained: depends only on NumPy and Matplotlib. It implements the three
 methods analysed in the note directly from their definitions --
 
   * the matrix-free CG inner solve (Proposition 3.1),
-  * the active-set / block-principal-pivoting outer loop (Algorithm 4.1), and
-  * the projected-gradient comparator (Proposition 4.2) --
+  * the active-set / block-principal-pivoting outer loop (Algorithm 1), and
+  * the projected-gradient comparator (Proposition 5.1) --
 
-and runs them on the controlled test family of Section 5.2: A = Q diag(lambda) Q^T
+and runs them on the controlled test family of Section 7.2: A = Q diag(lambda) Q^T
 with a prescribed spectral condition number kappa, and a planted non-negative
 minimiser x* >= 0 of chosen support obtained from a complementary pair
 b = A x* - s* with s* >= 0, so the exact optimum (x*, s*) of LCP(A, -b) is known
-in closed form. This turns the three qualitative predictions of Section 5.2 into
+in closed form. This turns the three qualitative predictions of Section 7.2 into
 measured curves.
 
 Usage:
@@ -21,6 +21,7 @@ Outputs (files):
     graphs/nncg_kappa.pdf      CG inner iterations vs kappa, with a sqrt(kappa) guide
     graphs/nncg_cg_vs_pg.pdf   CG vs projected gradient: O(sqrt kappa) vs O(kappa)
     graphs/nncg_reg.pdf        CG iterations and kappa vs the regularising split alpha
+    graphs/nncg_warm.pdf       warm vs cold CG iterations along a parametric sweep
     tables/nncg_synthetic.tex  per-kappa outer/inner/PG counts (booktabs fragment)
     tables/nncg_rankdef.tex    rank-deficient (m<n) alpha sweep (booktabs fragment)
     tables/nncg_defs.tex       fitted scaling exponents etc. as \\newcommand macros
@@ -47,6 +48,8 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from nncg import (cg, kkt_violation, make_problem, pcg,  # noqa: F401
+                  solve_nnqp, solve_nnqp_eq)
 
 HERE = Path(__file__).parent
 GRAPHS = HERE.parent / "graphs"
@@ -73,228 +76,7 @@ COLOR_KAPPA = "#1f77b4"
 
 
 # ---------------------------------------------------------------------------
-# Test-problem family (Section 5.2)
-# ---------------------------------------------------------------------------
-
-def make_problem(n, kappa, support_frac=0.5, seed=0):
-    """A = Q diag(lambda) Q^T with condition number kappa and a planted optimum.
-
-    Returns (A, b, x_star, s_star). The spectrum is geometric on [1, kappa], so
-    lambda_min = 1 and lambda_max = kappa. A support of size round(support_frac*n)
-    is chosen; x* is positive there and zero elsewhere, s* is zero there and
-    positive elsewhere, and b = A x* - s*. Then s* = A x* - b is the reduced
-    gradient, complementary slackness holds coordinate-wise, and x* is the unique
-    minimiser of min_{x>=0} 1/2 x^T A x - b^T x.
-    """
-    rng = np.random.default_rng(seed)
-    eig = np.geomspace(1.0, kappa, n)
-    Q, _ = np.linalg.qr(rng.standard_normal((n, n)))
-    A = (Q * eig) @ Q.T
-    A = 0.5 * (A + A.T)
-
-    k = max(1, int(round(support_frac * n)))
-    perm = rng.permutation(n)
-    supp = perm[:k]
-
-    x_star = np.zeros(n)
-    x_star[supp] = rng.uniform(0.5, 1.5, size=k)
-    s_star = np.zeros(n)
-    off = perm[k:]
-    s_star[off] = rng.uniform(0.5, 1.5, size=n - k)
-    b = A @ x_star - s_star
-    return A, b, x_star, s_star
-
-
-# ---------------------------------------------------------------------------
-# Matrix-free CG inner solve (Proposition 3.1)
-# ---------------------------------------------------------------------------
-
-def cg(matvec, rhs, tol=1e-8, maxit=100000):
-    """Solve (matvec) x = rhs by conjugate gradients. Returns (x, iterations)."""
-    x = np.zeros_like(rhs)
-    r = rhs.copy()
-    p = r.copy()
-    rs = float(r @ r)
-    bnorm = float(np.linalg.norm(rhs))
-    if bnorm == 0.0:
-        return x, 0
-    for it in range(1, maxit + 1):
-        Ap = matvec(p)
-        alpha = rs / float(p @ Ap)
-        x += alpha * p
-        r -= alpha * Ap
-        rs_new = float(r @ r)
-        if np.sqrt(rs_new) / bnorm <= tol:
-            return x, it
-        p = r + (rs_new / rs) * p
-        rs = rs_new
-    return x, maxit
-
-
-def pcg(matvec, rhs, dinv, tol=1e-8, maxit=100000):
-    """Jacobi-preconditioned CG: M^{-1} = diag(dinv). Returns (x, iterations)."""
-    x = np.zeros_like(rhs)
-    r = rhs.copy()
-    z = dinv * r
-    p = z.copy()
-    rz = float(r @ z)
-    bnorm = float(np.linalg.norm(rhs))
-    if bnorm == 0.0:
-        return x, 0
-    for it in range(1, maxit + 1):
-        Ap = matvec(p)
-        alpha = rz / float(p @ Ap)
-        x += alpha * p
-        r -= alpha * Ap
-        if np.linalg.norm(r) / bnorm <= tol:
-            return x, it
-        z = dinv * r
-        rz_new = float(r @ z)
-        p = z + (rz_new / rz) * p
-        rz = rz_new
-    return x, maxit
-
-
-# ---------------------------------------------------------------------------
-# Active-set / block-principal-pivoting loop (Algorithm 4.1)
-# ---------------------------------------------------------------------------
-
-def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False,
-               cg_maxit=100000, max_outer=None):
-    """Minimise 1/2 x^T A x - b^T x over x >= 0 by the active-set loop.
-
-    Each free-block solve is matrix-free CG on v -> A_F v; A is never refactorised.
-    inner="exact" swaps in a direct dense solve (used to verify the inexactness
-    lemma: the CG-driven loop must visit the same free sets); inner="pcg" uses
-    Jacobi-preconditioned CG on diag(A_F). track=True records the free-set
-    trajectory. max_outer caps the outer loop (used by the rank-deficient panel,
-    where alpha=0 is expected to fail); "converged" reports whether the KKT exit
-    was reached. Returns a dict of x and the loop counters.
-    """
-    n = len(b)
-    free = np.ones(n, dtype=bool)  # F = {1..n} initially
-    x = np.zeros(n)
-    N_bar = n + 1
-    patience = p_max
-    outer = inner_total = fallback = 0
-    traj = [] if track else None
-    converged = True
-
-    while True:
-        if max_outer is not None and outer >= max_outer:
-            converged = False
-            break
-        idx = np.flatnonzero(free)
-        if track:
-            traj.append(tuple(idx.tolist()))
-        A_FF = A[np.ix_(idx, idx)]  # sliced view drives the matrix-free mat-vec
-        if inner == "exact":
-            xF, k_step = np.linalg.solve(A_FF, b[idx]), 1
-        elif inner == "pcg":
-            xF, k_step = pcg(lambda v: A_FF @ v, b[idx],
-                             1.0 / np.diag(A_FF), tol=cg_tol, maxit=cg_maxit)
-        else:
-            xF, k_step = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol, maxit=cg_maxit)
-        outer += 1
-        inner_total += k_step
-
-        x = np.zeros(n)
-        x[idx] = xF
-        s = A @ x - b  # reduced gradient s_i = (Ax)_i - b_i
-
-        prim = np.flatnonzero(free & (x < -tol))            # D: free but negative
-        dual = np.flatnonzero((~free) & (s < -tol))         # V: bound but s<0
-        viol = np.concatenate([prim, dual])
-        N = viol.size
-        if N == 0:
-            break  # KKT satisfied -> unique global minimiser
-
-        if N < N_bar or patience > 0:  # fast path: progress, or patience remains
-            if N < N_bar:
-                N_bar = N
-                patience = p_max
-            else:
-                patience -= 1
-            free[prim] = False  # batch exchange: drop all D, add all V
-            free[dual] = True
-        else:  # anti-cycling fallback: single Bland least-index pivot
-            fallback += 1
-            i_star = int(viol.min())
-            free[i_star] = not free[i_star]
-
-    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback,
-            "traj": traj, "converged": converged}
-
-
-# ---------------------------------------------------------------------------
-# Equality-augmented loop: min_{x>=0, Bx=c} 1/2 x^T A x - b^T x  (Section 3)
-# ---------------------------------------------------------------------------
-
-def solve_nnqp_eq(A, b, B, c, tol=1e-8, cg_tol=1e-10, p_max=3):
-    """Active-set loop with a general linear equality constraint B x = c.
-
-    On each free set the saddle system
-        A_F x_F - B_F^T lambda = b_F,   B_F x_F = c
-    is solved by eliminating lambda in R^p through the p-by-p Schur complement
-    S = B_F A_F^{-1} B_F^T (Section 3): v0 = A_F^{-1} b_F and the columns of
-    V1 = A_F^{-1} B_F^T are p+1 matrix-free CG solves sharing the operator A_F,
-    then lambda solves S lambda = B_F v0 - c and x_F = v0 + V1 lambda. The single
-    normalisation 1^T x = beta is the p=1, B=1^T case. The reduced gradient used
-    by the dual test is s = A x - b - B^T lambda.
-    """
-    n = len(b)
-    p = B.shape[0]
-    free = np.ones(n, dtype=bool)
-    x = np.zeros(n)
-    lam = np.zeros(p)
-    N_bar = n + 1
-    patience = p_max
-    outer = inner_total = fallback = 0
-
-    while True:
-        idx = np.flatnonzero(free)
-        A_FF = A[np.ix_(idx, idx)]
-        B_F = B[:, idx]
-        v0, k0 = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol)
-        V1 = np.zeros((idx.size, p))
-        k_cols = 0
-        for j in range(p):
-            V1[:, j], kj = cg(lambda v: A_FF @ v, B_F[j], tol=cg_tol)
-            k_cols += kj
-        outer += 1
-        inner_total += k0 + k_cols
-
-        S = B_F @ V1                              # p-by-p Schur complement, SPD
-        lam = np.linalg.solve(S, c - B_F @ v0)    # multiplier in R^p
-        xF = v0 + V1 @ lam                        # x_F = A_F^{-1}(b_F + B_F^T lambda)
-        x = np.zeros(n)
-        x[idx] = xF
-        s = A @ x - b - B.T @ lam                 # reduced gradient
-
-        prim = np.flatnonzero(free & (x < -tol))
-        dual = np.flatnonzero((~free) & (s < -tol))
-        viol = np.concatenate([prim, dual])
-        N = viol.size
-        if N == 0:
-            break
-        if N < N_bar or patience > 0:
-            if N < N_bar:
-                N_bar = N
-                patience = p_max
-            else:
-                patience -= 1
-            free[prim] = False
-            free[dual] = True
-        else:
-            fallback += 1
-            i_star = int(viol.min())
-            free[i_star] = not free[i_star]
-
-    return {"x": x, "lam": lam, "outer": outer, "inner": inner_total, "fallback": fallback}
-
-
-# ---------------------------------------------------------------------------
-# Projected-gradient comparator (Proposition 4.2)
+# Projected-gradient comparator (Proposition 5.1)
 # ---------------------------------------------------------------------------
 
 def solve_projgrad(A, b, x_star, tol=1e-6, maxit=2000000):
@@ -519,13 +301,6 @@ print("Rank-deficient Gram operator  (n=200, m=100; support below/above rank)")
 print("=" * 72)
 
 
-def kkt_violation(A, b, x):
-    """max of negativity and complementarity violations of the KKT system."""
-    s = A @ x - b
-    return float(max(np.max(-x, initial=0.0), np.max(-s, initial=0.0),
-                     np.max(np.abs(x * s), initial=0.0)))
-
-
 n_rd, m_rd = 200, 100
 RD_CAP, RD_MAX_OUTER = 2000, 30
 RD_ALPHAS = [0.0, 0.05, 0.2]
@@ -653,7 +428,7 @@ for sd in range(FB_SEEDS):
     # fast path with the guard removed. A revisited free set proves a cycle.
     pure = solve_nnqp(A, b, p_max=10**9, inner="exact", max_outer=300, track=True)
     cycled = (not pure["converged"]) and len(pure["traj"]) != len(set(pure["traj"]))
-    # guarded loop: Algorithm 4.1 as stated (default patience, CG inner solves)
+    # guarded loop: Algorithm 1 as stated (default patience, CG inner solves)
     g = solve_nnqp(A, b)
     fb_cycles += cycled
     fb_conv += g["converged"]
@@ -666,6 +441,74 @@ print(f"pure block pivoting (no fallback, exact solves): cycles on "
 print(f"guarded loop (p_max=3, CG inner): converges {fb_conv}/{FB_SEEDS}; "
       f"fallback fires on {fb_fired}/{FB_SEEDS} seeds, up to {fb_max} least-index "
       f"pivots; max KKT violation {fb_kkt:.1e}")
+
+
+# ===========================================================================
+# Panel I: warm-starting across a parametric sweep  (Section 5.4)
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Warm-started parametric sweep  (n=200, kappa=1e4, 40 steps)")
+print("=" * 72)
+
+N_W, KAPPA_W, STEPS_W = 200, 1e4, 40
+A_w, b0_w, x0_w, _ = make_problem(N_W, KAPPA_W, seed=0)
+rng_w = np.random.default_rng(1)
+db_w = rng_w.standard_normal(N_W)
+db_w *= 0.02 * np.linalg.norm(b0_w) / np.linalg.norm(db_w)  # 2% drift per step
+
+cold_outer, cold_inner, warm_outer, warm_inner, drifts = [], [], [], [], []
+prev_free = None
+prev_x = None
+prev_supp = None
+for k in range(STEPS_W):
+    b_k = b0_w + k * db_w
+    rc = solve_nnqp(A_w, b_k)
+    if prev_free is None:
+        rw = rc  # first point: nothing to warm-start from
+    else:
+        rw = solve_nnqp(A_w, b_k, warm=(prev_free, prev_x))
+    assert float(np.max(np.abs(rw["x"] - rc["x"]))) < 1e-6  # same optimum
+    supp = frozenset(np.flatnonzero(rc["free"]).tolist())
+    drifts.append(len(supp ^ prev_supp) if prev_supp is not None else 0)
+    cold_outer.append(rc["outer"])
+    cold_inner.append(rc["inner"])
+    warm_outer.append(rw["outer"])
+    warm_inner.append(rw["inner"])
+    prev_free, prev_x, prev_supp = rw["free"], rw["x"], supp
+
+# steps after the first, where warm-starting actually applies
+co, ci = np.array(cold_outer[1:]), np.array(cold_inner[1:])
+wo, wi = np.array(warm_outer[1:]), np.array(warm_inner[1:])
+dr = np.array(drifts[1:])
+print(f"{'':>12}  {'outer (mean)':>13}  {'inner (total)':>14}")
+print(f"{'cold':>12}  {co.mean():>13.1f}  {ci.sum():>14d}")
+print(f"{'warm':>12}  {wo.mean():>13.1f}  {wi.sum():>14d}")
+print(f"\nsupport drift per step: mean {dr.mean():.1f}, max {dr.max()} of "
+      f"{len(prev_supp)} active indices")
+print(f"warm-start speedup: outer {co.mean() / wo.mean():.1f}x, "
+      f"inner {ci.sum() / wi.sum():.1f}x")
+print(f"steps with unchanged support solved in one outer step (warm): "
+      f"{int(np.sum((dr == 0) & (wo == 1)))}/{int(np.sum(dr == 0))} "
+      f"(Prop. support-stable case)")
+
+# Figure: per-step inner iterations, cold vs warm
+figW, axW = plt.subplots(figsize=(4.5, 3.2))
+axW.plot(range(1, STEPS_W), ci, marker="o", markersize=3, color=COLOR_KAPPA,
+         label="cold start")
+axW.plot(range(1, STEPS_W), wi, marker="s", markersize=3, color=COLOR_CG,
+         label="warm start")
+axW.set_yscale("log")
+axW.set_xlabel("Sweep step $k$")
+axW.set_ylabel("CG iterations for step $k$")
+axW.set_title(rf"Warm-started sweep  ($n={N_W}$, $\kappa=10^4$)")
+axW.legend(framealpha=0.9)
+axW.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.7)
+figW.tight_layout(pad=1.0)
+figW.savefig(GRAPHS / "nncg_warm.pdf", bbox_inches="tight")
+figW.savefig(GRAPHS / "nncg_warm.png", bbox_inches="tight", dpi=150)
+print(f"Saved {GRAPHS / 'nncg_warm.pdf'}")
 
 
 # ---------------------------------------------------------------------------
@@ -820,5 +663,12 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgFbConv}}{{{fb_conv}}}\n")
     fh.write(f"\\newcommand{{\\nncgFbFired}}{{{fb_fired}}}\n")
     fh.write(f"\\newcommand{{\\nncgFbMax}}{{{fb_max}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmSteps}}{{{STEPS_W - 1}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmColdOuter}}{{{co.mean():.1f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmOuter}}{{{wo.mean():.1f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmInnerX}}{{{ci.sum() / wi.sum():.1f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmDrift}}{{{dr.mean():.1f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmStable}}{{{int(np.sum((dr == 0) & (wo == 1)))}}}\n")
+    fh.write(f"\\newcommand{{\\nncgWarmStableTot}}{{{int(np.sum(dr == 0))}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")
