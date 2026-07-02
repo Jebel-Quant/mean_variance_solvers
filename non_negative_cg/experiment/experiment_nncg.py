@@ -620,6 +620,54 @@ print("\nJacobi PCG runs at the core's conditioning regardless of the diagonal"
       "\nspread; plain CG pays for the scaling, as Section 6 predicts.")
 
 
+# ===========================================================================
+# Panel H: exercising the Bland fallback -- an adversarial anti-correlated family
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Exercising the fallback: anti-correlated near-duplicate columns (n=20)")
+print("=" * 72)
+
+
+def make_adversarial(n, seed, noise=1e-2, ridge=1e-6):
+    """Columns arrive in near-anti-parallel pairs: M = [M0, -M0 + noise*E].
+
+    Dropping a variable flips the sign of its partner, so the batch exchange
+    systematically over-shoots -- the codimension-one near-tie event of
+    Section 4 made generic. The ridge keeps A a P-matrix.
+    """
+    rng = np.random.default_rng(seed)
+    M0 = rng.standard_normal((n, n // 2))
+    M = np.hstack([M0, -M0 + noise * rng.standard_normal((n, n // 2))])
+    A = M.T @ M + ridge * np.eye(n)
+    return A, M.T @ rng.standard_normal(n)
+
+
+FB_SEEDS = 60
+fb_cycles = fb_conv = fb_fired = fb_max = 0
+fb_kkt = 0.0
+for sd in range(FB_SEEDS):
+    A, b = make_adversarial(20, sd)
+    # pure block pivoting: patience unbounded, exact solves -- the theory-faithful
+    # fast path with the guard removed. A revisited free set proves a cycle.
+    pure = solve_nnqp(A, b, p_max=10**9, inner="exact", max_outer=300, track=True)
+    cycled = (not pure["converged"]) and len(pure["traj"]) != len(set(pure["traj"]))
+    # guarded loop: Algorithm 4.1 as stated (default patience, CG inner solves)
+    g = solve_nnqp(A, b)
+    fb_cycles += cycled
+    fb_conv += g["converged"]
+    fb_fired += g["fallback"] > 0
+    fb_max = max(fb_max, g["fallback"])
+    fb_kkt = max(fb_kkt, kkt_violation(A, b, g["x"]))
+
+print(f"pure block pivoting (no fallback, exact solves): cycles on "
+      f"{fb_cycles}/{FB_SEEDS} seeds (revisits a free set, never terminates)")
+print(f"guarded loop (p_max=3, CG inner): converges {fb_conv}/{FB_SEEDS}; "
+      f"fallback fires on {fb_fired}/{FB_SEEDS} seeds, up to {fb_max} least-index "
+      f"pivots; max KKT violation {fb_kkt:.1e}")
+
+
 # ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
@@ -767,5 +815,10 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgPcgRatio}}{{{_mc / _mp:.0f}}}\n")
     _mc1, _mp1 = pcg_rows[0][2], pcg_rows[0][3]
     fh.write(f"\\newcommand{{\\nncgPcgBase}}{{{_mp1:.0f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgFbSeeds}}{{{FB_SEEDS}}}\n")
+    fh.write(f"\\newcommand{{\\nncgFbCycles}}{{{fb_cycles}}}\n")
+    fh.write(f"\\newcommand{{\\nncgFbConv}}{{{fb_conv}}}\n")
+    fh.write(f"\\newcommand{{\\nncgFbFired}}{{{fb_fired}}}\n")
+    fh.write(f"\\newcommand{{\\nncgFbMax}}{{{fb_max}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")

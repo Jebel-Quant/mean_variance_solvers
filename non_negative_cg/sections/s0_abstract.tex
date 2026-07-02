@@ -20,8 +20,10 @@ every principal submatrix is invertible and each pivot is well defined. The cent
 concerns termination: guarding a fast block-pivot path with a least-index Bland fallback, we
 prove the loop reaches the unique global minimiser in finitely many outer steps with
 \emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}) -- removing the hypothesis
-that classical block-principal-pivoting termination arguments require, while a synthetic study
-shows the fallback is provably necessary yet never entered on generic data. The guarantee is
+that classical block-principal-pivoting termination arguments require. A synthetic study shows
+the fallback is never entered on generic data yet genuinely necessary: on an adversarial family
+of anti-correlated designs the unguarded batch path cycles, and the fallback is what terminates
+it. The guarantee is
 robust to inexactness: once CG's residual tolerance is tied to the decision threshold, the
 inexact loop provably visits the same free sets as the exact one
 (Lemma~\ref{lem:inexact}). A loop-free

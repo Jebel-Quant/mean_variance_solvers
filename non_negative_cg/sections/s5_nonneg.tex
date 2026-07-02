@@ -136,6 +136,9 @@ reduce $N$ only when a dropped index is immediately re-added (or vice versa), wh
 $s_i = 0$ exactly for some toggled $i$ -- a codimension-one, hence non-generic,
 condition~\cite{judice1994}; block principal pivoting therefore converges in a handful of outer
 steps on typical data, with the fast path alone certifying optimality.
+Section~\ref{ssec:synthetic} exhibits the flip side: an anti-correlated design family that
+makes the event systematic, on which the unguarded batch path provably cycles and only the
+fallback terminates.
 
 Theorem~\ref{thm:termination} assumes each inner call returns the exact minimiser of
 $f_{\mathcal{F}}$; CG returns an iterate accurate only to its residual tolerance. The
