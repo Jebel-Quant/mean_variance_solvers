@@ -74,7 +74,8 @@ golub2013,greenbaum1997,benzi2005}. What is \emph{not} classical is the terminat
 block principal pivoting is classically shown to terminate only under a non-degeneracy
 assumption, and the least-index Bland fallback removes it (Theorem~\ref{thm:termination}),
 giving an unconditional guarantee that the synthetic study of Section~\ref{sec:results} then
-shows to be provably necessary yet dormant -- the fallback is never entered on generic data.
+shows to be dormant on generic data yet genuinely necessary: on an adversarial family of
+anti-correlated designs the unguarded batch path cycles, and only the fallback terminates it.
 Wrapping this guaranteed loop around a matrix-free Krylov inner solver, warm-started across a
 parametric sweep, is the engineering that makes the guaranteed method also a fast one. The
 algorithm is the computational kernel of the companion

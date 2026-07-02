@@ -136,6 +136,22 @@ regularisation.
 \end{minipage}
 \end{figure}
 
+\emph{Exercising the fallback.} That the fallback lies dormant on generic data raises the
+question of whether it is needed at all; the following family answers it. Let the columns of
+$M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$ with small $\xi$ and a
+ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix: pushing a variable to the bound flips
+the sign of its partner's entry, so a batch drop systematically over-shoots and a later batch
+add restores it -- the codimension-one near-tie event of Section~\ref{sec:nonneg} made
+systematic. On this family ($n = 20$, \nncgFbSeeds{} seeds) \emph{pure} block principal
+pivoting -- Algorithm~\ref{alg:elim} with unbounded patience and exact inner solves --
+revisits a previously seen free set and cycles without terminating on \nncgFbCycles{} of
+\nncgFbSeeds{} seeds. The guarded loop, exactly as stated (default patience, CG inner
+solves), converges on all \nncgFbSeeds{}: on \nncgFbFired{} seeds the patience budget is
+exhausted and up to \nncgFbMax{} least-index pivots are taken before the batch path resumes,
+each exit certified by the KKT system to working tolerance. The guarantee of
+Theorem~\ref{thm:termination} is therefore not decorative: on adversarial data the unguarded
+fast path genuinely cycles, and the fallback is what terminates it.
+
 \emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
 regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
 $M \in \mathbb{R}^{100\times 200}$, so every free block with $|\mathcal{F}| > m = 100$ is
