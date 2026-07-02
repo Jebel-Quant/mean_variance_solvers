@@ -1,8 +1,9 @@
 # Repository-root Makefile. Each paper has its own self-contained Makefile
 # (paper/Makefile builds minvar_paper.pdf, paper_rmt/Makefile builds
 # rmt_paper.pdf); the compile, clean, and arxiv targets here run every paper.
-# Both papers' figures and tables come from the experiment/ Python package,
-# which the figures target regenerates.
+# The two finance papers' figures and tables come from the experiment/ Python
+# package; a paper that owns a self-contained study instead (non_negative_cg)
+# exposes its own `figures` target, which the figures target below also runs.
 
 .DEFAULT_GOAL := help
 
@@ -30,6 +31,11 @@ compile:  ## Build every paper
 
 figures:  ## Regenerate every paper's figures and tables (runs the experiment)
 	$(MAKE) -C experiment figures
+	@for p in $(PAPERS); do \
+		if grep -qE '^figures:' $$p/Makefile; then \
+			echo "==> $(MAKE) -C $$p figures"; $(MAKE) -C $$p figures; \
+		fi; \
+	done
 
 clean:  ## Remove every paper's LaTeX build artifacts
 	@$(foreach p,$(PAPERS),$(MAKE) -C $(p) clean &&) true

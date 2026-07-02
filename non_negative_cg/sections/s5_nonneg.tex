@@ -12,7 +12,7 @@ The active-set method maintains a free set $\mathcal{F}$, solves~\eqref{eq:inner
 equality-augmented form) on $\mathcal{F}$ by CG, and adjusts $\mathcal{F}$ toward
 feasibility. In the \emph{primal step} any free variable that returned negative is pushed to
 the bound and dropped from $\mathcal{F}$. Once all free variables are non-negative, the
-\emph{dual step} inspects the reduced gradient $s = Ax - b$ (minus $\lambda\mathbf{1}$ in the
+\emph{dual step} inspects the reduced gradient $s = Ax - b$ (minus $B^\top\lambda$ in the
 equality-augmented case, with $\lambda$ from Section~\ref{sec:reduction}) at every bound
 variable: a bound index $i$ with $s_i < 0$ would lower $f$ if released, so it is re-admitted
 to $\mathcal{F}$. The loop terminates when no variable violates either test, i.e.\ when
@@ -50,7 +50,7 @@ principal pivoting~\cite{judice1994}.
     \hfill\textit{($k_{\mathrm{step}}$: CG iterations; $1$ for a direct inner solve)}
   \State $x_i \leftarrow (x_{\mathcal{F}})_i$ for $i \in \mathcal{F}$;\; $x_i \leftarrow 0$ for $i \notin \mathcal{F}$
   \State $s_i \leftarrow (Ax)_i - b_i$
-    \hfill\textit{(reduced gradient; subtract $\lambda$ in the equality-augmented case)}
+    \hfill\textit{(reduced gradient; subtract $(B^\top\lambda)_i$ in the equality-augmented case)}
   \State $\mathcal{D} \leftarrow \{i \in \mathcal{F} : x_i < -\varepsilon\}$;\;
          $\mathcal{V} \leftarrow \{i \notin \mathcal{F} : s_i < -\varepsilon\}$
     \hfill\textit{(primal and dual violators)}
@@ -80,14 +80,20 @@ Let $f(x) = \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$. Then for any pa
 $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim} terminates in finitely many outer
 iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$. No
 non-degeneracy assumption is required. The same holds for the equality-augmented
-problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $\lambda\mathbf{1}$.
+problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $B^\top\lambda$,
+provided $B_{\mathcal{F}}$ retains full row rank on every free set the loop visits (automatic
+for $p=1$; generic once $|\mathcal{F}| \geq p$).
 \end{theorem}
 
 \begin{proof}
 \emph{Step 1 (each inner solve is well posed).}
 Because $A \succ 0$, every principal submatrix $A_{\mathcal{F}}$ is SPD, so $A$ is a
 $P$-matrix~\cite{murty1988}, and the system $A_{\mathcal{F}}x_{\mathcal{F}} = b_{\mathcal{F}}$
-has a unique solution to which CG converges (Proposition~\ref{prop:cg}).
+has a unique solution to which CG converges (Proposition~\ref{prop:cg}). In the
+equality-augmented case the free-set solve is the saddle system~\eqref{eq:saddle}; with
+$A_{\mathcal{F}} \succ 0$ and $B_{\mathcal{F}}$ of full row rank its Schur complement $S$ is
+SPD, so~\eqref{eq:saddle} has the unique solution recovered by the $p+1$ SPD solves of
+Section~\ref{sec:reduction}.
 
 \emph{Step 2 (termination implies global optimality).}
 Free-set stationarity gives $s_i = 0$ for $i \in \mathcal{F}$. The loop exits only when
@@ -146,10 +152,14 @@ The second strategy enforces the constraint at every step. Projected gradient it
   x_{k+1} = \Pi_C\!\left(x_k - \tau\,\nabla f(x_k)\right),
   \qquad \nabla f(x) = A x - b,
 \]
-where $C$ is the feasible set -- the non-negative orthant for~\eqref{eq:bqp}, so
-$\Pi_C(y) = \max(y, 0)$ componentwise, or the affine simplex slice $\Delta_\beta$ for the
-equality-augmented problem~\eqref{eq:eqp}, projected onto in $O(n\log n)$ by a single
-sort-and-threshold pass~\cite{duchi2008,condat2016}. The step size is $\tau = 1/L$ with
+where $C$ is the feasible set. For~\eqref{eq:bqp} it is the non-negative orthant, so
+$\Pi_C(y) = \max(y, 0)$ componentwise; for the single normalisation $\mathbf{1}^\top x=\beta$,
+$x\geq0$ it is the simplex slice $\Delta_\beta$, projected onto in $O(n\log n)$ by a single
+sort-and-threshold pass~\cite{duchi2008,condat2016}. For a general equality system $Bx=c$,
+however, the projection onto $\mathcal{P} = \{x\geq0: Bx=c\}$ is itself a non-negative
+quadratic program with no closed form, so projected gradient loses its per-step simplicity --
+one reason the active-set loop, whose cost rises only by the $p$ extra right-hand sides of
+Section~\ref{sec:reduction}, is the method of choice once $p>1$. The step size is $\tau = 1/L$ with
 $L = \lambda_{\max}(A)$, estimated once by power iteration on the same (matrix-free) operator.
 There is no outer loop and no linear solve: each step is one gradient evaluation -- two products
 with $M$ when $A = M^\top M$ -- plus a projection.

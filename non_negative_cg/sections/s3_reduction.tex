@@ -48,28 +48,43 @@ count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner 
 than a plain gradient iteration: the projected-gradient comparator of
 Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
 
-\paragraph{Eliminating the equality multiplier.}
-For the equality-augmented problem~\eqref{eq:eqp}, stationarity on the free set is
-$A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}} + \lambda\mathbf{1}$, an SPD system with an
-unknown scalar $\lambda$ on the right-hand side. Rather than enlarge the system to the
-$(|\mathcal{F}|+1)\times(|\mathcal{F}|+1)$ saddle-point form~\cite{benzi2005}, split it by
-linearity into two SPD solves,
+\paragraph{Eliminating the equality multipliers.}
+For the equality-augmented problem~\eqref{eq:eqp}, stationarity and feasibility on the free
+set are the $(|\mathcal{F}|+p)\times(|\mathcal{F}|+p)$ saddle-point system~\cite{benzi2005}
+\begin{equation}\label{eq:saddle}
+  \begin{pmatrix} A_{\mathcal{F}} & -B_{\mathcal{F}}^\top \\ B_{\mathcal{F}} & 0 \end{pmatrix}
+  \begin{pmatrix} x_{\mathcal{F}} \\ \lambda \end{pmatrix}
+  =
+  \begin{pmatrix} b_{\mathcal{F}} \\ c \end{pmatrix},
+  \qquad B_{\mathcal{F}} = B_{:,\mathcal{F}} \in \mathbb{R}^{p\times|\mathcal{F}|}.
+\end{equation}
+Rather than solve the indefinite system directly, eliminate $\lambda$ by the Schur
+complement. Stationarity gives $x_{\mathcal{F}} = A_{\mathcal{F}}^{-1}(b_{\mathcal{F}} +
+B_{\mathcal{F}}^\top\lambda) = v_0 + V_1\lambda$ in terms of the SPD solves
 \[
-  v_0 = A_{\mathcal{F}}^{-1} b_{\mathcal{F}},
+  v_0 = A_{\mathcal{F}}^{-1} b_{\mathcal{F}} \in \mathbb{R}^{|\mathcal{F}|},
   \qquad
-  v_1 = A_{\mathcal{F}}^{-1}\mathbf{1},
+  V_1 = A_{\mathcal{F}}^{-1} B_{\mathcal{F}}^\top \in \mathbb{R}^{|\mathcal{F}|\times p}
+  \quad(\text{its $p$ columns, one CG solve each}).
 \]
-so that $x_{\mathcal{F}} = v_0 + \lambda v_1$. The normalisation
-$\mathbf{1}^\top x_{\mathcal{F}} = \beta$ then fixes the multiplier in closed form,
+Imposing $B_{\mathcal{F}}x_{\mathcal{F}} = c$ then fixes the multiplier through the $p\times p$
+system
 \[
-  \lambda = \frac{\beta - \mathbf{1}^\top v_0}{\mathbf{1}^\top v_1},
+  S\,\lambda = c - B_{\mathcal{F}} v_0,
   \qquad
-  x_{\mathcal{F}} = v_0 + \lambda v_1,
+  S = B_{\mathcal{F}} V_1 = B_{\mathcal{F}} A_{\mathcal{F}}^{-1} B_{\mathcal{F}}^\top \succ 0,
+  \qquad
+  x_{\mathcal{F}} = v_0 + V_1\lambda,
 \]
-with $\mathbf{1}^\top v_1 = \mathbf{1}^\top A_{\mathcal{F}}^{-1}\mathbf{1} > 0$ since
-$A_{\mathcal{F}} \succ 0$. The pure-normalisation case $b = 0$, $\beta = 1$ collapses to a
-single solve, $x_{\mathcal{F}} = v_1 / (\mathbf{1}^\top v_1)$. Thus each outer step costs one
-or two matrix-free CG solves; the multiplier is recovered analytically and never appears in
-the linear system, keeping every inner solve SPD and directly amenable to
-Proposition~\ref{prop:cg}. The two right-hand sides share the operator $A_{\mathcal{F}}$ and
-can be solved by a block-CG or by two independent CG runs.
+where $S$, the Schur complement, is SPD because $A_{\mathcal{F}} \succ 0$ and $B_{\mathcal{F}}$
+has full row rank; the multiplier is $\lambda = S^{-1}(c - B_{\mathcal{F}}v_0)$ and the
+$p\times p$ solve is a dense Cholesky, negligible for the small $p$ typical of balance
+conditions. The single-normalisation case $p=1$, $B=\mathbf{1}^\top$, $c=\beta$ recovers the
+two solves $v_0, v_1 = A_{\mathcal{F}}^{-1}\mathbf{1}$ with the scalar
+$\lambda = (\beta - \mathbf{1}^\top v_0)/(\mathbf{1}^\top v_1)$, and the pure-normalisation
+case $b=0$, $\beta=1$ collapses to the single solve $x_{\mathcal{F}} = v_1/(\mathbf{1}^\top v_1)$.
+Thus each outer step costs $p+1$ matrix-free CG solves; the multipliers are recovered
+analytically and never appear in the linear solve, keeping every inner system SPD and directly
+amenable to Proposition~\ref{prop:cg}. The $p+1$ right-hand sides share the operator
+$A_{\mathcal{F}}$ and can be solved by a block-CG or by independent CG runs, warm-started
+across outer steps.

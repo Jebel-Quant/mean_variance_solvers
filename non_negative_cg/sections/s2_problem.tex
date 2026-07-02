@@ -8,13 +8,19 @@ We consider the strictly convex non-negative quadratic program~\eqref{eq:bqp},
 together with its two structural specialisations. In the \emph{least-squares} form
 $A = M^\top M$ and $b = M^\top d$ for $M \in \mathbb{R}^{m\times n}$ of full column rank, so
 that $f(x) = \tfrac{1}{2}\|Mx - d\|_2^2 - \tfrac{1}{2}\|d\|_2^2$ and~\eqref{eq:bqp} is
-NNLS~\cite{lawson1974}. In the \emph{equality-augmented} form a single normalisation
-$\mathbf{1}^\top x = \beta$ is imposed as well,
+NNLS~\cite{lawson1974}. In the \emph{equality-augmented} form a linear equality
+system $Bx = c$ is imposed as well,
 \begin{equation}\label{eq:eqp}
   \min_{x}\; \tfrac{1}{2}\,x^\top A x - b^\top x
-  \quad\text{subject to}\quad \mathbf{1}^\top x = \beta,\; x \geq 0,
+  \quad\text{subject to}\quad Bx = c,\; x \geq 0,
+  \qquad B \in \mathbb{R}^{p\times n},\; c \in \mathbb{R}^p,
 \end{equation}
-which constrains $x$ to the affine slice $\Delta_\beta$ of the non-negative orthant.
+with $B$ of full row rank $p \leq n$, which constrains $x$ to the polytope
+$\mathcal{P} = \{x \geq 0 : Bx = c\}$, an affine slice of the non-negative
+orthant. The single normalisation $\mathbf{1}^\top x = \beta$ is the case $p=1$,
+$B = \mathbf{1}^\top$, $c = \beta$; the general $B$ carries any finite family of
+linear balance conditions (group budgets, factor neutralities, netting rules)
+at the same cost structure.
 
 \paragraph{Optimality and complementarity.}
 Because $f$ is strictly convex and the feasible set of~\eqref{eq:bqp} is a non-empty closed
@@ -34,12 +40,18 @@ variable with $x_i < 0$ is infeasible and must be pushed to the bound. These two
 drive the primal and dual steps of Section~\ref{sec:nonneg}.
 
 For the equality-augmented problem~\eqref{eq:eqp} the Lagrangian carries an additional term
-$-\lambda(\mathbf{1}^\top x - \beta)$, so the reduced gradient becomes
-$s = A x - b - \lambda\mathbf{1}$ and the free-set stationarity reads
-$(Ax)_i = b_i + \lambda$ for $i \in \mathcal{F}$: every free coordinate's gradient equals the
-common shadow price $\lambda$ of the normalisation. Section~\ref{sec:reduction} shows that
-$\lambda$ need not be carried as an unknown in the linear solve; it is recovered in closed form
-from two SPD solves.
+$-\lambda^\top(Bx - c)$ with a multiplier $\lambda \in \mathbb{R}^p$, so the reduced gradient
+becomes $s = A x - b - B^\top\lambda$ and the free-set stationarity reads
+$(Ax)_i = b_i + (B^\top\lambda)_i$ for $i \in \mathcal{F}$: on the free set the gradient is
+pinned to the row space of $B$, with $\lambda$ the vector of shadow prices of the $p$ balance
+conditions. The KKT system is now a \emph{mixed} complementarity problem -- the free block
+carries the equality $B_{\mathcal{F}}x_{\mathcal{F}} = c$ alongside the sign conditions.
+Section~\ref{sec:reduction} shows that $\lambda$ need not be carried as an unknown in the
+linear solve; it is recovered in closed form from $p+1$ SPD solves and a $p\times p$ Schur
+system (for $p=1$, the two solves of the single-normalisation case). This requires
+$B_{\mathcal{F}}$ to have full row rank, which holds whenever the free set is large enough,
+$|\mathcal{F}| \geq p$, and generically thereafter; for $p=1$ it holds for every non-empty
+free set.
 
 \paragraph{The $P$-matrix property.}
 Since $A \succ 0$, every principal submatrix $A_{\mathcal{F}} = A_{\mathcal{F},\mathcal{F}}$
