@@ -81,7 +81,9 @@ non_negative_cg/
   Makefile               builds nncg_paper.pdf (cites ../matrix_free/bib/refs.bib)
   nncg_paper.tex         main file: preamble + \input of the sections
   sections/              one .tex per section (s0_abstract … s8_conclusions)
-  experiment/            self-contained synthetic study (experiment_nncg.py, NumPy only)
+  experiment/            self-contained synthetic study (nncg.py + experiment_nncg.py,
+                         NumPy only) and an external-solver benchmark
+                         (experiment_nncg_bench.py; SciPy + Clarabel)
   graphs/                generated figure PDFs (committed; `make figures`)
   tables/                generated table + \newcommand fragments (committed)
 experiment/              numerical experiments that generate graphs/ and tables/
