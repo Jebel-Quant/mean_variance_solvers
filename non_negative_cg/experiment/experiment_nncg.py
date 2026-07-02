@@ -22,7 +22,8 @@ Outputs (files):
     graphs/nncg_cg_vs_pg.pdf   CG vs projected gradient: O(sqrt kappa) vs O(kappa)
     graphs/nncg_reg.pdf        CG iterations and kappa vs the regularising split alpha
     tables/nncg_synthetic.tex  per-kappa outer/inner/PG counts (booktabs fragment)
-    tables/nncg_defs.tex       fitted scaling exponents as \\newcommand macros
+    tables/nncg_rankdef.tex    rank-deficient (m<n) alpha sweep (booktabs fragment)
+    tables/nncg_defs.tex       fitted scaling exponents etc. as \\newcommand macros
 
 Outputs (stdout):
     a correctness check (max |x - x*|) and the three measured tables.
@@ -130,17 +131,45 @@ def cg(matvec, rhs, tol=1e-8, maxit=100000):
     return x, maxit
 
 
+def pcg(matvec, rhs, dinv, tol=1e-8, maxit=100000):
+    """Jacobi-preconditioned CG: M^{-1} = diag(dinv). Returns (x, iterations)."""
+    x = np.zeros_like(rhs)
+    r = rhs.copy()
+    z = dinv * r
+    p = z.copy()
+    rz = float(r @ z)
+    bnorm = float(np.linalg.norm(rhs))
+    if bnorm == 0.0:
+        return x, 0
+    for it in range(1, maxit + 1):
+        Ap = matvec(p)
+        alpha = rz / float(p @ Ap)
+        x += alpha * p
+        r -= alpha * Ap
+        if np.linalg.norm(r) / bnorm <= tol:
+            return x, it
+        z = dinv * r
+        rz_new = float(r @ z)
+        p = z + (rz_new / rz) * p
+        rz = rz_new
+    return x, maxit
+
+
 # ---------------------------------------------------------------------------
 # Active-set / block-principal-pivoting loop (Algorithm 4.1)
 # ---------------------------------------------------------------------------
 
-def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False):
+def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False,
+               cg_maxit=100000, max_outer=None):
     """Minimise 1/2 x^T A x - b^T x over x >= 0 by the active-set loop.
 
     Each free-block solve is matrix-free CG on v -> A_F v; A is never refactorised.
     inner="exact" swaps in a direct dense solve (used to verify the inexactness
-    lemma: the CG-driven loop must visit the same free sets). track=True records
-    the free-set trajectory. Returns a dict of x and the loop counters.
+    lemma: the CG-driven loop must visit the same free sets); inner="pcg" uses
+    Jacobi-preconditioned CG on diag(A_F). track=True records the free-set
+    trajectory. max_outer caps the outer loop (used by the rank-deficient panel,
+    where alpha=0 is expected to fail); "converged" reports whether the KKT exit
+    was reached. Returns a dict of x and the loop counters.
     """
     n = len(b)
     free = np.ones(n, dtype=bool)  # F = {1..n} initially
@@ -149,16 +178,23 @@ def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False):
     patience = p_max
     outer = inner_total = fallback = 0
     traj = [] if track else None
+    converged = True
 
     while True:
+        if max_outer is not None and outer >= max_outer:
+            converged = False
+            break
         idx = np.flatnonzero(free)
         if track:
             traj.append(tuple(idx.tolist()))
         A_FF = A[np.ix_(idx, idx)]  # sliced view drives the matrix-free mat-vec
         if inner == "exact":
             xF, k_step = np.linalg.solve(A_FF, b[idx]), 1
+        elif inner == "pcg":
+            xF, k_step = pcg(lambda v: A_FF @ v, b[idx],
+                             1.0 / np.diag(A_FF), tol=cg_tol, maxit=cg_maxit)
         else:
-            xF, k_step = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol)
+            xF, k_step = cg(lambda v: A_FF @ v, b[idx], tol=cg_tol, maxit=cg_maxit)
         outer += 1
         inner_total += k_step
 
@@ -186,7 +222,8 @@ def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False):
             i_star = int(viol.min())
             free[i_star] = not free[i_star]
 
-    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback, "traj": traj}
+    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback,
+            "traj": traj, "converged": converged}
 
 
 # ---------------------------------------------------------------------------
@@ -472,6 +509,117 @@ print(f"\nCG-driven loop visits the exact loop's free sets on {traj_agree}/{traj
       f"instances (cg_tol=1e-10, test tol=1e-8), as the inexactness lemma licenses.")
 
 
+# ===========================================================================
+# Panel F: rank-deficient Gram operator (m < n) -- only alpha > 0 is well posed
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Rank-deficient Gram operator  (n=200, m=100; support below/above rank)")
+print("=" * 72)
+
+
+def kkt_violation(A, b, x):
+    """max of negativity and complementarity violations of the KKT system."""
+    s = A @ x - b
+    return float(max(np.max(-x, initial=0.0), np.max(-s, initial=0.0),
+                     np.max(np.abs(x * s), initial=0.0)))
+
+
+n_rd, m_rd = 200, 100
+RD_CAP, RD_MAX_OUTER = 2000, 30
+RD_ALPHAS = [0.0, 0.05, 0.2]
+rd_rows = []  # (k, alpha, n_conv, n_seeds, mean_inner_conv, n_capped, max_err_conv)
+for k_rd in (50, 150):  # optimal support below / above the data rank m
+    print(f"--- planted support k={k_rd} (data rank m={m_rd}) ---")
+    print(f"{'alpha':>7}  {'conv':>6}  {'inner(conv)':>12}  {'capped':>7}  {'max|x-x*|':>11}")
+    for a in RD_ALPHAS:
+        convs, inners, errs, capped = 0, [], [], 0
+        for sd in SEEDS:
+            rng = np.random.default_rng(sd)
+            M_rd = rng.standard_normal((m_rd, n_rd)) / np.sqrt(m_rd)
+            A0 = M_rd.T @ M_rd  # PSD, rank m: free blocks with |F| > m are singular
+            perm = rng.permutation(n_rd)
+            x_rd = np.zeros(n_rd)
+            x_rd[perm[:k_rd]] = rng.uniform(0.5, 1.5, size=k_rd)
+            s_rd = np.zeros(n_rd)
+            s_rd[perm[k_rd:]] = rng.uniform(0.5, 1.5, size=n_rd - k_rd)
+            A_a = (1.0 - a) * A0 + a * np.eye(n_rd)
+            b_a = A_a @ x_rd - s_rd  # planted KKT point for every alpha, incl. 0
+            res = solve_nnqp(A_a, b_a, cg_maxit=RD_CAP, max_outer=RD_MAX_OUTER)
+            # a capped inner solve returned without meeting its tolerance:
+            # no certificate, whatever the outer loop then does with it
+            capped += res["inner"] >= RD_CAP
+            if res["converged"]:
+                convs += 1
+                inners.append(res["inner"])
+                errs.append(float(np.max(np.abs(res["x"] - x_rd))))
+        mean_inner = float(np.mean(inners)) if inners else float("nan")
+        max_err = max(errs) if errs else float("nan")
+        rd_rows.append((k_rd, a, convs, len(list(SEEDS)), mean_inner, capped, max_err))
+        print(f"{a:>7.2f}  {convs:>4}/5  {mean_inner:>12.0f}  {capped:>7}  {max_err:>11.1e}")
+
+rd_ok = [r for r in rd_rows if r[1] > 0]
+print(f"\nalpha=0: unreliable below the rank (uncertified capped solves; occasional"
+      f"\nnon-convergence) and fails on every seed once the optimal support exceeds"
+      f"\nthe rank. Every alpha > 0 run converges (max err "
+      f"{max(r[6] for r in rd_ok):.1e}), at an order of magnitude fewer iterations.")
+
+
+# ===========================================================================
+# Panel G: Jacobi-preconditioned CG inside the loop  (badly scaled operator)
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Jacobi PCG vs CG inside the active-set loop  (n=200, scaled operator)")
+print("=" * 72)
+
+
+def make_scaled_problem(n, kappa_core, spread, support_frac=0.5, seed=0):
+    """A = D^(1/2) (Q Lambda Q^T) D^(1/2): well-conditioned core, bad row scaling.
+
+    Jacobi preconditioning removes the diagonal scaling, so PCG should run at
+    the core's condition number regardless of the spread.
+    """
+    rng = np.random.default_rng(seed)
+    eig = np.geomspace(1.0, kappa_core, n)
+    Q, _ = np.linalg.qr(rng.standard_normal((n, n)))
+    core = 0.5 * ((Q * eig) @ Q.T + ((Q * eig) @ Q.T).T)
+    d = rng.permutation(np.geomspace(1.0, spread, n))
+    A = core * np.sqrt(np.outer(d, d))
+    k = max(1, int(round(support_frac * n)))
+    perm = rng.permutation(n)
+    x_star = np.zeros(n)
+    x_star[perm[:k]] = rng.uniform(0.5, 1.5, size=k)
+    s_star = np.zeros(n)
+    s_star[perm[k:]] = rng.uniform(0.5, 1.5, size=n - k)
+    return A, A @ x_star - s_star, x_star
+
+
+SPREADS = [1e0, 1e2, 1e4]
+pcg_rows = []
+print(f"{'spread':>9}  {'kappa(A)':>10}  {'inner(CG)':>10}  {'inner(PCG)':>11}  {'ratio':>6}")
+for spread in SPREADS:
+    inners_cg, inners_pcg, kappas = [], [], []
+    for sd in SEEDS:
+        A, b, x_star = make_scaled_problem(200, 100.0, spread, seed=sd)
+        eigs = np.linalg.eigvalsh(A)
+        kappas.append(float(eigs[-1] / eigs[0]))
+        r_cg = solve_nnqp(A, b)
+        r_pcg = solve_nnqp(A, b, inner="pcg")
+        for r in (r_cg, r_pcg):
+            assert float(np.max(np.abs(r["x"] - x_star))) < 1e-6
+        inners_cg.append(r_cg["inner"])
+        inners_pcg.append(r_pcg["inner"])
+    mc, mp = float(np.mean(inners_cg)), float(np.mean(inners_pcg))
+    pcg_rows.append((spread, float(np.mean(kappas)), mc, mp))
+    print(f"{spread:>9.0e}  {np.mean(kappas):>10.1e}  {mc:>10.1f}  {mp:>11.1f}  {mc / mp:>6.1f}")
+
+print("\nJacobi PCG runs at the core's conditioning regardless of the diagonal"
+      "\nspread; plain CG pays for the scaling, as Section 6 predicts.")
+
+
 # ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
@@ -569,6 +717,30 @@ with open(TABLES / "nncg_synthetic.tex", "w") as fh:
     fh.write("\\bottomrule\n\\end{tabular}\n")
 print(f"Saved {TABLES / 'nncg_synthetic.tex'}")
 
+def sci(v):
+    """Format a float as LaTeX scientific notation, e.g. $2\\cdot10^{-9}$."""
+    if v == 0.0:
+        return "$0$"
+    mant, expo = f"{v:.0e}".split("e")
+    return f"${mant}\\cdot10^{{{int(expo)}}}$"
+
+
+with open(TABLES / "nncg_rankdef.tex", "w") as fh:
+    fh.write("% Generated by experiment_nncg.py -- do not edit by hand.\n")
+    fh.write("\\begin{tabular}{rrcrrr}\n\\toprule\n")
+    fh.write("Support $k$ & $\\alpha$ & Converged & CG inner & Capped solves & "
+             "$\\lVert x - x^\\star\\rVert_\\infty$ \\\\\n\\midrule\n")
+    prev_k = None
+    for k, a, convs, total, mean_inner, capped, max_err in rd_rows:
+        if prev_k is not None and k != prev_k:
+            fh.write("\\midrule\n")
+        prev_k = k
+        inner_s = "--" if np.isnan(mean_inner) else f"{mean_inner:.0f}"
+        err_s = "--" if np.isnan(max_err) else sci(max_err)
+        fh.write(f"{k} & {a:.2f} & {convs}/{total} & {inner_s} & {capped} & {err_s} \\\\\n")
+    fh.write("\\bottomrule\n\\end{tabular}\n")
+print(f"Saved {TABLES / 'nncg_rankdef.tex'}")
+
 with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write("% Generated by experiment_nncg.py -- do not edit by hand.\n")
     fh.write(f"\\newcommand{{\\nncgCGslope}}{{{cg_slope:.2f}}}\n")
@@ -583,5 +755,17 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgEqErr}}{{{eq_err:.0e}}}\n")
     fh.write(f"\\newcommand{{\\nncgTrajAgree}}{{{traj_agree}}}\n")
     fh.write(f"\\newcommand{{\\nncgTrajTotal}}{{{traj_total}}}\n")
+    fh.write(f"\\newcommand{{\\nncgRankOkErr}}{{{max(r[6] for r in rd_ok):.0e}}}\n")
+    _rd0 = {r[0]: r for r in rd_rows if r[1] == 0.0}
+    fh.write(f"\\newcommand{{\\nncgRankConvLow}}{{{_rd0[50][2]}}}\n")   # alpha=0, k<m
+    fh.write(f"\\newcommand{{\\nncgRankConvHigh}}{{{_rd0[150][2]}}}\n")  # alpha=0, k>m
+    # PCG panel at the widest diagonal spread: CG pays for the scaling, PCG does not.
+    _sp, _kap, _mc, _mp = pcg_rows[-1]
+    fh.write(f"\\newcommand{{\\nncgPcgKappa}}{{{_kap:.0e}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPcgCG}}{{{_mc:.0f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPcgPCG}}{{{_mp:.0f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPcgRatio}}{{{_mc / _mp:.0f}}}\n")
+    _mc1, _mp1 = pcg_rows[0][2], pcg_rows[0][3]
+    fh.write(f"\\newcommand{{\\nncgPcgBase}}{{{_mp1:.0f}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")

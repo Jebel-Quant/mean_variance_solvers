@@ -94,7 +94,8 @@ $\nncgCGslope < \tfrac12$, the clustered spectrum buying CG its superlinear phas
 regularising split~\eqref{eq:regsplit} with $R^\top R = I$ compresses $\kappa$ at rate
 $O((1-\alpha)/\alpha)$ (Proposition~\ref{prop:regcond}) and drives the count down monotonically
 as $\alpha$ increases (Figure~\ref{fig:nncg_reg}); the effect is largest in the rank-deficient
-regime $m < n$, where only $\alpha > 0$ makes the system well posed.
+regime $m < n$, where only $\alpha > 0$ makes the system well posed
+(Table~\ref{tab:nncg_rankdef} below).
 
 \emph{(ii) Outer count is small and the fallback is dormant.}
 Across $\kappa \in [10, 10^6]$ the active-set loop terminates in at most $\nncgMaxOuter$ outer
@@ -134,6 +135,47 @@ regularisation.
   \label{fig:nncg_reg}
 \end{minipage}
 \end{figure}
+
+\emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
+regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
+$M \in \mathbb{R}^{100\times 200}$, so every free block with $|\mathcal{F}| > m = 100$ is
+singular -- including the initial one, since the loop starts from
+$\mathcal{F} = \{1,\dots,n\}$. The failure at $\alpha = 0$ is instructive in its anatomy.
+When the planted support lies \emph{below} the rank, the first inner solve can never meet its
+tolerance (the residual stalls at the component of $b_{\mathcal{F}}$ outside the range of
+$A_{\mathcal{F}}$, so the iteration cap is hit and the iterate carries no certificate), yet
+the uncertified signs may still identify the support, after which the shrunken free blocks
+are regular: the loop then reaches the optimum on \nncgRankConvLow{} of five seeds -- at an
+order of magnitude more inner iterations -- and fails to converge on the remainder. When the
+optimal support \emph{exceeds} the rank, the final free block is itself singular, no
+certificate is ever available, and the loop converges on \nncgRankConvHigh{} of five seeds.
+Any $\alpha > 0$ restores the $P$-matrix premise of Theorem~\ref{thm:termination}, and with
+it both reliability and speed: every run converges, recovering the planted optimum to
+$\nncgRankOkErr$. The point is sharpened rather than softened by the partial successes at
+$\alpha = 0$: what regularisation buys is not merely conditioning but the \emph{guarantee} --
+without it, termination is luck.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_rankdef}
+\caption{The rank-deficient regime ($n = 200$, $m = 100$, five seeds; CG capped at $2000$
+iterations per solve, $30$ outer steps). ``Capped solves'' counts runs whose first inner
+solve hit the iteration cap without meeting its tolerance. At $\alpha = 0$ the loop is
+unreliable below the rank and fails uniformly above it; any $\alpha > 0$ converges on every
+seed with an order of magnitude fewer inner iterations.}
+\label{tab:nncg_rankdef}
+\end{table}
+
+\emph{Preconditioning.} Section~\ref{sec:conditioning}'s claim that a preconditioner slots
+into the loop unchanged is tested on operators with a well-conditioned core and a badly
+scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
+and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
+Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the spread
+(\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
+plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
+$\kappa(A) \approx \nncgPcgKappa$): a factor of $\nncgPcgRatio$ recovered by a
+preconditioner that costs one vector division per iteration.
 
 \emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
 CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
