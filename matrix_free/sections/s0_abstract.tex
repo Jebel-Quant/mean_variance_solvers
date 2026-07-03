@@ -11,7 +11,8 @@ as two $O(nT)$ passes over $X$ without ever forming $\hat\Sigma = X^\top X/T$.
 Non-negativity is enforced by a primal-dual active-set outer loop that alternately
 removes assets with negative weight (primal step) and re-adds assets that violate
 dual feasibility (dual step), restarting the inner solver on the modified active set
-each time. The mean-variance
+each time; the loop and its finite-termination guarantee are developed in full
+generality in the companion paper~\cite{schmelzer2026nncg}. The mean-variance
 problem with a return tilt $\rho$ reduces to two such solves with the budget multiplier
 recovered analytically. The $O(\sqrt\kappa)$ iteration count of CG, where
 $\kappa = \kappa(\hat\Sigma)$ is the spectral condition number, contrasts sharply with

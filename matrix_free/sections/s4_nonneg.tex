@@ -80,30 +80,18 @@ together with stationarity from the inner solve this certifies global optimality
 
 These two conditions are precisely the complementarity system for the long-only KKT
 conditions: with the constraint multiplier $s_i = \nabla_i f(w) - \lambda$, an optimum
-requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$. The active set $\mathcal{A}$ plays
-the role of the index set on which $w$ is free and $s = 0$; primal violators are
-active assets with $w_i < 0$ and dual violators are excluded assets with $s_i < 0$.
-Toggling assets between $\mathcal{A}$ and its complement is therefore a sequence of
-\emph{principal pivots} on this linear complementarity problem (LCP), and dropping or
-adding several assets in one step is a \emph{block} principal pivot
-\cite{judice1994,kim2011}. Because $\hat\Sigma_{\mathrm{LW},\mathcal{A}} \succ 0$ for
-every $\mathcal{A}$ (Section~\ref{sec:pd}), the governing matrix is a $P$-matrix, so
-every principal submatrix is invertible and each pivot is well defined
-\cite{murty1988}.
-
-Block pivots are fast but, like all-at-once exchanges in general, can cycle: a batch
-drop can over-shoot the support and a later batch add can restore it, returning to an
-active set already visited. Algorithm~\ref{alg:elim} therefore runs the batch exchange
-as a \emph{fast path} guarded by an anti-cycling counter. Let $N$ be the total number
-of primal and dual violators at the current solve and $\bar N$ the fewest seen so far.
-A batch step is taken whenever it makes progress ($N < \bar N$) or a fixed patience
-budget $p$ has not been exhausted; otherwise the algorithm falls back to a single
-\emph{Bland-style} pivot that toggles the lowest-indexed violating asset. The
-least-index single-pivot rule is Murty's principal pivoting method, which cannot cycle
-\cite{murty1988}; it is what the finite-termination guarantee below actually rests on,
-with the batch path serving only to reach the optimum faster when it does not stall.
-This is the anti-cycling construction of J\'udice and Pires for block principal
-pivoting \cite{judice1994}, adapted to the budget-constrained minimum-variance LCP.
+requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$, and the asset toggles are the
+\emph{principal pivots} of the associated linear complementarity problem
+\cite{judice1994,kim2011,murty1988}. This loop -- block principal pivoting on a
+$P$-matrix LCP, run as a fast path guarded by a least-index (Bland-style) anti-cycling
+fallback -- is developed and analysed in full generality in the companion
+paper~\cite{schmelzer2026nncg}, for the non-negative quadratic
+$\min_{x \geq 0} \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$ and its
+equality-augmented variant. Algorithm~\ref{alg:elim} is that loop instantiated on the
+budget-constrained minimum-variance problem: let $N$ be the total number of primal and
+dual violators at the current solve and $\bar N$ the fewest seen so far; a batch
+exchange is taken whenever it makes progress ($N < \bar N$) or a fixed patience budget
+$p$ has not been exhausted, and otherwise a single least-index pivot is taken.
 
 \begin{algorithm}[ht]
 \caption{Active-set outer loop (wraps any inner solver $f$)}\label{alg:elim}
@@ -164,97 +152,31 @@ No non-degeneracy assumption is required.
 \end{theorem}
 
 \begin{proof}
-\emph{Step 1 (well-posedness of each inner solve).}
-Because $\hat\Sigma_{\mathrm{LW}} = (1-\alpha)\hat\Sigma + \alpha T_0 \succ 0$,
-every principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, so
-$\hat\Sigma_{\mathrm{LW}}$ is a $P$-matrix \cite{murty1988}.
-The equality-constrained problem on active set $\mathcal{A}$,
-$\min_{w_\mathcal{A}:\,\mathbf{1}^\top w_\mathcal{A}=1} f_\mathcal{A}(w_\mathcal{A})$,
-has a unique minimiser; CG converges to it (Proposition~\ref{prop:cg}).
-
-\emph{Step 2 (termination implies global optimality).}
-Stationarity of $f_\mathcal{A}$ gives $g_j = \lambda$ for all $j\in\mathcal{A}$.
-Algorithm~\ref{alg:elim} exits only when $N = 0$, i.e.\ (i)~all active weights are
-non-negative and (ii)~$g_i \geq \lambda$ for every excluded $i \notin \mathcal{A}$.
-With the multiplier $s_i = g_i - \lambda$ these are exactly $w \geq 0$, $s \geq 0$,
-$w_i s_i = 0$: the KKT conditions for the long-only problem. Strict convexity of $f$
-makes them sufficient for global optimality. It therefore suffices to show the loop
-cannot run forever.
-
-\emph{Step 3 (the fallback cannot cycle).}
-Index the outer iterates and call a maximal block of consecutive iterates that take
-the \textbf{else} branch (the single Bland pivot) a \emph{fallback run}. Within a run
-$\bar N$ is constant, and each iterate performs one principal pivot on the
-lowest-indexed violating asset. This is precisely Murty's least-index principal
-pivoting method for the $P$-matrix LCP of Step~2, which generates a sequence of
-complementary bases (here, active sets) in which no basis recurs and which reaches a
-solution in finitely many pivots \cite{murty1988}. A fallback run is an initial
-segment of that sequence started from the active set left by the preceding step, so
-each run is finite, regardless of where it starts.
-
-\emph{Step 4 (only finitely many batch steps and runs).}
-The counter $N$ satisfies $0 \le N \le n$, and $\bar N$ is non-increasing and
-strictly decreases exactly when the progress branch ($N < \bar N$) fires. Hence the
-progress branch fires at most $n+1$ times. Each remaining fast-path step has
-$N \ge \bar N$ and decrements $p$; since $p$ is reset to $p_{\max}$ only on a progress
-step, at most $p_{\max}$ such steps occur between progress events. The number of
-fallback runs is likewise bounded: a run ends either at termination ($N=0$) or at a
-progress step, and there are at most $n+1$ progress steps. Combining, the algorithm
-takes at most $(n+1) + (n+2)\,p_{\max}$ fast-path steps and at most $n+2$ fallback
-runs.
-
-\emph{Step 5 (finite termination).}
-By Step~3 each of the at most $n+2$ fallback runs is finite, and by Step~4 the
-fast-path steps are finite in number. Their sum is finite, so the loop reaches $N=0$
-after finitely many outer iterations; Step~2 then certifies the returned $w$ as the
-unique global minimiser. A crude ceiling is the number of complementary bases,
-$2^n$.
+Because $\hat\Sigma_{\mathrm{LW}} = (1-\alpha)\hat\Sigma + \alpha T_0 \succ 0$, every
+principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, so each inner solve
+is well posed. Eliminating the budget multiplier as in Section~\ref{sec:pd} puts the
+problem in the equality-augmented form treated in \cite{schmelzer2026nncg}, with
+$B = \mathbf{1}^\top$ of full row rank on every active set, and
+Algorithm~\ref{alg:elim} is the loop analysed there. Theorem~5.1 of
+\cite{schmelzer2026nncg} gives finite termination at the unique global minimiser; its
+exit condition is precisely the $N = 0$ test of Algorithm~\ref{alg:elim}, which
+certifies the long-only KKT conditions.
 \end{proof}
 
-The $2^n$ ceiling of Step~5 establishes \emph{finiteness} only; it is not an
-efficiency estimate, and we make no claim that the worst case is approached. The
-guarantee is unconditional: the least-index fallback removes the non-degeneracy
-hypothesis that earlier active-set arguments need, and it is the fallback -- not the
-batch exchange -- that the proof rests on. In practice the outer loop never reaches
-the fallback: across both equity universes and all shrinkage levels reported here it
+The guarantee is unconditional -- the least-index fallback removes the non-degeneracy
+hypothesis that classical block-principal-pivoting arguments require -- and it is
+robust to the inexactness of the CG inner solves: once CG's residual tolerance is tied
+to the KKT decision threshold $\varepsilon$, the inexact loop provably visits the same
+active sets as the exact one \cite[Lemma~5.1]{schmelzer2026nncg}. The fallback is a
+safety net that generic data never triggers: a batch step fails to make progress only
+on a codimension-one, hence non-generic, configuration of $X$, though an adversarial
+family of anti-correlated designs shows the guard is genuinely necessary
+\cite[Section~7.2]{schmelzer2026nncg}. In practice the outer loop never reaches the
+fallback: across both equity universes and all shrinkage levels reported here it
 terminates in $s$ between $6$ and $18$ outer steps
 (Tables~\ref{tab:sp500}--\ref{tab:ftse}), with the active set changing by only a few
 assets per step and the patience budget $p$ never exhausted, so the batch fast path
 alone certifies optimality and no cycling was observed in any run.
-
-\begin{remark}[Exact inner solver assumption]\label{rem:exact}
-Theorem~\ref{thm:termination} assumes each inner call to $f(\mathcal{A})$ returns the
-exact minimiser of $f_{\mathcal{A}}$.
-In the algorithm, CG terminates at relative residual tolerance $\varepsilon = 10^{-5}$,
-so the returned iterate is not the exact minimiser.
-The practical implication is small: the KKT dual-feasibility check in
-Algorithm~\ref{alg:elim} uses the same tolerance $\varepsilon$, so an inexact iterate
-that satisfies the check to tolerance $\varepsilon$ is accepted as optimal.
-The finite-termination argument of Steps~3--5 holds exactly in exact arithmetic and
-to working accuracy in finite precision; no cycling was observed in any reported experiment.
-\end{remark}
-
-\begin{remark}[Why the fallback is rarely triggered]\label{rem:nondeg}
-The fallback engages only when the batch exchange stalls -- when the infeasibility
-count $N$ fails to improve on its best value $\bar N$ for $p_{\max}$ consecutive
-steps. Such stalls are tied to degenerate configurations of $X$, each of which
-corresponds to a polynomial equation in its entries. A batch step fails to reduce
-$N$ only when a dropped asset is immediately re-added (or vice versa), which requires
-$g_i = \lambda$ exactly for some toggled $i$, a codimension-one condition; the related
-event $\hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1} \geq 0$ component-wise at a
-non-terminal iterate is likewise codimension-one. Both fail almost surely under any
-distribution for $X$ absolutely continuous with respect to Lebesgue measure; for
-continuous factor models or i.i.d.\ noise distributions this holds by construction.
-Under strictly positive shrinkage ($\alpha > 0$) the minimiser
-$w^\star(\mathcal{A}) = \hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1} /
-(\mathbf{1}^\top \hat\Sigma_{\mathrm{LW},\mathcal{A}}^{-1}\mathbf{1})$
-is a rational function of $X$, further constraining the degenerate set, and on real
-market data floating-point rounding provides an additional generic-position guarantee.
-Theorem~\ref{thm:termination} no longer \emph{assumes} these conditions -- the
-fallback guarantees termination unconditionally -- but they explain why $p$ was never
-exhausted in any experiment reported here, so the batch fast path alone always
-sufficed.
-\end{remark}
 
 \paragraph{Warm-starting}
 Two levels of warm-starting are available for Algorithm~\ref{alg:elim}.
@@ -279,7 +201,10 @@ set.
 Passing the previous problem's final $(\mathcal{A},\,w)$ pair as the
 initial state for the next solve simultaneously reduces outer iterations (the
 active set needs fewer primal and dual adjustments) and CG iterations (the
-initial residual is small).
+initial residual is small). When the optimal support does not move between
+adjacent $\rho$ points, the warm-started loop terminates in a single outer step
+and the inner iteration count scales with the logarithm of the parameter step
+\cite[Proposition~5.2]{schmelzer2026nncg}.
 The mechanism is the same for a direct solver
 such as KKT, but KKT profits only from the warm active set: direct
 factorisation has no analogue of an initial guess.

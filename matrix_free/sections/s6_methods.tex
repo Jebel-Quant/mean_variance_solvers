@@ -127,23 +127,9 @@ inner step.
   \]
   for all $k \geq 0$.
 \end{proposition}
-\begin{proof}[Proof sketch]
-  Since $w^\star$ minimises $f$ over $\Delta_n$, it is a fixed point:
-  $w^\star = \Pi_{\Delta_n}(w^\star - \tau\nabla f(w^\star))$ for all $\tau > 0$.
-  Non-expansiveness of $\Pi_{\Delta_n}$ and co-coercivity of $L$-smooth functions
-  ($\|\nabla f(x)-\nabla f(y)\|^2 \leq L\langle\nabla f(x)-\nabla f(y),\,x-y\rangle$)
-  give
-  \begin{align*}
-    \|w_{k+1}-w^\star\|^2
-    &\leq \|(w_k-w^\star) - \tau(\nabla f(w_k)-\nabla f(w^\star))\|^2 \\
-    &\leq \|w_k-w^\star\|^2
-      - \tau(2-\tau L)\langle\nabla f(w_k)-\nabla f(w^\star),\,w_k-w^\star\rangle.
-  \end{align*}
-  Setting $\tau = 1/L$ yields $2-\tau L = 1$; $\mu$-strong convexity then gives
-  $\langle\nabla f(w_k)-\nabla f(w^\star),\,w_k-w^\star\rangle \geq \mu\|w_k-w^\star\|^2$,
-  so $\|w_{k+1}-w^\star\|^2 \leq (1-\mu/L)\|w_k-w^\star\|^2$. Iterating completes the
-  bound.
-\end{proof}
+The proof is the standard fixed-point argument from non-expansiveness of the
+projection and co-coercivity of the $L$-smooth gradient; the statement above is
+the simplex case $C = \Delta_n$ of \cite[Proposition~5.1]{schmelzer2026nncg}.
 \begin{remark}[Termination criterion]\label{rem:termination_prox}
 Algorithm~\ref{alg:proximal} stops when the step size $\|w_{k+1}-w_k\|\leq\varepsilon$.
 This is a standard surrogate for the first-order optimality condition: at $w^\star$,
@@ -166,14 +152,12 @@ decisive. Proposition~\ref{prop:shrinkage} shows that Ledoit-Wolf shrinkage comp
 $\kappa$ and benefits both methods.
 
 Nesterov acceleration applied to the projected gradient step would improve the rate from
-$O(\kappa)$ to $O(\sqrt{\kappa})$, matching CG's asymptotic iteration count. However,
-CG achieves the $O(\sqrt{\kappa})$ rate optimally within the Krylov subspace: each iterate
-minimises $f$ over $\mathcal{K}_k(\hat\Sigma,\mathbf{1})$, which is a strictly richer
-search space than the two-point momentum used by Nesterov's method. In practice CG
-typically requires a smaller constant in the $O(\sqrt{\kappa})$ bound.
-Plain projected gradient is therefore the appropriate first-order comparator: the
-$\sqrt{\kappa}$ gap between CG and gradient descent is the defining advantage of Krylov
-methods, and accelerating the gradient baseline would obscure rather than isolate it.
+$O(\kappa)$ to $O(\sqrt{\kappa})$, matching CG's asymptotic iteration count, but CG
+attains that rate optimally within the Krylov subspace
+$\mathcal{K}_k(\hat\Sigma,\mathbf{1})$, a strictly richer search space than two-point
+momentum. Plain projected gradient is therefore the appropriate first-order comparator,
+isolating the Krylov advantage; the full argument is given in the companion
+paper~\cite{schmelzer2026nncg}.
 For completeness, a FISTA implementation~\cite{beck2009} (Beck-Teboulle momentum) is
 available in the companion package \cite{fast_minimum_variance}; empirically it requires
 roughly $1.5$--$1.8\times$ fewer iterations than plain proximal gradient at the same

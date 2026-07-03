@@ -33,7 +33,11 @@ assembled. Each CG iteration requires only two matrix-vector products with $X$, 
 per-iteration cost from $O(n^2)$ to $O(nT)$ and eliminating $O(n^2)$ storage (the active-set loop further reduces this to $O(kT)$, $k \leq n$; see Table~\ref{tab:complexity}).
 Non-negative weights are enforced by a primal-dual active-set loop that alternately removes
 assets with negative weight and re-adds assets violating dual feasibility, calling the CG
-solver on the modified active set at each step. Because CG is a Krylov method, it builds
+solver on the modified active set at each step. This constraint-handling layer -- the
+loop itself, its unconditional finite-termination guarantee, and its robustness to
+inexact inner solves -- is developed and analysed in full generality in the companion
+paper~\cite{schmelzer2026nncg}; here it is instantiated on the portfolio problem.
+Because CG is a Krylov method, it builds
 successive iterates in the Krylov subspace $\mathcal{K}_k(\hat\Sigma, \mathbf{1})$ and
 achieves $O(\sqrt\kappa)$ convergence, where $\kappa = \kappa(\hat\Sigma)$
 is the spectral condition number (Proposition~\ref{prop:cg}). This $\sqrt\kappa$ rate is the defining advantage
