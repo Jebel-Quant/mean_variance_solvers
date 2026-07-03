@@ -9,11 +9,12 @@ interior-point solver \cite{clarabel2024} as a second-order cone program.
 \begin{algorithm}[ht]
 \caption{CVXPY reference solver}\label{alg:cvxpy}
 \begin{algorithmic}[1]
-\Require Stacked matrix $\tilde{X} \in \mathbb{R}^{(T+n_R)\times n}$;\; return tilt $\rho\hat\mu$
-\Ensure Weight vector $w \in \Delta_n$;\; interior-point iteration count $k$
+\Require Stacked matrix $\tilde{X} \in \mathbb{R}^{(T+n_R)\times n}$;\; return tilt $\rho\hat\mu$;\;
+         balance system $B$, $c$
+\Ensure Weight vector $w$ with $Bw = c$, $w \geq \mathbf{0}$;\; interior-point iteration count $k$
 \State Declare $w \in \mathbb{R}^n$ as a CVXPY variable
 \State Minimise $\|\tilde{X}w\|^2 - \rho\hat\mu^\top w$
-  \Statex\hspace{1.5em} subject to $\mathbf{1}^\top w = 1$,\; $w \geq \mathbf{0}$
+  \Statex\hspace{1.5em} subject to $Bw = c$,\; $w \geq \mathbf{0}$
 \State Dispatch to Clarabel interior-point solver \cite{clarabel2024}
 \State \Return $w$,\; $k$
 \end{algorithmic}
@@ -29,20 +30,25 @@ same optimization problem; on the S\&P~500 problem the maximum absolute deviatio
 portfolio weights between CG and CVXPY (Clarabel) is below $10^{-5}$, confirming
 correctness. The comparison is purely computational. CVXPY and Clarabel are general-purpose tools: the same
 code handles additional convex constraints (sector limits, turnover bounds, factor-exposure
-constraints) without modification. The matrix-free methods exploit the specific structure of the
-pure long-only minimum variance problem and would require rework to accommodate richer constraint
-sets; practitioners with such requirements may find a specialized QP solver a more appropriate
+constraints) without modification. The matrix-free methods accommodate any linear balance
+system $Bw = c$ through the Schur elimination of Section~\ref{sec:pd}, but \emph{inequality}
+constraints beyond $w \geq 0$ fall outside the reduction and would require rework;
+practitioners with such requirements may find a specialized QP solver a more appropriate
 baseline.
 
 \subsection{CG Method}\label{ssec:cg}
 
 The inner solver $f$ for Algorithm~\ref{alg:elim} is conjugate gradients applied to the
-$n_a \times n_a$ SPD system derived in Section~\ref{sec:pd}. The action of
+$n_a \times n_a$ SPD reduction derived in Section~\ref{sec:pd}: $p$ or $p+1$ CG solves
+sharing one operator, followed by the $p \times p$ Schur system for the multipliers.
+The action of
 $\hat\Sigma_{\mathrm{LW},a}$ on a vector requires only two matrix-vector products with
-$\tilde{X}_a$; the matrix itself is never formed.
+$\tilde{X}_a$; the matrix itself is never formed. Algorithm~\ref{alg:cg} shows the
+budget instantiation ($p = 1$) implemented in the companion package and run in every
+experiment of Section~\ref{sec:results}.
 
 \begin{algorithm}[ht]
-\caption{CG inner step (inner solver $f$ for Algorithm~\ref{alg:elim})}\label{alg:cg}
+\caption{CG inner step (inner solver $f$ for Algorithm~\ref{alg:elim}), budget case}\label{alg:cg}
 \begin{algorithmic}[1]
 \Require Active-asset index set $\mathrm{active}$;\; stacked matrix $\tilde{X}$;\;
          return-tilt weight $\rho$;\; expected returns $\hat\mu$
@@ -95,85 +101,22 @@ the oracle intensity $\alpha_{\mathrm{LW}} \approx 0.017$ reduces iterations
 to 516 (one quarter), reflecting the Frobenius objective's insensitivity to
 the near-zero noise eigenvalues that govern $\kappa$.
 
-\subsection{Proximal Gradient}\label{ssec:proximal}
-
-Section~\ref{sec:primaldual} introduces the simplex-projection strategy and
-Algorithm~\ref{alg:proximal} gives the matrix-free implementation. Here we analyse its cost
-and convergence relative to the other methods.
-
-\paragraph{Cost per iteration}
-The gradient is computed as
-$\tfrac{1-\alpha}{T}X^\top(Xw_k) + \alpha\,\hat\Sigma_0 w_k$,
-without assembling $\hat\Sigma_{\mathrm{LW}}$ or $\tilde{X}$. The data term costs $O(nT)$;
-the target term costs $O(n^2)$ for a general $\hat\Sigma_0$ or $O(n)$ for a scaled
-identity. The Lipschitz constant $L = \lambda_{\max}(\hat\Sigma_{\mathrm{LW}})$ is
-estimated by power iteration on the same two-term operator at $O(n_{\mathrm{pow}}\cdot nT)$
-setup cost. Each iteration therefore costs $O(nT)$ when $n \ll T$, matching the CG
-inner step.
-
-\paragraph{Convergence}
-\begin{proposition}[Proximal gradient convergence {\cite{nesterov2004}}]\label{prop:proximal}
-  Let $\hat\Sigma_{\mathrm{LW}}$ be SPD, so that $f(w) = \tfrac{1}{2}w^\top\hat\Sigma_{\mathrm{LW}}\,w$
-  is $\mu$-strongly convex and $L$-smooth on $\mathbb{R}^n$ with
-  $\mu = \lambda_{\min}(\hat\Sigma_{\mathrm{LW}}) > 0$ and
-  $L = \lambda_{\max}(\hat\Sigma_{\mathrm{LW}})$; both properties therefore hold on
-  $\Delta_n \subset \mathbb{R}^n$. Let $w^\star = \arg\min_{w \in \Delta_n} f(w)$.
-  Projected gradient descent with step $\tau = 1/L$ satisfies
-  \[
-    \|w_k - w^\star\|^2
-    \;\leq\;
-    \left(1 - \frac{1}{\kappa(\hat\Sigma_{\mathrm{LW}})}\right)^{\!k}
-    \|w_0 - w^\star\|^2
-  \]
-  for all $k \geq 0$.
-\end{proposition}
-The proof is the standard fixed-point argument from non-expansiveness of the
-projection and co-coercivity of the $L$-smooth gradient; the statement above is
-the simplex case $C = \Delta_n$ of \cite[Proposition~5.1]{schmelzer2026nncg}.
-\begin{remark}[Termination criterion]\label{rem:termination_prox}
-Algorithm~\ref{alg:proximal} stops when the step size $\|w_{k+1}-w_k\|\leq\varepsilon$.
-This is a standard surrogate for the first-order optimality condition: at $w^\star$,
-$w^\star = \Pi_{\Delta_n}(w^\star - \tau\nabla f(w^\star))$, so the step vanishes.
-The two criteria are equivalent up to a constant: since $f$ is $L$-smooth,
-the descent lemma gives $f(w_{k+1})\leq f(w_k) - \tfrac{L}{2}\|w_{k+1}-w_k\|^2$,
-so a step of size $\leq\varepsilon$ implies an objective decrease of
-$\leq\tfrac{L}{2}\varepsilon^2$.  By Proposition~\ref{prop:proximal},
-$\|w_k-w^\star\|$ decays geometrically at rate $(1-1/\kappa)^{1/2}$;
-non-expansiveness of $\Pi_{\Delta_n}$ then gives
-$\|w_{k+1}-w_k\|\leq\|w_{k+1}-w^\star\|+\|w_k-w^\star\|\leq 2\|w_k-w^\star\|$,
-so the step-size criterion is met as soon as $\|w_k-w^\star\|\leq\varepsilon/2$.
-\end{remark}
-
-The iteration count therefore scales as $O(\kappa)$, versus $O(\sqrt{\kappa})$ for CG
-(Proposition~\ref{prop:cg}). Since both methods pay $O(nT)$ per step, the $\sqrt{\kappa}$
-gap in iteration counts directly translates to a runtime gap. On ill-conditioned
-problems (the unshrunk S\&P~500 system has $\kappa \approx 109{,}000$) this difference is
-decisive. Proposition~\ref{prop:shrinkage} shows that Ledoit-Wolf shrinkage compresses
-$\kappa$ and benefits both methods.
-
-Nesterov acceleration applied to the projected gradient step would improve the rate from
-$O(\kappa)$ to $O(\sqrt{\kappa})$, matching CG's asymptotic iteration count, but CG
-attains that rate optimally within the Krylov subspace
-$\mathcal{K}_k(\hat\Sigma,\mathbf{1})$, a strictly richer search space than two-point
-momentum. Plain projected gradient is therefore the appropriate first-order comparator,
-isolating the Krylov advantage; the full argument is given in the companion
-paper~\cite{schmelzer2026nncg}.
-For completeness, a FISTA implementation~\cite{beck2009} (Beck-Teboulle momentum) is
-available in the companion package \cite{fast_minimum_variance}; empirically it requires
-roughly $1.5$--$1.8\times$ fewer iterations than plain proximal gradient at the same
-per-step cost (measured on the S\&P~500 benchmark at $\alpha=0.5$), and remains
-$7$--$10\times$ slower than CG, confirming that the advantage over proximal gradient
-comes from Krylov subspace structure, not Nesterov momentum.
-
-\paragraph{Comparison with other solvers}
-The proximal solver is loop-free and straightforward to implement: it requires no dual
-feasibility check and no restart logic. Under realistic equity-like spectra (factor-model data, $\kappa$ growing with $n$),
-the scaling experiments (Figure~\ref{fig:scaling}) show CG as the fastest solver beyond
-$n \approx 300$: at $n=3000$ ($T=1250$ fixed) CG takes $0.081$\,s versus $1.53$\,s for proximal gradient ($19\times$ faster). The $O(\kappa)$ iteration count of proximal gradient
-grows with $\kappa$, making it the slowest solver when $\kappa$ is large. Only when
-shrinkage is strong enough to compress $\kappa$ to $O(1)$ does the proximal iteration
-count compete with CG's $O(\sqrt\kappa)$; Section~\ref{sec:results} discusses this
-crossover in more detail.
+\paragraph{First-order baseline}
+The benchmarks of Section~\ref{sec:results} include \emph{proximal gradient}: the
+projected-gradient comparator of the companion paper~\cite[Section~5]{schmelzer2026nncg},
+applied to the budget case with the $O(n\log n)$ simplex
+projection~\cite{duchi2008,condat2016} and the same matrix-free gradient operator as CG.
+It is loop-free and needs no dual feasibility check, but it is not a Krylov method and
+converges at $O(\kappa)$ against CG's $O(\sqrt{\kappa})$ at the same $O(nT)$ per-step
+cost, which makes it the slowest solver on ill-conditioned problems (the unshrunk
+S\&P~500 system has $\kappa \approx 109{,}000$); only when shrinkage compresses $\kappa$
+to $O(1)$ does its iteration count become competitive. The companion paper also
+explains why the \emph{unaccelerated} method is the honest first-order comparator --
+Nesterov momentum would match the $O(\sqrt\kappa)$ rate but not the Krylov subspace; a
+FISTA variant~\cite{beck2009}, available in the companion
+package~\cite{fast_minimum_variance}, empirically needs $1.5$--$1.8\times$ fewer
+iterations than plain proximal gradient yet remains $7$--$10\times$ slower than CG on
+the S\&P~500 benchmark at $\alpha=0.5$.
 
 \subsection{Complexity Summary}\label{ssec:complexity}
 
@@ -181,7 +124,9 @@ Table~\ref{tab:complexity} collects the asymptotic cost of each method.
 ``Extra memory'' is storage beyond the $T \times n$ input matrix $X$; $\varepsilon$
 is the solver tolerance; $s$ is the number of active-set outer steps.  The two
 matrix-free methods never form $\hat\Sigma$ and require only $O(n)$ working memory
-beyond $X$.
+beyond $X$. For a general balance system the CG row scales by the $p+1$ right-hand
+sides of Section~\ref{sec:pd}, which share one operator; the table shows the budget
+case run in the experiments.
 
 \begin{table}[ht]
 \centering

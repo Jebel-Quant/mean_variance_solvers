@@ -1,86 +1,32 @@
 \section{Enforcing Non-Negativity}\label{sec:primaldual}
 
-Section~\ref{sec:pd} reduces the long-only problem to solving an SPD system, leaving
-$w \geq 0$ as the sole remaining constraint. Two strategies are available.
-
-\subsection{Simplex-projection strategy}
-The first strategy treats the two constraints as a single geometric object: the
-probability simplex
-$\Delta_n = \{w \in \mathbb{R}^n : \mathbf{1}^\top w = 1,\, w \geq 0\}$.
-Rather than separating budget and non-negativity, gradient steps of the form
-\[
-  w_{k+1} = \Pi_{\Delta_n}\!\left(w_k - \tau\,\nabla f(w_k)\right)
-\]
-project directly onto $\Delta_n$ after each descent step, where $\Pi_{\Delta_n}$
-is the Euclidean projection.
-Duchi et al.\ \cite{duchi2008} and Condat~\cite{condat2016} show that $\Pi_{\Delta_n}$ can be computed in
-$O(n\log n)$ by a single sort-and-threshold pass, making each iteration cheap.
-There is no outer loop: both constraints are handled simultaneously, and the method
-terminates when the step size $\|w_{k+1} - w_k\|$ falls below a tolerance.
-
-Although $\hat\Sigma = \tilde{X}^\top\tilde{X}$ admits a stacked-matrix
-representation (Section~\ref{sec:precond}), assembling or storing $\tilde{X}$ is
-unnecessary. The gradient decomposes additively as
-\[
-  \nabla f(w) = \hat\Sigma\,w
-  = \frac{1-\alpha}{T}\,X^\top(Xw) + \alpha\,\hat\Sigma_0\,w\,,
-\]
-and each term is applied separately: the data contribution costs $O(nT)$ via two
-matrix-vector products with $X$, and the target contribution costs $O(n^2)$ for a general
-$\hat\Sigma_0$ or $O(n)$ for a scaled identity. The Lipschitz constant
-$L = \lambda_{\max}(\hat\Sigma)$, needed for the step size $\tau = L^{-1}$,
-is estimated once by power iteration on the same two-term operator, also matrix-free.
-
-\begin{algorithm}[ht]
-\caption{Simplex-projection solver (proximal gradient, matrix-free)}\label{alg:proximal}
-\begin{algorithmic}[1]
-\Require Returns matrix $X \in \mathbb{R}^{T\times n}$;\; shrinkage intensity $\alpha$;\;
-         target $\hat\Sigma_0 \in \mathbb{R}^{n\times n}$;\; tolerance $\varepsilon = 10^{-6}$
-\Ensure Weight vector $w \in \Delta_n$
-\State Define operator $\mathcal{A}$:\; $v \mapsto \tfrac{1-\alpha}{T}X^\top(Xv) + \alpha\,\hat\Sigma_0 v$
-  \hfill\textit{($\hat\Sigma$ applied matrix-free)}
-\State Estimate $L \leftarrow \lambda_{\max}(\mathcal{A})$ by power iteration
-  \hfill\textit{($O(n_{\mathrm{pow}}\cdot nT)$)}
-\State $\tau \leftarrow L^{-1}$;\; initialise $w_0 \in \mathbb{R}^n$ randomly;\; $k \leftarrow 0$
-\Loop
-  \State $g \leftarrow \mathcal{A}(w_k)$
-    \hfill\textit{(gradient, $O(nT)$)}
-  \State $w_{k+1} \leftarrow \Pi_{\Delta_n}(w_k - \tau\,g)$
-    \hfill\textit{(simplex projection, $O(n\log n)$)}
-  \If{$\|w_{k+1} - w_k\|_2 \leq \varepsilon$}
-    \textbf{ break}
-  \EndIf
-  \State $k \leftarrow k + 1$
-\EndLoop
-\State \Return $w_{k+1}$
-\end{algorithmic}
-\end{algorithm}
-
-\subsection{Active-set strategy}\label{subsec:activeSet}
-The second strategy separates the budget constraint from the non-negativity constraint.
-The budget-only problem is solved over a dynamically adjusted \emph{active set} of
-assets; non-negativity is then enforced iteratively without ever modifying the inner
-solve.
+Section~\ref{sec:pd} reduces the long-only problem to a handful of SPD solves, leaving
+$w \geq 0$ as the sole remaining constraint. It is enforced by an \emph{active-set}
+strategy that separates the balance constraints from the non-negativity
+constraint: the balance-only problem is solved over a dynamically adjusted \emph{active
+set} of assets, and non-negativity is enforced iteratively without ever modifying the
+inner solve.
 
 In the \emph{primal step}, any asset with a negative weight is dropped from the active
-set and the budget-constrained SPD system is re-solved on the reduced universe. Once
+set and the balance-constrained SPD reduction is re-solved on the reduced universe. Once
 all active weights are non-negative, the \emph{dual step} checks the KKT gradient
 condition for every excluded asset: global optimality requires every excluded asset $i$
 to satisfy
 \[
-  \nabla_i f(w) \;\geq\; \lambda\;,
+  \nabla_i f(w) \;\geq\; (B^\top\lambda)_i\;,
   \qquad
   \nabla_i f(w) = \tfrac{2}{T}(X^\top Xw)_i - \rho\hat\mu_i\;,
 \]
-where $\lambda$ is the budget Lagrange multiplier recovered analytically from
-Section~\ref{sec:pd}. An excluded asset that violates this condition would decrease
+where $\lambda \in \mathbb{R}^p$ collects the balance multipliers recovered analytically
+from Section~\ref{sec:pd} -- in the budget case, the single shadow price of full
+investment. An excluded asset that violates this condition would decrease
 portfolio variance if held at a small positive weight; it is re-added to the active set
 and the loop repeats. The loop terminates when both primal and dual feasibility hold;
 together with stationarity from the inner solve this certifies global optimality.
 
 These two conditions are precisely the complementarity system for the long-only KKT
-conditions: with the constraint multiplier $s_i = \nabla_i f(w) - \lambda$, an optimum
-requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$, and the asset toggles are the
+conditions: with the constraint multiplier $s_i = \nabla_i f(w) - (B^\top\lambda)_i$, an
+optimum requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$, and the asset toggles are the
 \emph{principal pivots} of the associated linear complementarity problem
 \cite{judice1994,kim2011,murty1988}. This loop -- block principal pivoting on a
 $P$-matrix LCP, run as a fast path guarded by a least-index (Bland-style) anti-cycling
@@ -88,10 +34,10 @@ fallback -- is developed and analysed in full generality in the companion
 paper~\cite{schmelzer2026nncg}, for the non-negative quadratic
 $\min_{x \geq 0} \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$ and its
 equality-augmented variant. Algorithm~\ref{alg:elim} is that loop instantiated on the
-budget-constrained minimum-variance problem: let $N$ be the total number of primal and
+balance-constrained minimum-variance problem: let $N$ be the total number of primal and
 dual violators at the current solve and $\bar N$ the fewest seen so far; a batch
 exchange is taken whenever it makes progress ($N < \bar N$) or a fixed patience budget
-$p$ has not been exhausted, and otherwise a single least-index pivot is taken.
+has not been exhausted, and otherwise a single least-index pivot is taken.
 
 \begin{algorithm}[ht]
 \caption{Active-set outer loop (wraps any inner solver $f$)}\label{alg:elim}
@@ -106,10 +52,10 @@ $p$ has not been exhausted, and otherwise a single least-index pivot is taken.
     \hfill\textit{($k_{\mathrm{step}} = 1$ sentinel for direct solvers; iterative count for CG)}
   \State $w_i \leftarrow w_{a,i}$ for $i \in \mathrm{active}$;\; $w_i \leftarrow 0$ for $i \notin \mathrm{active}$
   \State $g_i \leftarrow \tfrac{2}{T}(X^\top Xw)_i - \rho\hat\mu_i$;\;
-         $\lambda \leftarrow \mathrm{median}_{j \in \mathrm{active}}(g_j)$
-    \hfill\textit{(stationarity: $g_j \approx \lambda$ for $j \in \mathrm{active}$ to solver tolerance)}
+         $\lambda \leftarrow$ balance multipliers from the inner solve (Section~\ref{sec:pd})
+    \hfill\textit{(stationarity: $g_j \approx (B^\top\lambda)_j$ for $j \in \mathrm{active}$ to solver tolerance)}
   \State $\mathcal{D} \leftarrow \{i \in \mathrm{active} : w_i < -\varepsilon\}$;\;
-         $\mathcal{V} \leftarrow \{i \notin \mathrm{active} : g_i < \lambda - \varepsilon\}$
+         $\mathcal{V} \leftarrow \{i \notin \mathrm{active} : g_i < (B^\top\lambda)_i - \varepsilon\}$
     \hfill\textit{(primal and dual violators)}
   \State $\mathcal{H} \leftarrow \mathcal{D} \cup \mathcal{V}$;\; $N \leftarrow |\mathcal{H}|$
   \If{$N = 0$}
@@ -132,11 +78,14 @@ $p$ has not been exhausted, and otherwise a single least-index pivot is taken.
 \end{algorithmic}
 \end{algorithm}
 
-\paragraph{Budget multiplier}
-The $\lambda$-computation step of Algorithm~\ref{alg:elim} recovers the budget shadow price as the median
-of the active gradients. In exact arithmetic, the inner solver minimises $f$ over
-$\{w_\mathcal{A} : \mathbf{1}^\top w_\mathcal{A} = 1\}$, whose stationarity
-condition is $\tfrac{2}{T}(X_\mathcal{A}^\top X_\mathcal{A}\,w_\mathcal{A})_j = \lambda$
+\paragraph{Balance multipliers}
+The multipliers in the $\lambda$-computation step of Algorithm~\ref{alg:elim} come for
+free: the Schur elimination of Section~\ref{sec:pd} produces $\lambda$ alongside the
+weights of every inner solve. In the budget case the implementation instead recovers
+the single shadow price directly from the gradients: in exact arithmetic the inner
+solver minimises $f$ over $\{w_\mathcal{A} : \mathbf{1}^\top w_\mathcal{A} = 1\}$, whose
+stationarity condition is
+$\tfrac{2}{T}(X_\mathcal{A}^\top X_\mathcal{A}\,w_\mathcal{A})_j = \lambda$
 for every $j \in \mathcal{A}$, so all active gradients equal $\lambda$.
 In practice CG terminates at residual tolerance $\varepsilon = 10^{-5}$, so
 the active gradients agree with $\lambda$ up to this tolerance; the median (used in the implementation for robustness; the mean gives the
@@ -147,16 +96,18 @@ Let $f(w) = w^\top \hat\Sigma_{\mathrm{LW}}\,w - \rho\hat\mu^\top w$ with
 $\hat\Sigma_{\mathrm{LW}} \succ 0$ (ensured by $\alpha > 0$).
 Then for any patience budget $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim}
 terminates in finitely many outer iterations and returns the unique global minimizer
-of $\min_{w}\,f(w)$ subject to $\mathbf{1}^\top w = 1,\;w \geq 0$.
+of $\min_{w}\,f(w)$ subject to $Bw = c,\;w \geq 0$, provided $B_{\mathcal{A}}$ retains
+full row rank on every active set the loop visits (automatic for the budget case
+$p = 1$; generic once $|\mathcal{A}| \geq p$).
 No non-degeneracy assumption is required.
 \end{theorem}
 
 \begin{proof}
 Because $\hat\Sigma_{\mathrm{LW}} = (1-\alpha)\hat\Sigma + \alpha T_0 \succ 0$, every
-principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, so each inner solve
-is well posed. Eliminating the budget multiplier as in Section~\ref{sec:pd} puts the
-problem in the equality-augmented form treated in \cite{schmelzer2026nncg}, with
-$B = \mathbf{1}^\top$ of full row rank on every active set, and
+principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, and with
+$B_{\mathcal{A}}$ of full row rank the Schur elimination of Section~\ref{sec:pd} is
+well posed at every outer step. The problem is then the equality-augmented
+non-negative quadratic treated in \cite{schmelzer2026nncg}, and
 Algorithm~\ref{alg:elim} is the loop analysed there. Theorem~5.1 of
 \cite{schmelzer2026nncg} gives finite termination at the unique global minimiser; its
 exit condition is precisely the $N = 0$ test of Algorithm~\ref{alg:elim}, which
@@ -185,7 +136,7 @@ Two levels of warm-starting are available for Algorithm~\ref{alg:elim}.
 When the active set changes size, the previous CG solution lives in a different
 subspace and cannot be reused directly. One can restrict the previous full
 weight vector $w^{(k)} \in \mathbb{R}^n$ to the new active set
-$\mathcal{A}^{(k+1)}$ and renormalise:
+$\mathcal{A}^{(k+1)}$ and, in the budget case, renormalise:
 \[
   x_0 = \frac{w^{(k)}_{\mathcal{A}^{(k+1)}}}
              {\mathbf{1}^\top w^{(k)}_{\mathcal{A}^{(k+1)}}}\,.
@@ -215,13 +166,10 @@ The cross-solve warm start is implemented in \texttt{solve\_cg\_warm}
 against cold-started CG on a 50-point frontier sweep.
 
 \medskip
-The two strategies make different tradeoffs. The simplex-projection approach is
-single-stage and loop-free; unlike CG, it is not a Krylov method: each step applies
-the gradient operator and projects onto $\Delta_n$ without building a Krylov subspace,
-so residuals are not orthogonalised against prior directions, giving $O(\kappa)$
-convergence. The active-set loop solves a sequence of linear systems and certifies
-global optimality via the KKT check; using CG as the inner solver reduces this to
-$O(\sqrt{\kappa})$ convergence. Both methods share the same $O(nT)$ per-step cost,
-so the $\sqrt{\kappa}$ gap in iteration count translates directly to a runtime gap on
-ill-conditioned problems.
-Section~\ref{sec:solvers} develops concrete implementations of both strategies.
+A loop-free alternative -- projected gradient, which enforces the constraints at
+every step by projecting onto the simplex -- is analysed in the companion
+paper~\cite{schmelzer2026nncg}: it is not a Krylov method, forgoes the subspace
+structure, and converges at $O(\kappa)$ against the $O(\sqrt{\kappa})$ of the CG inner
+solver at the same $O(nT)$ per-step cost. Section~\ref{sec:results} benchmarks it as a
+matrix-free first-order baseline.
+Section~\ref{sec:solvers} develops the concrete implementations.
