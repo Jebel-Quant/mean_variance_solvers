@@ -30,6 +30,15 @@ jobs:
           # format files; rerun them when restoring from cache.
           execute_install_scripts: true
 
+      # The postinst scripts alone leave a restored cache with an empty ls-R
+      # and stale font maps (pdfTeX then falls back to bitmap fonts and fails
+      # with "auto expansion is only possible with scalable fonts").
+      - name: Refresh TeX Live databases
+        run: |
+          sudo mktexlsr
+          sudo updmap-sys
+          sudo fmtutil-sys --byfmt pdflatex
+
       - name: Checkout
         uses: actions/checkout@v4
 
