@@ -69,7 +69,11 @@ the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below us
 $O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
 NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the comparator
 directly from their definitions; the external-solver benchmark below is a second script whose
-only additional dependencies are SciPy and Clarabel. The geometric spectrum is the honest choice: its clustering
+only additional dependencies are SciPy and Clarabel. The algorithms are also released as the
+open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
+suite is this study: planted recovery, the equality-augmented solve, trajectory agreement
+under inexact solves, the warm-start single-step property, and the adversarial family that
+forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
 lets CG converge faster than the worst-case bound, so the measured growth is an
 \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a fitted exponent.
 

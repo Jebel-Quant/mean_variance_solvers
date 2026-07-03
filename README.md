@@ -83,7 +83,9 @@ non_negative_cg/
   sections/              one .tex per section (s0_abstract … s8_conclusions)
   experiment/            self-contained synthetic study (nncg.py + experiment_nncg.py,
                          NumPy only) and an external-solver benchmark
-                         (experiment_nncg_bench.py; SciPy + Clarabel)
+                         (experiment_nncg_bench.py; SciPy + Clarabel); the algorithms
+                         are released as the pip package
+                         https://github.com/Jebel-Quant/nncg
   graphs/                generated figure PDFs (committed; `make figures`)
   tables/                generated table + \newcommand fragments (committed)
 experiment/              numerical experiments that generate graphs/ and tables/
