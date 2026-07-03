@@ -9,15 +9,15 @@ would be problematic if the resulting portfolio changes substantially.
 
 Auditing the sensitivity at $k \pm 1$ requires two additional Woodbury solves.
 Since the eigenpairs $(U_k, \Lambda_k)$ are already computed, these are pure solve
-costs at $O(n_a k^2 + k^3)$ each -- negligible relative to the preprocessing.
+costs at $O(n_a k^2 + k^3)$ each, negligible relative to the preprocessing.
 On the benchmark dataset, the three-point audit ($k = 22, 23, 24$) adds less than
 $3$\,ms to the total pipeline. This makes the audit a costless safety check.
 
 \subsection{Analytical sensitivity}
 
 Let $w^*(k)$ denote the RMT minimum-variance portfolio with $k$ signal factors.
-To leading order -- ignoring the accompanying $O(1/(n-k))$ adjustment of the
-bulk mean $\bar\lambda$, which is at the percent level on the benchmark data --
+To leading order (ignoring the accompanying $O(1/(n-k))$ adjustment of the
+bulk mean $\bar\lambda$, which is at the percent level on the benchmark data),
 adding the $(k+1)$-th factor changes the system matrix by a rank-one update:
 $T_0^{\mathrm{RMT}}(k+1) \approx T_0^{\mathrm{RMT}}(k) + \delta_{k+1}\,u_{k+1}u_{k+1}^\top$,
 where $\delta_{k+1} = \lambda_{k+1} - \bar\lambda > 0$.

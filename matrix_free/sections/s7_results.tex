@@ -10,7 +10,7 @@ $X$ and is negligible relative to any solver.
 We also include a dense baseline, ``KKT (Cholesky)'': it assembles the active-set Gram
 matrix $\hat\Sigma_{\mathcal{A}}$ explicitly and solves each outer step by a LAPACK
 Cholesky factorisation (\texttt{posv}), wrapped in the same active-set loop as CG. This
-is the natural production alternative -- assemble and factor -- and isolates the value of
+is the natural production alternative (assemble and factor) and isolates the value of
 the matrix-free representation, since CG and KKT share the active-set logic and differ
 only in whether $\hat\Sigma$ is formed. It is reported only for the shrunk ($\alpha>0$)
 panels: without shrinkage the assembled matrix can be singular (it is for FTSE), where
@@ -103,8 +103,8 @@ returns concentrates variance along a few eigendirections, inflating the conditi
 iterative methods slow without shrinkage.
 
 Second, shrinkage benefits all solvers, and the scale of the benefit is strongly $\alpha$-dependent.
-At $\alpha=0.5$ -- in the range of heavier shrinkage levels commonly used in portfolio
-construction for out-of-sample stability \cite{demiguel2009,ledoit2003jpm} -- $\kappa$ falls to
+At $\alpha=0.5$ (in the range of heavier shrinkage levels commonly used in portfolio
+construction for out-of-sample stability \cite{demiguel2009,ledoit2003jpm}), $\kappa$ falls to
 the low hundreds, CG iterations drop to~82, and the speedup grows to $661\times$ (CG).
 The active-set outer steps also fall, from 18 to~6: shrinkage moves the unconstrained minimum-variance
 portfolio closer to equal weights, so fewer assets receive negative weight in the primal step and the
@@ -137,7 +137,7 @@ sample covariance is well-estimated and the condition number without
 shrinkage is $\kappa \approx 516$, roughly 200$\times$ lower than the
 S\&P~500 counterpart ($\kappa \approx 109{,}000$). The LW oracle intensity
 is $\alpha_{\mathrm{LW}} \approx 0.025$, and heavy shrinkage ($\alpha = 0.5$)
-compresses $\kappa$ to~27 -- an order of magnitude lower than the
+compresses $\kappa$ to~27, an order of magnitude lower than the
 S\&P~500 at the same $\alpha$.
 
 \input{tables/ftse_defs}
@@ -174,7 +174,7 @@ Proximal gradient ($22\times$ without shrinkage, $114\times$ at $\alpha=0.5$)
 remains consistently slower than CG, as the $O(\kappa)$ vs $O(\sqrt\kappa)$
 gap predicts. One ordering does change: at $\alpha=0.5$ the dense KKT (Cholesky)
 baseline is the fastest solver here ($711\times$), narrowly ahead of CG ($560\times$).
-This is the expected crossover -- with only $n=86$ assets the $O(k^3)$ factorisation
+This is the expected crossover: with only $n=86$ assets the $O(k^3)$ factorisation
 is cheap and the condition $\kappa < k^2$ (Section~\ref{sec:solvers}) tips in favour of
 the direct solve; the matrix-free advantage emerges as $n$ grows, as the scaling study
 (Section~\ref{sec:results}) confirms. At $n=86$ the absolute
@@ -228,7 +228,7 @@ range; turnover and CG iterations both fall monotonically in $\alpha$.}
 
 The realised out-of-sample volatility is essentially flat across two orders of
 magnitude of $\alpha$, ranging only from $9.66\%$ to $9.78\%$ for
-$\alpha\in[0.01,0.5]$, and is \emph{minimised at $\alpha=0.30$} ($9.66\%$) -- squarely
+$\alpha\in[0.01,0.5]$, and is \emph{minimised at $\alpha=0.30$} ($9.66\%$), squarely
 inside the heavy-shrinkage range, far from the Frobenius oracle
 $\bar\alpha_{\mathrm{LW}}\approx0.04$. Heavy shrinkage $\alpha=0.5$ delivers
 $9.74\%$, statistically indistinguishable from the oracle-scale $\alpha=0.017$
@@ -248,8 +248,8 @@ $-0.04$ percentage points with $95\%$ interval $[-0.40,\,+0.37]$ straddling zero
 indistinguishable from the Frobenius oracle out-of-sample, at a fraction of the
 iteration cost. The conclusion is also robust to the estimation window: repeating the
 backtest with a shorter $L=252$ days (the rank-deficient regime $n/L\approx1.96$) moves
-the out-of-sample optimum only to $\alpha=0.20$ -- still well inside the heavy-shrinkage
-range -- with $\alpha=0.5$ and the oracle again indistinguishable ($10.5\%$ each).
+the out-of-sample optimum only to $\alpha=0.20$, still well inside the heavy-shrinkage
+range, with $\alpha=0.5$ and the oracle again indistinguishable ($10.5\%$ each).
 
 The picture (Figure~\ref{fig:oos}) is therefore the opposite of a trade-off: the
 intensity that makes the system well-conditioned and the solver fast is also the

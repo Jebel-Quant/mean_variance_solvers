@@ -71,8 +71,8 @@ The bound $\epsilon_{k,p}$ is governed by the eigenvalues at and below the MP
 edge: $\lambda_{k+1} \approx \hat\lambda_+ \approx 1.2 \times 10^{-3}$ on
 S\&P~500 data, while the leading signal eigenvalue
 $\lambda_1 \approx 343\,\bar\lambda \approx 0.066$ is roughly $50\times$ larger.
-The bound is conservative -- the tail-sum term accumulates all $n - k$ bulk
-eigenvalues -- and the measured accuracy is far better, as the direct
+The bound is conservative (the tail-sum term accumulates all $n - k$ bulk
+eigenvalues) and the measured accuracy is far better, as the direct
 portfolio comparison below shows.
 
 \paragraph{Memory passes}
@@ -139,7 +139,7 @@ re-diagonalised, and the top $m$ directions are retained, at cost
 $O(nm^2 + m^3)$ per day with no re-sketch of $X$ (the mean update, a further
 rank-one correction, is omitted; daily means are negligible relative to
 volatilities). On the S\&P~500 benchmark ($m = 33$) one update costs
-$0.21$\,ms against $4.8$\,ms for a fresh randomised SVD of the window -- a
+$0.21$\,ms against $4.8$\,ms for a fresh randomised SVD of the window, a
 $23\times$ speedup. Tracking accuracy degrades slowly: over $100$ consecutive
 daily updates with no re-sketch, the minimum-variance portfolio built from the
 tracked eigenpairs differs from the freshly-sketched one by $6.7$\,bp in the

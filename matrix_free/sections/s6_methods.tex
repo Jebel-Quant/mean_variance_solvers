@@ -222,7 +222,7 @@ The table compares asymptotic structure, not the constant factors that determine
 wall-clock time. The KKT row assembles the active-set Gram matrix and
 Cholesky-factorises it ($O(k^2 T)$ assembly-dominated, $s$ outer steps, no inner
 iterations); it is the dense counterpart to matrix-free CG and is faster when the
-active set is small or the system well-conditioned -- the crossover $\kappa < k^2$ --
+active set is small or the system well-conditioned (the crossover $\kappa < k^2$),
 which is why it leads on the $86$-asset FTSE problem but trails CG as $n$ grows
 (Section~\ref{sec:results}).}
 \label{tab:complexity}

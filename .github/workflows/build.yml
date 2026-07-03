@@ -1,9 +1,11 @@
 name: Build and publish PDF
 
+# The quality gate (make check) runs on every push and pull request; the
+# publish and release steps below stay guarded to main / tags via their own
+# `if:` conditions, so broadening the triggers does not change what ships.
 on:
   push:
-    branches: [main]
-    tags: ['*']
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -41,6 +43,12 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Cheap compile-time and static checks (issue #28): undefined refs and
+      # citations, spaced dash asides, bib placeholders, stale solver rows.
+      # Fails the build before anything is published.
+      - name: Quality gate
+        run: make check
 
       - name: Compile every paper
         run: make compile

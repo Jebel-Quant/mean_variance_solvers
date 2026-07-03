@@ -80,7 +80,7 @@ when $n/T$ is non-negligible. The resulting estimator is still a fixed SPD matri
 the matrix-free solvers accept any such target through their dense-target path; what it
 does \emph{not} admit is the augmented stacked-matrix form $\tilde{X}$, because it is not
 a scaled identity plus low-rank update of $\hat\Sigma$. Its target term therefore costs
-$O(n^2)$ per application rather than the $O(nk)$ of a factor target -- the matrix-free
+$O(n^2)$ per application rather than the $O(nk)$ of a factor target; the matrix-free
 property is retained, only the linear-time target application is lost.
 
 \paragraph{Matrix-free implementation}
@@ -107,7 +107,7 @@ because $\delta^2 = \|\hat\Sigma - \bar\lambda I\|_F^2$ is dominated by the larg
 well-estimated eigenvalues (the market factor alone contributes
 $(\lambda_1 - \bar\lambda)^2 \approx (0.067)^2$ to $\delta^2$), while each near-zero
 noise eigenvalue contributes only $\bar\lambda^2 \approx 2\times10^{-7}$.
-The near-zero eigenvalues -- sole cause of $\kappa \approx 109{,}000$ -- receive
+The near-zero eigenvalues, sole cause of $\kappa \approx 109{,}000$, receive
 negligible correction from the oracle; Corollary~\ref{cor:si} quantifies this: at
 $\alpha^* \approx 0.017$ the bound gives $\kappa \lesssim 8{,}500$, barely below the
 unshrunk value. Reaching the practical operating range requires $(1-\alpha)/\alpha =

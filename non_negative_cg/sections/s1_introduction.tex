@@ -7,7 +7,7 @@ and Bau~\cite{trefethenbau1997}. It builds
 its iterates in the Krylov subspace $\mathcal{K}_k(A, b)$ and converges at the
 $O(\sqrt\kappa)$ rate, where $\kappa = \kappa(A)$ is the spectral condition number
 (Proposition~\ref{prop:cg}). What CG does \emph{not} do is respect an inequality: it solves
-equations, not constrained programs. This note is about the gap between the two -- how to
+equations, not constrained programs. This note is about the gap between the two: how to
 make CG deliver the solution of the bound-constrained quadratic
 \begin{equation}\label{eq:bqp}
   \min_{x \in \mathbb{R}^n}\; f(x) = \tfrac{1}{2}\,x^\top A x - b^\top x
@@ -24,8 +24,8 @@ the constraint, the minimiser is simply $x = A^{-1}b$, which is exactly what CG 
 constraint $x \geq 0$ is what stands between that clean solve and the answer. We also treat
 the \emph{equality-augmented} variant, in which a linear equality system $Bx = c$ (with
 $B \in \mathbb{R}^{p\times n}$ of full row rank) is imposed alongside $x \geq 0$, because it
-arises whenever the solution must satisfy a family of linear balance conditions -- the single
-normalisation $\mathbf{1}^\top x = \beta$ being the case $p=1$ -- and because its multipliers
+arises whenever the solution must satisfy a family of linear balance conditions (the single
+normalisation $\mathbf{1}^\top x = \beta$ being the case $p=1$) and because its multipliers
 $\lambda \in \mathbb{R}^p$ can be eliminated analytically through a $p\times p$ Schur
 complement (Section~\ref{sec:reduction}).
 
@@ -39,13 +39,13 @@ complementarity problem (LCP) $(A,\,{-b})$, and $A \succ 0$ makes it a $P$-matri
 principal submatrix is invertible and each pivot is well
 defined~\cite{murty1988,judice1994,kim2011}. Guarding a fast block-pivot path with a
 least-index Bland-style fallback then yields \emph{unconditional} finite termination at the
-unique global minimiser, with no non-degeneracy hypothesis (Theorem~\ref{thm:termination}) --
+unique global minimiser, with no non-degeneracy hypothesis (Theorem~\ref{thm:termination}),
 the hypothesis on which classical block-principal-pivoting termination arguments rely. A
 perturbation lemma extends the guarantee to the inexact CG solves the loop actually performs:
 once the residual is small against the problem's decision margin, the inexact loop visits
 exactly the free sets of the exact one (Lemma~\ref{lem:inexact}).
-Integrating this with a Krylov inner solver on a changing free set -- restarting CG on each
-reduced system and warm-starting it across a parametric family of problems -- is the
+Integrating this with a Krylov inner solver on a changing free set (restarting CG on each
+reduced system and warm-starting it across a parametric family of problems) is the
 engineering that turns the guarantee into a fast solver in practice.
 
 The inner solve preserves two properties that matter for speed. It is \emph{matrix-free}:
@@ -59,8 +59,8 @@ submatrix strictly positive definite, secures the $P$-matrix property the finite
 proof relies on (Section~\ref{sec:conditioning}).
 
 For contrast we analyse a loop-free comparator that enforces the constraint at every step: a
-\emph{projected-gradient} method that takes a gradient step and projects onto the feasible set
--- the non-negative orthant for~\eqref{eq:bqp}, or the simplex slice
+\emph{projected-gradient} method that takes a gradient step and projects onto the feasible set:
+the non-negative orthant for~\eqref{eq:bqp}, or the simplex slice
 $\Delta_\beta = \{x : \mathbf{1}^\top x = \beta,\, x \geq 0\}$ for the single-normalisation
 case, computed in $O(n\log n)$ by a sort-and-threshold pass~\cite{duchi2008,condat2016}. It is
 single-stage and simple, but it is not a Krylov
@@ -68,7 +68,7 @@ method: it does not orthogonalise residuals against prior search directions and 
 the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop
 (Section~\ref{sec:nonneg}).
 
-Both building blocks are individually classical -- active-set and block-principal-pivoting
+Both building blocks are individually classical: active-set and block-principal-pivoting
 methods for the non-negative and complementarity problems~\cite{lawson1974,judice1994,kim2011,%
 murty1988,nocedal2006}, and CG with preconditioning for SPD systems~\cite{hestenes1952,%
 golub2013,greenbaum1997,trefethenbau1997,benzi2005}. What is \emph{not} classical is the termination result:
@@ -94,7 +94,7 @@ sufficient-decrease or proportioning tests, with convergence rates in terms of $
 finite identification of the optimal face guaranteed under a non-degeneracy
 (strict-complementarity) assumption. The loop developed here is instead a
 \emph{complementary-basis} method: its iterates are infeasible between outer steps, the free
-set changes by principal pivots driven by signs alone -- no line search, no decrease test --
+set changes by principal pivots driven by signs alone (no line search, no decrease test)
 and termination is combinatorial, resting on Murty's least-index rule, which is what removes
 the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast
 NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations

@@ -82,9 +82,9 @@ These two conditions are precisely the complementarity system for the long-only 
 conditions: with the constraint multiplier $s_i = \nabla_i f(w) - \lambda$, an optimum
 requires $w \geq 0$, $s \geq 0$, and $w_i s_i = 0$, and the asset toggles are the
 \emph{principal pivots} of the associated linear complementarity problem
-\cite{judice1994,kim2011,murty1988}. This loop -- block principal pivoting on a
-$P$-matrix LCP, run as a fast path guarded by a least-index (Bland-style) anti-cycling
-fallback -- is developed and analysed in full generality in the companion
+\cite{judice1994,kim2011,murty1988}. This loop, block principal pivoting on a
+$P$-matrix LCP run as a fast path guarded by a least-index (Bland-style) anti-cycling
+fallback, is developed and analysed in full generality in the companion
 paper~\cite{schmelzer2026nncg}, for the non-negative quadratic
 $\min_{x \geq 0} \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$ and its
 equality-augmented variant. Algorithm~\ref{alg:elim} is that loop instantiated on the
@@ -163,8 +163,8 @@ exit condition is precisely the $N = 0$ test of Algorithm~\ref{alg:elim}, which
 certifies the long-only KKT conditions.
 \end{proof}
 
-The guarantee is unconditional -- the least-index fallback removes the non-degeneracy
-hypothesis that classical block-principal-pivoting arguments require -- and it is
+The guarantee is unconditional (the least-index fallback removes the non-degeneracy
+hypothesis that classical block-principal-pivoting arguments require) and it is
 robust to the inexactness of the CG inner solves: once CG's residual tolerance is tied
 to the KKT decision threshold $\varepsilon$, the inexact loop provably visits the same
 active sets as the exact one \cite[Lemma~5.1]{schmelzer2026nncg}. The fallback is a

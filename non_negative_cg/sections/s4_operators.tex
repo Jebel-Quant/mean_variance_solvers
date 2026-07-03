@@ -18,9 +18,9 @@ A full product $\mathrm{matvec}\colon x \mapsto Ax$ is convenient for a residual
 not otherwise required. The equality-augmented problem~\eqref{eq:eqp} adds only the column
 selections $v \mapsto B_{\mathcal{F}}v$ and $w \mapsto B_{\mathcal{F}}^\top w$ used to form the
 $p+1$ right-hand sides and the Schur complement of Section~\ref{sec:reduction}; these act on
-the given $B$ and are independent of which backend implements $A$. Capturing exactly this contract as an operator protocol -- the same
+the given $B$ and are independent of which backend implements $A$. Capturing exactly this contract as an operator protocol (the same
 device by which the critical-line algorithm reaches its covariance through a small
-interface~\cite{schmelzer2026cla,cvxcla} -- lets the solver run unchanged on any object that
+interface~\cite{schmelzer2026cla,cvxcla}) lets the solver run unchanged on any object that
 implements it. Several backends do, each realising the two operations at a different cost.
 
 \paragraph{Dense.}
@@ -32,7 +32,7 @@ spectrum makes CG cheap relative to a factorisation. It is the natural choice wh
 already assembled and fits in memory.
 
 \paragraph{Gram (data matrix).}
-When $A = M^\top M$ for $M \in \mathbb{R}^{m\times n}$ -- the least-squares/NNLS setting -- the
+When $A = M^\top M$ for $M \in \mathbb{R}^{m\times n}$ (the least-squares/NNLS setting), the
 backend implements the protocol straight from $M$, never forming the $n\times n$ Gram matrix:
 \[
   \mathrm{apply}_{\mathcal{F}}(v) = M_{\mathcal{F}}^\top\!\left(M_{\mathcal{F}}\,v\right),
@@ -41,7 +41,7 @@ backend implements the protocol straight from $M$, never forming the $n\times n$
 \]
 each a pair of thin products, at $O(km)$ and $O(nm)$ respectively and $O(nm)$ memory instead of
 $O(n^2)$. The rank caveat is the familiar one: $M^\top M$ has rank at most $m$, so for $m < n$
-the free block becomes singular once $\mathcal{F}$ outgrows the data rank -- exactly the
+the free block becomes singular once $\mathcal{F}$ outgrows the data rank, exactly the
 degeneracy the regularisation of Section~\ref{sec:conditioning} removes.
 
 \paragraph{Factor (diagonal-plus-low-rank).}
@@ -72,8 +72,8 @@ needed. Because $A_\alpha \succ 0$ strictly, this backend also restores the $P$-
 (Section~\ref{sec:problem}) when the underlying $A$ is only semidefinite.
 
 Because Algorithm~\ref{alg:elim} and the CG inner solver reach $A$ only through
-$\mathrm{apply}_{\mathcal{F}}$ and $\mathrm{cross}$, switching backend -- dense to Gram to factor
-to regularised -- requires no change to the loop, the termination proof
+$\mathrm{apply}_{\mathcal{F}}$ and $\mathrm{cross}$, switching backend (dense to Gram to factor
+to regularised) requires no change to the loop, the termination proof
 (Theorem~\ref{thm:termination}), or the convergence analysis (Proposition~\ref{prop:cg}). The
 companion papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} are, in this light, two
 backends of one solver.
