@@ -64,3 +64,7 @@ solution reachable by principal pivoting~\cite{murty1988,judice1994}, which is t
 the finite-termination guarantee in Section~\ref{sec:nonneg}. When $A$ is only positive
 semidefinite -- as in a rank-deficient least-squares problem, $m < n$ -- the regularisation of
 Section~\ref{sec:conditioning} restores $A \succ 0$ and with it the $P$-matrix property.
+
+The complementarity structure~\eqref{eq:lcp} reduces the search for $x$ to a search over free
+sets $\mathcal{F}$. This means that once $\mathcal{F}$ is fixed, the sign constraints drop out and what remains on $\mathcal{F}$ is exactly the linear system~\eqref{eq:innerspd} guaranteed well posed above.
+Section~\ref{sec:reduction} makes this reduction precise, together with the closed-form elimination of $\lambda$ for the equality-augmented problem~\eqref{eq:eqp}.
