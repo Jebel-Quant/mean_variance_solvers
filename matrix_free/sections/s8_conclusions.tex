@@ -2,9 +2,10 @@
 
 The long-only minimum variance portfolio is conventionally solved by forming an $n\times n$
 covariance matrix and passing it to a general-purpose solver. This paper shows that the
-covariance matrix is unnecessary: the problem reduces to one symmetric positive definite
-linear solve, with non-negativity enforced either by an active-set loop or by projecting
-gradient steps directly onto the probability simplex. Both strategies work entirely with
+covariance matrix is unnecessary: the problem reduces to a handful of symmetric positive
+definite linear solves -- one per balance constraint, plus one for a return tilt, with
+the multipliers eliminated through a $p\times p$ Schur complement -- and non-negativity
+is enforced by an active-set loop. The method works entirely with
 the $T\times n$ returns matrix; the covariance matrix is never assembled during
 the solve.
 
@@ -38,11 +39,12 @@ tension more decisively by clipping noise eigenvalues to their theoretically pre
 bulk mean, reducing $\kappa$ to~146 on S\&P~500 data; the Woodbury direct solver for the
 RMT target is developed in the companion paper.
 
-The simplex-projection comparator is $19\times$ slower than CG at $n=3000$,
+The projected-gradient baseline of the companion paper~\cite{schmelzer2026nncg} is
+$19\times$ slower than CG at $n=3000$,
 as its $O(\kappa)$ iteration count grows with the condition number while CG's $O(\sqrt\kappa)$
-count does not. Both strategies extend naturally to the
-mean-variance problem with a return tilt, which requires solving two SPD systems and
-recovering the budget multiplier analytically, as outlined in Section~\ref{sec:pd}.
+count does not. The method extends naturally to the
+mean-variance problem with a return tilt, which requires one additional SPD solve with
+the balance multipliers still recovered analytically, as outlined in Section~\ref{sec:pd}.
 The frontier experiment in Section~\ref{sec:results} demonstrates this concretely:
 a 50-point long-only efficient frontier for $n=500$ assets is completed
 $1{,}455\times$ faster than CVXPY (warm-started CG with LW shrinkage, Table~\ref{tab:frontier}).

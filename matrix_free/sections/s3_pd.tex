@@ -2,32 +2,53 @@
 
 Ignoring the inequality constraints for now, the Lagrangian for the equality-constrained problem is:
 \[
-\mathcal{L}(w, \lambda) = \frac{\|Xw\|^2}{T} - \rho\hat\mu^\top w - \lambda(\mathbf{1}^\top w - 1)\,.
+\mathcal{L}(w, \lambda) = \frac{\|Xw\|^2}{T} - \rho\hat\mu^\top w - \lambda^\top(Bw - c)\,,
 \]
-Setting the derivative to zero gives the stationarity condition
-$\frac{2}{T}\hat\Sigma\, w = \lambda \mathbf{1} + \rho\hat \mu$, where $\hat\Sigma = X^\top X/T$.
-For $\rho = 0$, this reduces to $\frac{2}{T}\hat\Sigma\, w = \lambda\mathbf{1}$, determining the solution up to a scalar.
+whose stationarity condition is
+$2\hat\Sigma\, w = B^\top\lambda + \rho\hat \mu$, where $\hat\Sigma = X^\top X/T$.
+Together with feasibility $Bw = c$ this forms an $(n+p)\times(n+p)$ saddle-point system,
+but the indefinite system is never needed: the multipliers are eliminated through a
+$p\times p$ Schur complement, following the general reduction of the companion
+paper~\cite{schmelzer2026nncg}. Stationarity expresses the weights through $p+1$ SPD
+solves against $\hat\Sigma$,
+\[
+  w = \tfrac{1}{2}\,V_1\lambda + \tfrac{\rho}{2}\,v_2\,,
+  \qquad
+  V_1 = \hat\Sigma^{-1}B^\top \in \mathbb{R}^{n\times p}
+  \quad(\text{one solve per column}),
+  \qquad
+  v_2 = \hat\Sigma^{-1}\hat\mu\,,
+\]
+and imposing $Bw = c$ fixes the multipliers through the $p\times p$ system
+\[
+  S\,\lambda = 2c - \rho\,Bv_2\,,
+  \qquad
+  S = BV_1 = B\hat\Sigma^{-1}B^\top \succ 0\,.
+\]
+The Schur complement $S$ is SPD because $\hat\Sigma \succ 0$ and $B$ has full row rank,
+and the $p\times p$ solve is a dense Cholesky, negligible for the small $p$ typical of
+balance conditions. For $\rho = 0$ the solve $v_2$ is not needed and the weights collapse
+to $w = V_1 S^{-1} c$, a total of $p$ SPD solves.
 
-When $\rho = 0$ (pure long-only minimum variance), stationarity gives $2\hat\Sigma\, w = \lambda\mathbf{1}$,
-so $w$ is a scalar multiple of $\hat\Sigma^{-1}\mathbf{1}$.
-Setting $v_1 = \hat\Sigma^{-1}\mathbf{1}$ and writing $w = c\,v_1$, the budget constraint
-$\mathbf{1}^\top w = 1$ determines $c$:
+For the budget constraint ($p = 1$, $B = \mathbf{1}^\top$, $c = 1$) the solve
+$V_1 = v_1 = \hat\Sigma^{-1}\mathbf{1}$ is a single vector and the Schur complement is the
+scalar $S = \mathbf{1}^\top v_1$. The weights specialise to
 \[
-  c = \frac{1}{\mathbf{1}^\top v_1} \quad \mbox{and} \quad w = \frac{v_1}{\mathbf{1}^\top v_1}~.
+  w = \frac{v_1}{\mathbf{1}^\top v_1} \quad (\rho = 0)\,,
+  \qquad\qquad
+  w = \tfrac{\lambda}{2}\,v_1 + \tfrac{\rho}{2}\,v_2\,,
+  \quad
+  \lambda = \frac{2 - \rho\,(\mathbf{1}^\top v_2)}{\mathbf{1}^\top v_1} \quad (\rho \neq 0)\,,
 \]
-When $\rho \neq 0$, stationarity gives $2\hat\Sigma\, w = \lambda\mathbf{1} + \rho\hat \mu$, so
-$w = \tfrac{\lambda}{2}\,\hat\Sigma^{-1}\mathbf{1} + \tfrac{\rho}{2}\,\hat\Sigma^{-1}\hat \mu$.
-Setting $v_1 = \hat\Sigma^{-1}\mathbf{1}$ and $v_2 = \hat\Sigma^{-1}\hat \mu$ (two SPD solves), the budget
-constraint determines the multiplier
-\[
-  \lambda = \frac{2 - \rho\,(\mathbf{1}^\top v_2)}{\mathbf{1}^\top v_1}~,
-\]
-and the weights follow as $w = \tfrac{\lambda}{2}\,v_1 + \tfrac{\rho}{2}\,v_2$.
-In both cases the $(n+1)\times(n+1)$ saddle-point system is never needed and $\lambda$ is
-recovered analytically rather than as part of the solve.
+the two formulas implemented by every solver in Section~\ref{sec:solvers}.
+
+In all cases the multipliers are recovered analytically rather than as part of the solve.
 The long-only problem therefore reduces to solving a symmetric positive definite system
-$\hat\Sigma\,v = b$ for one or two right-hand sides, subject to the remaining inequality
-constraint $w \geq 0$; the latter is addressed in Section~\ref{sec:primaldual}, which
-presents two strategies for doing so. Section~\ref{sec:precond} shows how Ledoit-Wolf
+$\hat\Sigma\,v = b$ for $p$ or $p+1$ right-hand sides (one or two in the budget case),
+subject to the remaining inequality
+constraint $w \geq 0$; the latter is addressed by the active-set loop of
+Section~\ref{sec:primaldual}. The right-hand sides share the operator
+$\hat\Sigma$, so the solves are warm-started against each other at no extra cost.
+Section~\ref{sec:precond} shows how Ledoit-Wolf
 shrinkage replaces $\hat\Sigma$ with a better-conditioned estimator $\hat\Sigma_{\mathrm{LW}}$
 without changing this reduction.

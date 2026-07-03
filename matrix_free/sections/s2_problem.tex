@@ -3,22 +3,22 @@ The long-only mean-variance portfolio solves
 \[
 \min_{w}\; w^\top\Sigma\, w - \rho\,\mu^\top w
 \quad\text{subject to}\quad
-\mathbf{1}^\top w = 1,\quad w\geq 0~,
+Bw = c,\quad w\geq 0~,
 \]
-where $\Sigma$ is the $n\times n$ covariance matrix of returns, $\mu$ is the $n\times 1$ vector of expected returns, and $\rho\geq 0$ controls the risk-return trade-off; setting $\rho=0$ recovers the pure long-only minimum variance portfolio.
+where $\Sigma$ is the $n\times n$ covariance matrix of returns, $\mu$ is the $n\times 1$ vector of expected returns, $\rho\geq 0$ controls the risk-return trade-off (setting $\rho=0$ recovers the pure long-only minimum variance portfolio), and $B \in \mathbb{R}^{p\times n}$ of full row rank, $c \in \mathbb{R}^p$ carry $p \ll n$ linear balance conditions. The budget constraint $\mathbf{1}^\top w = 1$ -- full investment -- is the case $p=1$, $B = \mathbf{1}^\top$, $c = 1$; it is the constraint used in every experiment reported here, and the reader may substitute it throughout. The general $B$ additionally accommodates group budgets (sector sleeves summing to prescribed weights), factor neutralities $\beta^\top w = 0$, or a target portfolio beta at the same cost structure. This is the equality-augmented non-negative quadratic of the companion paper~\cite{schmelzer2026nncg}, whose treatment the present formulation follows.
 Since both $\Sigma$ and
 $\mu$ are unknown, in practice they must be replaced by estimates. Let $X\in\mathbb{R}^{T\times n}$ denote the demeaned return matrix for $n$ assets over the previous $T$ trading periods. The feasible problem formulation then is
 \[
 \min_{w}\; w^\top\hat\Sigma\, w - \rho\,\hat\mu^\top w
 \quad\text{subject to}\quad
-\mathbf{1}^\top w = 1,\quad w\geq 0~.
+Bw = c,\quad w\geq 0~.
 \]
 The classical choice for estimating $\Sigma$ is
 the sample covariance matrix $\hat\Sigma = X^\top X/T$, for which $w^\top\hat\Sigma\, w = \norm{Xw}^2/T$, and the problem becomes
 \[
 \min_{w}\;\frac{\norm{Xw}^2}{T} - \rho\,\hat\mu^\top w
 \quad\text{subject to}\quad
-\mathbf{1}^\top w = 1,\quad w\geq 0~.
+Bw = c,\quad w\geq 0~.
 \]
 This reframing is key: the variance term is now a normalised squared norm of $Xw$, and the gradient $w\mapsto X^\top(Xw)$ can be evaluated with two matrix-vector products, without ever forming $X^\top X$.
 
@@ -31,63 +31,41 @@ Parameter & Type & Description \\
 $X$        & $\mathbb{R}^{T \times n}$ & Demeaned return matrix \\
 $\rho$     & $\mathbb{R}_{\geq 0}$     & Return-tilt weight (default $0$) \\
 $\mu$      & $\mathbb{R}^n$            & Expected returns (default $\mathbf{0}$) \\
+$B$        & $\mathbb{R}^{p \times n}$ & Balance constraints, full row rank (default $\mathbf{1}^\top$) \\
+$c$        & $\mathbb{R}^{p}$          & Balance targets (default $1$) \\
 \bottomrule
 \end{tabular}
 \caption{Parameters of the \texttt{Problem} specification.}
 \label{tab:params}
 \end{table}
 
-\paragraph{Dual problem}
-Including multipliers for both constraints, the full Lagrangian is
+\paragraph{KKT structure}
+Up to the factor $\tfrac{1}{2}$ in the quadratic term, this is the equality-augmented
+non-negative quadratic of the companion paper~\cite{schmelzer2026nncg} with
+$A = \tfrac{2}{T}X^\top X$ and $b = \rho\hat\mu$; its KKT, complementarity, and
+$P$-matrix pivot structure are developed there in full and need only be read in
+portfolio terms. Introducing multipliers $\lambda \in \mathbb{R}^p$ for the balance
+constraints and $\nu \geq \mathbf{0}$ for non-negativity, stationarity reads
 \[
-\mathcal{L}(w,\, \lambda,\, \nu)
-= \frac{\lVert Xw\rVert^2}{T} - \rho\hat\mu^\top w
-  - \lambda(\mathbf{1}^\top w - 1) - \nu^\top w\;,
+\tfrac{2}{T}\, X^\top X w = B^\top\lambda+\nu+\rho\hat\mu\;,
 \]
-where $\lambda\in\mathbb{R}$ is the budget multiplier and $\nu\geq\mathbf{0}$ is the vector of
-non-negativity multipliers. The stationarity condition
-\[
-\tfrac{2}{T}\, X^\top X w = \lambda\mathbf{1}+\nu+\rho\hat\mu
-\]
-gives $w^* = \tfrac{T}{2}(X^\top X)^{-1}s$ with $s = \lambda\mathbf{1}+\nu+\rho\hat\mu$.
-Substituting into $\mathcal{L}$:
-\[
-\mathcal{L}(w^*,\,\lambda,\,\nu)
-= \tfrac{1}{T}(w^*)^\top X^\top X w^* - s^\top w^* + \lambda\;.
-\]
-From stationarity $\tfrac{1}{T}X^\top X w^* = \tfrac{s}{2}$, so the first term equals
-$\tfrac{1}{2}s^\top w^*$, giving
-\[
-g(\lambda,\,\nu)
-= \tfrac{1}{2}s^\top w^* - s^\top w^* + \lambda
-= -\tfrac{1}{2}s^\top w^* + \lambda\;.
-\]
-Substituting $w^* = \tfrac{T}{2}(X^\top X)^{-1}s$ yields the dual function
-\[
-g(\lambda,\,\nu)
-= \inf_w\; \mathcal{L}(w,\,\lambda,\,\nu)
-= \lambda - \tfrac{T}{4}\,
-  (\lambda\mathbf{1}+\nu+\rho\hat\mu)^\top(X^\top X)^{-1}
-  (\lambda\mathbf{1}+\nu+\rho\hat\mu)\;,
-\]
-defined when $X$ has full column rank; the dual problem is
-$\max_{\lambda,\,\nu\geq\mathbf{0}}\; g(\lambda,\,\nu)$.
-The feasible set $\{w:\mathbf{1}^\top w=1,\,w\geq\mathbf{0}\}$ is compact and
-$w=\tfrac{1}{n}\mathbf{1}$ is strictly feasible, so Slater's condition holds and
-strong duality obtains.
-
-At the optimum, complementary slackness ($\nu_i w_i = 0$ for all $i$) partitions assets
+and complementary slackness ($\nu_i w_i = 0$ for all $i$) partitions assets
 into two types. \emph{Active} assets ($w_i>0$) have $\nu_i=0$; stationarity then gives
 \[
-\tfrac{2}{T}\,(X^\top Xw)_i = \lambda+\rho\hat\mu_i\;,
+\tfrac{2}{T}\,(X^\top Xw)_i = (B^\top\lambda)_i+\rho\hat\mu_i\;,
 \]
-equating each active asset's marginal variance to the budget shadow price adjusted for its
-expected return. \emph{Excluded} assets ($w_i=0$) satisfy
+pinning each active asset's marginal variance, adjusted for its expected return, to the
+row space of $B$ -- in the budget case, to the single shadow price $\lambda$ of full
+investment. \emph{Excluded} assets ($w_i=0$) satisfy
 \[
-\nu_i = \tfrac{2}{T}\,(X^\top Xw)_i - \lambda - \rho\hat\mu_i \geq 0~.
+\nu_i = \tfrac{2}{T}\,(X^\top Xw)_i - (B^\top\lambda)_i - \rho\hat\mu_i \geq 0~.
 \]
 Their marginal variance exceeds this threshold, so holding them at a positive weight would
-increase variance net of return. The primal-dual loop in Section~\ref{sec:primaldual} is a direct
+increase variance net of return. Once the estimator is strictly positive definite
+(guaranteed by shrinkage with $\alpha > 0$, Section~\ref{sec:precond}), the objective is
+strictly convex and these conditions are necessary and sufficient for the unique global
+optimum \cite[Section~2]{schmelzer2026nncg}. The primal-dual loop in
+Section~\ref{sec:primaldual} is a direct
 implementation of these conditions: it terminates precisely when primal and dual feasibility
 both hold, which (together with stationarity from each inner solve) is sufficient for
 global optimality.

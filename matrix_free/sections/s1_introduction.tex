@@ -33,7 +33,11 @@ assembled. Each CG iteration requires only two matrix-vector products with $X$, 
 per-iteration cost from $O(n^2)$ to $O(nT)$ and eliminating $O(n^2)$ storage (the active-set loop further reduces this to $O(kT)$, $k \leq n$; see Table~\ref{tab:complexity}).
 Non-negative weights are enforced by a primal-dual active-set loop that alternately removes
 assets with negative weight and re-adds assets violating dual feasibility, calling the CG
-solver on the modified active set at each step. This constraint-handling layer -- the
+solver on the modified active set at each step. The treatment covers a general system
+of linear balance conditions $Bw = c$ -- group budgets, factor neutralities, a target
+beta -- with the budget constraint as the leading case: the $p$ multipliers are
+eliminated analytically through a $p \times p$ Schur complement at the cost of $p+1$
+matrix-free solves (Section~\ref{sec:pd}). This constraint-handling layer -- the
 loop itself, its unconditional finite-termination guarantee, and its robustness to
 inexact inner solves -- is developed and analysed in full generality in the companion
 paper~\cite{schmelzer2026nncg}; here it is instantiated on the portfolio problem.
@@ -96,21 +100,20 @@ inner solver on a changing active set is new.
 Three features of the problem make the matrix-free approach non-obvious in standard
 QP form. First, all prior solvers treat the assembled $\hat\Sigma$ as a required input;
 recognising that $v = \hat\Sigma^{-1}\mathbf{1}$ is the only quantity needed requires
-stepping outside the QP abstraction. Second, recovering the budget multiplier
-analytically -- reducing the long-only problem to a single SPD linear solve rather than
-a constrained QP -- exploits the rank-one structure of the equality constraint, which is
+stepping outside the QP abstraction. Second, recovering the balance multipliers
+analytically -- reducing the long-only problem to a handful of SPD linear solves rather
+than a constrained QP -- exploits the low-rank ($p \ll n$) structure of the equality
+constraints, which is
 not surfaced by general-purpose QP interfaces. Third, restarting a Krylov inner solver
 on a changing active-asset subset each outer step, without re-initialising unnecessarily,
 is a non-trivial integration of the active-set and iterative-solver layers.
 
 The scope is deliberately the pure long-only minimum-variance and mean-variance
-problem: the matrix-free reduction exploits its specific structure -- a single SPD
-solve with a rank-one budget constraint -- and richer constraint sets such as sector
+problem: the matrix-free reduction exploits its specific structure -- a few SPD
+solves with a low-rank system of balance equalities -- and \emph{inequality} constraint
+sets such as sector
 caps, turnover limits, or factor-exposure bounds fall outside it and are better served
 by a general-purpose QP solver (Section~\ref{sec:solvers}).
-
-For completeness, Section~\ref{sec:primaldual} also includes a simplex-projection
-first-order comparator that handles both constraints simultaneously without an outer active-set loop.
 
 The remainder of the paper is organized as follows.
 Sections~\ref{sec:problem}--\ref{sec:pd} develop the problem formulation and
