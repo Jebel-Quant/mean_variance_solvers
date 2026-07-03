@@ -13,19 +13,34 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
+      # Runs before checkout: needs no repo files, and a cache hit restores
+      # the TeX Live packages without going through apt at all.
+      - name: Install TeX Live (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            texlive-latex-base
+            texlive-latex-recommended
+            texlive-latex-extra
+            texlive-fonts-recommended
+            texlive-science
+            texlive-publishers
+          version: 1.0
+          # TeX Live relies on postinst scripts (fmtutil, mktexlsr) to build
+          # format files; rerun them when restoring from cache.
+          execute_install_scripts: true
+
+      # The postinst scripts alone leave a restored cache with an empty ls-R
+      # and stale font maps (pdfTeX then falls back to bitmap fonts and fails
+      # with "auto expansion is only possible with scalable fonts").
+      - name: Refresh TeX Live databases
+        run: |
+          sudo mktexlsr
+          sudo updmap-sys
+          sudo fmtutil-sys --byfmt pdflatex
+
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-latex-base \
-            texlive-latex-recommended \
-            texlive-latex-extra \
-            texlive-fonts-recommended \
-            texlive-science \
-            texlive-publishers
 
       - name: Compile every paper
         run: make compile
