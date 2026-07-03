@@ -17,7 +17,7 @@ never inside the linear solve. The inner solver is the proposed CG method.
 
 \paragraph{Matrix-free operator.}
 As a Krylov subspace method the only thing that CG requires for $A_{\mathcal{F}}$ is the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never as an explicit matrix. When considering the free set $\mathcal{F}$ for $A = M^\top M$ this factors as $A_{\mathcal{F}}\,v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
-$M_{\mathcal{F}} = M_{:,\mathcal{F}}$m which are two products with the $m \times |\mathcal{F}|$ submatrix
+$M_{\mathcal{F}} = M_{:,\mathcal{F}}$, which are two products with the $m \times |\mathcal{F}|$ submatrix
 at $O(m\,|\mathcal{F}|)$, so the Gram matrix is never formed and no $O(n^2)$ storage is used. This is equivalent to the standard CG-on-the-normal-equations arrangement~\cite{golub2013,paige1975,choi2006} applied to a column subset that changes between outer steps. This mat-vec is one of the two operations
 the whole method requires of $A$. In Section~\ref{sec:operators} we discuss the details of how to  implement this. When a variable is released in the primal step, the operator is
 rebuilt on the reduced free set and CG restarts on the smaller system. We now state the standard convergence result for CG.
@@ -38,7 +38,7 @@ rebuilt on the reduced free set and CG restarts on the smaller system. We now st
 The rate of convergence is thus $O(\sqrt\kappa)$ so that reaching a fixed relative energy-norm tolerance takes $O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations. The bound follows from a Chebyshev minimax
 argument that states that the $k$-th CG error is majorised by the best degree-$k$ polynomial on
 $[\lambda_{\min}, \lambda_{\max}]$ normalised at the origin, which is a scaled Chebyshev
-polynomial~\cite[Lecture~38]{trefethenbau1997}. The main motivation is to obtain clustered spectra beat it meaning that CG converges superlinearly once the extremal eigenvalues are resolved, which is exactly the behaviour the synthetic study of Section~\ref{sec:results}. Because $A \succ 0$ forces every
+polynomial~\cite[Lecture~38]{trefethenbau1997}. Clustered spectra beat this bound: CG converges superlinearly once the extremal eigenvalues are resolved, which is exactly the behaviour the synthetic study of Section~\ref{sec:results} measures. Because $A \succ 0$ forces every
 $A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather than a plain gradient iteration: the projected-gradient comparator of Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
 
 \paragraph{Eliminating the equality multipliers.}
