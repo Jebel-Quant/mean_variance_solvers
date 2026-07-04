@@ -42,12 +42,12 @@ from pathlib import Path
 import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
+from util.runner import output_dirs
 
-from nncg import shaw, phillips, solve_nnqp, kkt_violation
+from nncg_ref import shaw, phillips, solve_nnqp, kkt_violation
 
 HERE = Path(__file__).parent
-TABLES = HERE.parent / "tables"
-TABLES.mkdir(exist_ok=True)
+_, TABLES = output_dirs(HERE)
 
 
 def ridge(gram, alpha):

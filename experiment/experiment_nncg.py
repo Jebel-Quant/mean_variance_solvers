@@ -48,14 +48,13 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from nncg import (cg, kkt_violation, make_problem, pcg,  # noqa: F401
-                  solve_nnqp, solve_nnqp_eq)
+from util.runner import output_dirs
+
+from nncg_ref import (cg, kkt_violation, make_problem, pcg,  # noqa: F401
+                      solve_nnqp, solve_nnqp_eq)
 
 HERE = Path(__file__).parent
-GRAPHS = HERE.parent / "graphs"
-TABLES = HERE.parent / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {

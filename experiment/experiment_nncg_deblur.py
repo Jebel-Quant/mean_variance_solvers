@@ -36,13 +36,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-from nncg import solve_nnqp_op
+from util.runner import output_dirs
+
+from nncg_ref import solve_nnqp_op
 
 HERE = Path(__file__).parent
-GRAPHS = HERE.parent / "graphs"
-TABLES = HERE.parent / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update({"font.family": "serif", "font.size": 9,
                      "axes.titlesize": 9, "figure.dpi": 150})
