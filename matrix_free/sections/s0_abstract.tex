@@ -1,20 +1,23 @@
 \begin{abstract}
 The long-only mean-variance portfolio, minimising variance for a given return target
-subject to a budget constraint and non-negative weights, is routinely solved by
+subject to linear balance constraints $Bw = c$ (the fully-invested budget constraint
+$\mathbf{1}^\top w = 1$ being the leading case) and non-negative weights, is routinely
+solved by
 assembling an $n\times n$ sample covariance matrix and dispatching it to a
 general-purpose quadratic program. Both steps are unnecessary: the covariance matrix
 is not a primitive of the problem. It is a computational detour.
 
-The detour is avoidable. The portfolio weights require only $v = \hat\Sigma^{-1}\mathbf{1}$;
-conjugate gradients computes this matrix-free, evaluating each product $\hat\Sigma\,v$
-as two $O(nT)$ passes over $X$ without ever forming $\hat\Sigma = X^\top X/T$.
+The detour is avoidable. The portfolio weights require only a handful of solves
+against $\hat\Sigma$ -- in the budget case, $v = \hat\Sigma^{-1}\mathbf{1}$ alone;
+conjugate gradients computes them matrix-free, evaluating each product $\hat\Sigma\,v$
+as two $O(nT)$ passes over $X$ without ever forming $\hat\Sigma = X^\top X/T$, and the
+$p$ balance multipliers are eliminated analytically through a $p \times p$ Schur
+complement.
 Non-negativity is enforced by a primal-dual active-set outer loop that alternately
 removes assets with negative weight (primal step) and re-adds assets that violate
 dual feasibility (dual step), restarting the inner solver on the modified active set
 each time; the loop and its finite-termination guarantee are developed in full
-generality in the companion paper~\cite{schmelzer2026nncg}. The mean-variance
-problem with a return tilt $\rho$ reduces to two such solves with the budget multiplier
-recovered analytically. The $O(\sqrt\kappa)$ iteration count of CG, where
+generality in the companion paper~\cite{schmelzer2026nncg}. The $O(\sqrt\kappa)$ iteration count of CG, where
 $\kappa = \kappa(\hat\Sigma)$ is the spectral condition number, contrasts sharply with
 the $O(\kappa)$ rate of projected-gradient methods that do not exploit Krylov structure.
 

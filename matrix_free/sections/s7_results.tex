@@ -16,7 +16,7 @@ only in whether $\hat\Sigma$ is formed. It is reported only for the shrunk ($\al
 panels: without shrinkage the assembled matrix can be singular (it is for FTSE), where
 the dense Cholesky solve is undefined while CG still returns a least-squares iterate.
 CG is initialised from the zero vector, so its iteration counts are deterministic
-and exactly reproducible, independent of any random seed. The proximal-gradient comparator instead starts from a
+and exactly reproducible, independent of any random seed. The proximal-gradient baseline (Section~\ref{sec:solvers}) instead starts from a
 random point on the simplex and estimates its Lipschitz step by power iteration, so its iteration count varies
 mildly across runs (on the S\&P~500 problem at $\alpha=0.5$, $825 \pm 87$ over ten runs); we report the count from
 the minimum-time run. All implementations are available in the companion package
@@ -337,11 +337,11 @@ moderate $\alpha$ values well below unity.
 \includegraphics[width=0.65\linewidth]{graphs/minvar_scaling.pdf}
 \caption{Wall-clock time vs number of assets $n$ (log--log scale, $T = 1250$
 fixed) for CG with LW shrinkage ($\alpha = 0.5$), the dense KKT (Cholesky) baseline,
-and the simplex-projection comparator.
+and the proximal-gradient baseline.
 Data are generated from a latent factor model.
 Reference slopes $O(n)$ and $O(n^2)$ are anchored to the CG-LW curve at $n = 500$;
 CG-LW tracks well below $O(n^2)$ and pulls steadily ahead of the dense KKT baseline as
-$n$ grows, while the simplex-projection method tracks closer to
+$n$ grows, while proximal gradient tracks closer to
 $O(n^2)$ as its $O(\kappa)$ iteration count grows with the condition number.}
 \label{fig:scaling}
 \end{figure}
@@ -363,7 +363,7 @@ portfolios that minimise variance for a given expected return.
 Parameterising by the return-tilt weight $\rho \geq 0$,
 \[
   w^\star(\rho)
-  = \arg\min_{w \in \Delta_n}\;
+  = \arg\min_{\mathbf{1}^\top w = 1,\; w \geq 0}\;
     w^\top \hat\Sigma_{\mathrm{LW}}\, w - \rho\,\hat\mu^\top w\,,
 \]
 sweeping $\rho$ from $0$ (pure minimum variance) to $\rho_{\max}$ traces the
