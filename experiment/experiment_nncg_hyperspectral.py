@@ -10,9 +10,10 @@ poses
 
 This script instantiates the raster-scan warm start of Section 5 (Prop. 5.2):
 neighbouring pixels usually share the same mineral mix, so passing pixel
-(i-1)'s free set into solve_nnqp_eq as free_init for pixel i lets many
-pixels certify in a single outer iteration instead of re-searching the active
-set from scratch (cold start). On the offline synthetic proxy scene (see
+(i-1)'s (free mask, solution) pair into solve_nnqp_eq's `warm` argument for
+pixel i lets many pixels certify in a single outer iteration instead of
+re-searching the active set from scratch (cold start). On the offline
+synthetic proxy scene (see
 below, tuned for realistic per-pixel mineral contrast) the effect is real but
 modest: roughly a 1.1-1.2x reduction in total outer iterations, well short of
 the 1.6-1.7x an earlier, unrealistically flat-abundance version of this scene
@@ -80,7 +81,9 @@ Outputs:
 # requires-python = ">=3.11"
 # dependencies = [
 #     "clarabel",
+#     "cvx-linalg",
 #     "matplotlib",
+#     "nncg==0.2.2",
 #     "numpy",
 #     "scipy",
 # ]
@@ -96,15 +99,14 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
+from cvx.linalg import DenseOperator
+from util.runner import output_dirs
 
 from nncg import solve_nnqp_eq
 
 HERE = Path(__file__).parent
-GRAPHS = HERE.parent / "graphs"
-TABLES = HERE.parent / "tables"
-DATA = HERE.parent / "data"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
+DATA = HERE / "data"
 
 mpl.rcParams.update(
     {
@@ -367,23 +369,24 @@ def snake_order(n_rows, n_cols):
     return np.array(order)
 
 
-def unmix_image(Y, A, B, c, order, warm_start):
+def unmix_image(Y, A_op, B, c, order, warm_start):
     """Solve the FCLS QP for every pixel in `order`; optionally warm-start
-    each solve's free set from the previous pixel's (Prop. 5.2)."""
-    n_end = A.shape[0]
+    each solve's free set and iterate from the previous pixel's solution
+    (Prop. 5.2), via the nncg package's `warm=(free_mask, x_prev)` argument."""
+    n_end = B.shape[1]
     n_pix = Y.shape[1]
     X = np.zeros((n_end, n_pix))
     outer = np.zeros(n_pix, dtype=int)
     inner = np.zeros(n_pix, dtype=int)
-    free = None
+    warm = None
     t0 = time.perf_counter()
     for i in order:
-        res = solve_nnqp_eq(A, Y[:, i], B, c, free_init=free if warm_start else None)
-        X[:, i] = res["x"]
-        outer[i] = res["outer"]
-        inner[i] = res["inner"]
+        res = solve_nnqp_eq(A_op, Y[:, i], B, c, warm=warm if warm_start else None)
+        X[:, i] = res.x
+        outer[i] = res.outer
+        inner[i] = res.inner
         if warm_start:
-            free = res["free"]
+            warm = (res.free, res.x)
     elapsed = time.perf_counter() - t0
     return X, outer, inner, elapsed
 
@@ -409,6 +412,7 @@ def main():
     print(f"VCA endmembers: {N_ENDMEMBERS} extracted from pixel indices {endmember_px[:5]}...")
 
     A = M.T @ M
+    A_op = DenseOperator(A)                                           # shared across every pixel's solve
     Bmat = np.ones((1, N_ENDMEMBERS))
     c = np.array([1.0])
     Bpix = M.T @ Y                                                    # b_i columns, all pixels at once
@@ -416,11 +420,11 @@ def main():
     order = snake_order(rows, cols)
 
     print("Unmixing (cold start: every pixel from scratch)...")
-    X_cold, outer_cold, inner_cold, t_cold = unmix_image(Bpix, A, Bmat, c, order, warm_start=False)
+    X_cold, outer_cold, inner_cold, t_cold = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=False)
     print(f"  {t_cold:.2f}s, total outer iters = {outer_cold.sum()}")
 
     print("Unmixing (warm start: free set carried along the raster scan)...")
-    X_warm, outer_warm, inner_warm, t_warm = unmix_image(Bpix, A, Bmat, c, order, warm_start=True)
+    X_warm, outer_warm, inner_warm, t_warm = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=True)
     print(f"  {t_warm:.2f}s, total outer iters = {outer_warm.sum()}")
 
     agree = float(np.max(np.abs(X_cold - X_warm)))
