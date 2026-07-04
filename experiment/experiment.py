@@ -30,15 +30,19 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 # ]
 #
 # [tool.uv.sources]
-# fast-minimum-variance = { git = "https://github.com/Jebel-Quant/fast_minimum_variance" }
+# # balance systems (B, c) and the cvx-linalg>=0.9.6 restricted() perf fix are not
+# # yet released; run against the local checkout until the next release, then
+# # restore the git/PyPI source.
+# fast-minimum-variance = { path = "../../fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-from util.runner import print_table, run_timed, write_table_defs
+from util.runner import _fmt_time, print_table, run_timed, write_table_defs
 
 from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
 from fast_minimum_variance.shrinkage.util import (
@@ -49,7 +53,8 @@ from fast_minimum_variance.shrinkage.util import (
 HERE = Path(__file__).parent
 TABLES = HERE / "tables"
 
-# Solver rows written to the paper tables (FISTA is benchmarked but not in the paper).
+# Solver rows written to the paper tables (first-order methods are treated in the
+# nncg companion paper and excluded here).
 _TABLE_METHODS_ALL = [
     "cvxpy (Clarabel)",
     "cvxpy (OSQP)",
@@ -57,15 +62,13 @@ _TABLE_METHODS_ALL = [
     "OSQP (direct API)",
     "KKT (Cholesky)",
     "CG (SPD)",
-    "Proximal gradient",
 ]
 _TABLE_METHODS_KEY = [
     "cvxpy (Clarabel)",
     "KKT (Cholesky)",
     "CG (SPD)",
-    "Proximal gradient",
 ]
-_FOOTNOTE = {"Proximal gradient"}
+_FOOTNOTE = set()
 
 DATASETS = {
     "sp500": HERE / "data/sp500_pct_returns.parquet",
@@ -79,15 +82,11 @@ SOLVERS_ALL = [
     ("OSQP (direct API)", lambda p: p.solve_osqp(), False),
     ("KKT (Cholesky)", lambda p: p.solve_kkt(), True),
     ("CG (SPD)", lambda p: p.solve_cg(), False),
-    ("Proximal gradient", lambda p: p.solve_proximal(), False),
-    ("FISTA (Nesterov)", lambda p: p.solve_fista(), False),
 ]
 SOLVERS_KEY = [
     ("cvxpy (Clarabel)", lambda p: p.solve_cvxpy(), False),
     ("KKT (Cholesky)", lambda p: p.solve_kkt(), True),
     ("CG (SPD)", lambda p: p.solve_cg(), False),
-    ("Proximal gradient", lambda p: p.solve_proximal(), False),
-    ("FISTA (Nesterov)", lambda p: p.solve_fista(), False),
 ]
 
 
@@ -99,7 +98,7 @@ def _make_entry(prob, fn, is_kkt=False):
     elif is_kkt:  # solve_kkt -> (w, outer_steps)
         _, outer = raw
         inner = None
-    else:  # proximal / cvxpy / etc -> (w, iters)
+    else:  # cvxpy / clarabel / osqp -> (w, iters)
         _, inner = raw
         outer = None
     return {"time_s": t, "outer": outer, "inner": inner}
@@ -184,6 +183,50 @@ for dataset_name, data_file in DATASETS.items():
             ],
         )
         print("  → wrote experiment/tables/sp500_defs.tex")
+
+        # Balance-system panel: the production package now accepts (B, c), so the
+        # p in {1, 4, 8} sleeve systems of Section (balance) run through the same
+        # matrix-free CG / dense-KKT solvers as the budget benchmark above, with
+        # timings directly comparable to the budget rows.  Sleeve construction
+        # matches experiment_balance.py (seed 0, proportional shares).
+        print("\nBalance systems (sleeves, LW alpha=0.5)")
+        print(f"{'solver':<16} {'p':>3} {'time(s)':>9} {'iters':>7} {'speedup':>9}")
+        print("-" * 50)
+        sleeve_rng = np.random.default_rng(0)
+
+        def _sleeve(p, n=N, rng=sleeve_rng):
+            """Partition the universe into p sleeves each holding its budget share."""
+            if p == 1:
+                return np.ones((1, n)), np.array([1.0])
+            groups = np.array_split(rng.permutation(n), p)
+            b_eq = np.zeros((p, n))
+            c_eq = np.zeros(p)
+            for g, idx in enumerate(groups):
+                b_eq[g, idx] = 1.0
+                c_eq[g] = len(idx) / n
+            return b_eq, c_eq
+
+        sleeve_lines = []
+        for solver_label, solver_fn, is_kkt in (
+            ("CG (SPD)", lambda pr: pr.solve_cg(), False),
+            ("KKT (Cholesky)", lambda pr: pr.solve_kkt(), True),
+        ):
+            for p in (1, 4, 8):
+                b_eq, c_eq = _sleeve(p)
+                prob = MinVarProblem(R, alpha=alpha_hard, target=target, B=b_eq, c=c_eq)
+                (_ref, _), t_ref = run_timed(lambda pr=prob: pr.solve_cvxpy(project=False))
+                entry = _make_entry(prob, solver_fn, is_kkt)
+                iters = entry["inner"] if entry["inner"] is not None else entry["outer"]
+                speedup = t_ref / entry["time_s"]
+                tag = "(budget)" if p == 1 else "(sleeves)"
+                label = f"{solver_label}, $p = {p}$ {tag}"
+                sleeve_lines.append(
+                    f"{label:<32} & {_fmt_time(entry['time_s']):>8} & {iters:>6} & {speedup:>6.1f}x \\\\\n"
+                )
+                print(f"{solver_label:<16} {p:>3} {entry['time_s']:>9.4f} {iters:>7} {speedup:>8.1f}x")
+
+        (TABLES / "sp500_sleeves_def.tex").write_text(f"\\def\\dataSpSleeves{{%\n{''.join(sleeve_lines)}}}\n")
+        print("  → wrote experiment/tables/sp500_sleeves_def.tex")
     else:
         write_table_defs(
             TABLES / "ftse_defs.tex",

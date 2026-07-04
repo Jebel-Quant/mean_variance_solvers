@@ -1,23 +1,20 @@
 \def\dataSpNoshrink{%
-cvxpy (Clarabel)                    &    1.848 &     11 &    1.0x \\
-cvxpy (OSQP)                        &    0.610 &    100 &    3.0x \\
-Clarabel (direct API)               &   0.0678 &     11 &   27.3x \\
-OSQP (direct API)                   &   0.0705 &    225 &   26.2x \\
-CG (SPD)                            &   0.0119 &    684 &  155.5x \\
-Proximal gradient$^\dagger$         &    0.229 &   6040 &    8.1x \\
+cvxpy (Clarabel)                    &    1.897 &     11 &    1.0x \\
+cvxpy (OSQP)                        &    0.635 &    100 &    3.0x \\
+Clarabel (direct API)               &   0.0738 &     11 &   25.7x \\
+OSQP (direct API)                   &   0.0717 &    225 &   26.4x \\
+CG (SPD)                            &   0.0145 &    689 &  130.7x \\
 }
 \def\dataSpLwHalf{%
-cvxpy (Clarabel)                    &    2.602 &     16 &    1.0x \\
-cvxpy (OSQP)                        &    0.579 &     75 &    4.5x \\
-Clarabel (direct API)               &   0.0879 &     16 &   29.6x \\
-OSQP (direct API)                   &   0.0380 &    100 &   68.4x \\
-KKT (Cholesky)                      &   0.0073 &      6 &  358.1x \\
-CG (SPD)                            &   0.0039 &     82 &  660.8x \\
-Proximal gradient$^\dagger$         &   0.0367 &    769 &   71.0x \\
+cvxpy (Clarabel)                    &    2.645 &     16 &    1.0x \\
+cvxpy (OSQP)                        &    0.613 &     75 &    4.3x \\
+Clarabel (direct API)               &   0.0934 &     16 &   28.3x \\
+OSQP (direct API)                   &   0.0392 &    100 &   67.4x \\
+KKT (Cholesky)                      &   0.0084 &      6 &  314.0x \\
+CG (SPD)                            &   0.0055 &     83 &  480.8x \\
 }
 \def\dataSpLwOracle{%
-cvxpy (Clarabel)                    &    1.875 &     11 &    1.0x \\
-KKT (Cholesky)                      &   0.0081 &     15 &  231.2x \\
-CG (SPD)                            &   0.0114 &    516 &  164.9x \\
-Proximal gradient$^\dagger$         &    0.229 &   6049 &    8.2x \\
+cvxpy (Clarabel)                    &    1.896 &     11 &    1.0x \\
+KKT (Cholesky)                      &   0.0090 &     15 &  210.9x \\
+CG (SPD)                            &   0.0144 &    516 &  131.4x \\
 }
