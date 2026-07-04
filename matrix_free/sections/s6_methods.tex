@@ -44,8 +44,11 @@ sharing one operator, followed by the $p \times p$ Schur system for the multipli
 The action of
 $\hat\Sigma_{\mathrm{LW},a}$ on a vector requires only two matrix-vector products with
 $\tilde{X}_a$; the matrix itself is never formed. Algorithm~\ref{alg:cg} shows the
-budget instantiation ($p = 1$) implemented in the companion package and run in every
-experiment of Section~\ref{sec:results}.
+budget instantiation ($p = 1$) implemented in the companion package; the general
+$p > 1$ balance system replaces the single right-hand side with the $p$ columns of
+$B_a^\top$ and the scalar renormalisation with the $p\times p$ Schur solve of
+Section~\ref{sec:pd}, as benchmarked in the balance-systems panel of
+Table~\ref{tab:sp500}.
 
 \begin{algorithm}[ht]
 \caption{CG inner step (inner solver $f$ for Algorithm~\ref{alg:elim}), budget case}\label{alg:cg}
