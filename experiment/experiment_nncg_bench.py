@@ -49,14 +49,14 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
+from cvx.linalg import DenseOperator
+from util.runner import SMOKE, output_dirs
 
-from nncg import make_problem, shaw, solve_nnqp
+from nncg import solve_nnqp
+from problems import make_problem, shaw
 
 HERE = Path(__file__).parent
-GRAPHS = HERE.parent / "graphs"
-TABLES = HERE.parent / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -105,12 +105,12 @@ def run_clarabel(A, b):
 
 def run_as_direct(A, b):
     """Algorithm 1 with a dense direct inner solve."""
-    return solve_nnqp(A, b, inner="exact")["x"]
+    return solve_nnqp(DenseOperator(A), b, inner="exact").x
 
 
 def run_as_cg(A, b):
     """Algorithm 1 with the matrix-free CG inner solve (the paper's method)."""
-    return solve_nnqp(A, b)["x"]
+    return solve_nnqp(DenseOperator(A), b).x
 
 
 METHODS = [
@@ -136,7 +136,7 @@ def bench(A, b, x_star, fn):
 # ---------------------------------------------------------------------------
 
 KAPPA_N = 1e4
-NS = [100, 200, 500, 1000, 2000]
+NS = [100, 200] if SMOKE else [100, 200, 500, 1000, 2000]
 
 print("=" * 78)
 print(f"Wall-clock vs n  (kappa={KAPPA_N:.0e}, support 50%, mean over seeds)")
@@ -207,10 +207,10 @@ for kap in KAPPAS_B:
 #          (active set vs Lawson-Hanson on the regularised Gram operator)
 # ---------------------------------------------------------------------------
 
-SHAW_NS = [256, 512, 1024]
+SHAW_NS = [256] if SMOKE else [256, 512, 1024]
 SHAW_ALPHA = 1e-4                                     # matches experiment_nncg_regu.py
 SHAW_NOISE = 1e-3
-SHAW_REP = 3                                          # min over repeats
+SHAW_REP = 1 if SMOKE else 3                          # min over repeats
 
 print()
 print("=" * 78)

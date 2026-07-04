@@ -48,14 +48,14 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from nncg import (cg, kkt_violation, make_problem, pcg,  # noqa: F401
-                  solve_nnqp, solve_nnqp_eq)
+from cvx.linalg import DenseOperator
+from util.runner import output_dirs
+
+from nncg import kkt_violation, solve_nnqp, solve_nnqp_eq
+from problems import make_problem
 
 HERE = Path(__file__).parent
-GRAPHS = HERE.parent / "graphs"
-TABLES = HERE.parent / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -151,11 +151,11 @@ for kap in KAPPAS:
     inners, outers, fbacks, errs = [], [], [], []
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        res = solve_nnqp(A, b)
-        inners.append(res["inner"])
-        outers.append(res["outer"])
-        fbacks.append(res["fallback"])
-        errs.append(float(np.max(np.abs(res["x"] - x_star))))
+        res = solve_nnqp(DenseOperator(A), b)
+        inners.append(res.inner)
+        outers.append(res.outer)
+        fbacks.append(res.fallback)
+        errs.append(float(np.max(np.abs(res.x - x_star))))
     cg_inner.append(float(np.mean(inners)))
     cg_outer.append(float(np.mean(outers)))
     cg_fallback.append(float(np.mean(fbacks)))
@@ -165,8 +165,8 @@ for kap in KAPPAS:
     )
 
 max_err = max(
-    float(np.max(np.abs(solve_nnqp(*make_problem(N, k, seed=0)[:2])["x"]
-                        - make_problem(N, k, seed=0)[2])))
+    float(np.max(np.abs(solve_nnqp(DenseOperator((mp := make_problem(N, k, seed=0))[0]), mp[1]).x
+                        - mp[2])))
     for k in (KAPPAS[0], KAPPAS[-1])
 )
 cg_slope, cg_r2 = fit_slope(KAPPAS, cg_inner)
@@ -190,11 +190,11 @@ cg_pg_inner, pg_iters = [], []
 print(f"{'kappa':>12}  {'inner(CG)':>10}  {'iter(PG)':>10}  {'PG conv':>8}")
 for kap in KAPPAS_PG:
     A, b, x_star, _ = make_problem(N_PG, kap, seed=0)
-    res = solve_nnqp(A, b)
+    res = solve_nnqp(DenseOperator(A), b)
     it_pg, conv = solve_projgrad(A, b, x_star)
-    cg_pg_inner.append(res["inner"])
+    cg_pg_inner.append(res.inner)
     pg_iters.append(it_pg)
-    print(f"{kap:>12.1e}  {res['inner']:>10d}  {it_pg:>10d}  {str(conv):>8}")
+    print(f"{kap:>12.1e}  {res.inner:>10d}  {it_pg:>10d}  {str(conv):>8}")
 
 pg_slope, pg_r2 = fit_slope(KAPPAS_PG, pg_iters)
 cg_pg_slope, cg_pg_r2 = fit_slope(KAPPAS_PG, cg_pg_inner)
@@ -234,7 +234,7 @@ for a in ALPHAS:
         eig_sd = np.linalg.eigvalsh(Asd)
         A_a = (1.0 - a) * Asd + a * np.eye(N)
         b_a = A_a @ xsd - ssd
-        inners_a.append(solve_nnqp(A_a, b_a)["inner"])
+        inners_a.append(solve_nnqp(DenseOperator(A_a), b_a).inner)
         kap_a = ((1.0 - a) * float(eig_sd[-1]) + a) / ((1.0 - a) * float(eig_sd[0]) + a)
     reg_inner.append(float(np.mean(inners_a)))
     reg_kappa.append(kap_a)
@@ -281,12 +281,12 @@ eq_err = 0.0
 for p in (1, 3, 10):
     for kap in (1e2, 1e4):
         A, b, B, c, x_star, lam_star, _ = make_eq_problem(N, kap, p, seed=p)
-        res = solve_nnqp_eq(A, b, B, c)
-        ex = float(np.max(np.abs(res["x"] - x_star)))
-        feas = float(np.linalg.norm(B @ res["x"] - c))
+        res = solve_nnqp_eq(DenseOperator(A), b, B, c)
+        ex = float(np.max(np.abs(res.x - x_star)))
+        feas = float(np.linalg.norm(B @ res.x - c))
         eq_err = max(eq_err, ex, feas)
         tag = "  (= 1^T x = beta)" if p == 1 else ""
-        print(f"{p:>4}  {kap:>9.0e}  {res['outer']:>7d}  {res['inner']:>7d}"
+        print(f"{p:>4}  {kap:>9.0e}  {res.outer:>7d}  {res.inner:>7d}"
               f"  {ex:>11.2e}  {feas:>10.2e}{tag}")
 print(f"\nEquality-augmented solver recovers the planted optimum to {eq_err:.1e}"
       f" across p in {{1,3,10}} (p=1 reproduces the single-normalisation case).")
@@ -306,12 +306,12 @@ traj_total = traj_agree = 0
 for kap in (1e2, 1e4, 1e6):
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        r_cg = solve_nnqp(A, b, track=True)
-        r_ex = solve_nnqp(A, b, inner="exact", track=True)
-        same = r_cg["traj"] == r_ex["traj"]
+        r_cg = solve_nnqp(DenseOperator(A), b, track=True)
+        r_ex = solve_nnqp(DenseOperator(A), b, inner="exact", track=True)
+        same = r_cg.traj == r_ex.traj
         traj_total += 1
         traj_agree += same
-        print(f"{kap:>9.0e}  {sd:>5}  {r_cg['outer']:>10}  {r_ex['outer']:>13}  {str(same):>10}")
+        print(f"{kap:>9.0e}  {sd:>5}  {r_cg.outer:>10}  {r_ex.outer:>13}  {str(same):>10}")
 
 print(f"\nCG-driven loop visits the exact loop's free sets on {traj_agree}/{traj_total} "
       f"instances (cg_tol=1e-10, test tol=1e-8), as the inexactness lemma licenses.")
@@ -347,14 +347,14 @@ for k_rd in (50, 150):  # optimal support below / above the data rank m
             s_rd[perm[k_rd:]] = rng.uniform(0.5, 1.5, size=n_rd - k_rd)
             A_a = (1.0 - a) * A0 + a * np.eye(n_rd)
             b_a = A_a @ x_rd - s_rd  # planted KKT point for every alpha, incl. 0
-            res = solve_nnqp(A_a, b_a, cg_maxit=RD_CAP, max_outer=RD_MAX_OUTER)
+            res = solve_nnqp(DenseOperator(A_a), b_a, cg_maxit=RD_CAP, max_outer=RD_MAX_OUTER)
             # a capped inner solve returned without meeting its tolerance:
             # no certificate, whatever the outer loop then does with it
-            capped += res["inner"] >= RD_CAP
-            if res["converged"]:
+            capped += res.inner >= RD_CAP
+            if res.converged:
                 convs += 1
-                inners.append(res["inner"])
-                errs.append(float(np.max(np.abs(res["x"] - x_rd))))
+                inners.append(res.inner)
+                errs.append(float(np.max(np.abs(res.x - x_rd))))
         mean_inner = float(np.mean(inners)) if inners else float("nan")
         max_err = max(errs) if errs else float("nan")
         rd_rows.append((k_rd, a, convs, len(list(SEEDS)), mean_inner, capped, max_err))
@@ -407,12 +407,12 @@ for spread in SPREADS:
         A, b, x_star = make_scaled_problem(200, 100.0, spread, seed=sd)
         eigs = np.linalg.eigvalsh(A)
         kappas.append(float(eigs[-1] / eigs[0]))
-        r_cg = solve_nnqp(A, b)
-        r_pcg = solve_nnqp(A, b, inner="pcg")
+        r_cg = solve_nnqp(DenseOperator(A), b)
+        r_pcg = solve_nnqp(DenseOperator(A), b, inner="pcg")
         for r in (r_cg, r_pcg):
-            assert float(np.max(np.abs(r["x"] - x_star))) < 1e-6
-        inners_cg.append(r_cg["inner"])
-        inners_pcg.append(r_pcg["inner"])
+            assert float(np.max(np.abs(r.x - x_star))) < 1e-6
+        inners_cg.append(r_cg.inner)
+        inners_pcg.append(r_pcg.inner)
     mc, mp = float(np.mean(inners_cg)), float(np.mean(inners_pcg))
     pcg_rows.append((spread, float(np.mean(kappas)), mc, mp))
     print(f"{spread:>9.0e}  {np.mean(kappas):>10.1e}  {mc:>10.1f}  {mp:>11.1f}  {mc / mp:>6.1f}")
@@ -452,15 +452,15 @@ for sd in range(FB_SEEDS):
     A, b = make_adversarial(20, sd)
     # pure block pivoting: patience unbounded, exact solves -- the theory-faithful
     # fast path with the guard removed. A revisited free set proves a cycle.
-    pure = solve_nnqp(A, b, p_max=10**9, inner="exact", max_outer=300, track=True)
-    cycled = (not pure["converged"]) and len(pure["traj"]) != len(set(pure["traj"]))
+    pure = solve_nnqp(DenseOperator(A), b, p_max=10**9, inner="exact", max_outer=300, track=True)
+    cycled = (not pure.converged) and len(pure.traj) != len(set(pure.traj))
     # guarded loop: Algorithm 1 as stated (default patience, CG inner solves)
-    g = solve_nnqp(A, b)
+    g = solve_nnqp(DenseOperator(A), b)
     fb_cycles += cycled
-    fb_conv += g["converged"]
-    fb_fired += g["fallback"] > 0
-    fb_max = max(fb_max, g["fallback"])
-    fb_kkt = max(fb_kkt, kkt_violation(A, b, g["x"]))
+    fb_conv += g.converged
+    fb_fired += g.fallback > 0
+    fb_max = max(fb_max, g.fallback)
+    fb_kkt = max(fb_kkt, kkt_violation(DenseOperator(A), b, g.x))
 
 print(f"pure block pivoting (no fallback, exact solves): cycles on "
       f"{fb_cycles}/{FB_SEEDS} seeds (revisits a free set, never terminates)")
@@ -490,19 +490,19 @@ prev_x = None
 prev_supp = None
 for k in range(STEPS_W):
     b_k = b0_w + k * db_w
-    rc = solve_nnqp(A_w, b_k)
+    rc = solve_nnqp(DenseOperator(A_w), b_k)
     if prev_free is None:
         rw = rc  # first point: nothing to warm-start from
     else:
-        rw = solve_nnqp(A_w, b_k, warm=(prev_free, prev_x))
-    assert float(np.max(np.abs(rw["x"] - rc["x"]))) < 1e-6  # same optimum
-    supp = frozenset(np.flatnonzero(rc["free"]).tolist())
+        rw = solve_nnqp(DenseOperator(A_w), b_k, warm=(prev_free, prev_x))
+    assert float(np.max(np.abs(rw.x - rc.x))) < 1e-6  # same optimum
+    supp = frozenset(np.flatnonzero(rc.free).tolist())
     drifts.append(len(supp ^ prev_supp) if prev_supp is not None else 0)
-    cold_outer.append(rc["outer"])
-    cold_inner.append(rc["inner"])
-    warm_outer.append(rw["outer"])
-    warm_inner.append(rw["inner"])
-    prev_free, prev_x, prev_supp = rw["free"], rw["x"], supp
+    cold_outer.append(rc.outer)
+    cold_inner.append(rc.inner)
+    warm_outer.append(rw.outer)
+    warm_inner.append(rw.inner)
+    prev_free, prev_x, prev_supp = rw.free, rw.x, supp
 
 # steps after the first, where warm-starting actually applies
 co, ci = np.array(cold_outer[1:]), np.array(cold_inner[1:])
@@ -617,10 +617,10 @@ for kap in [1e1, 1e2, 1e3, 1e4, 1e5, 1e6]:
     inners, outers, fbacks = [], [], []
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        res = solve_nnqp(A, b)
-        inners.append(res["inner"])
-        outers.append(res["outer"])
-        fbacks.append(res["fallback"])
+        res = solve_nnqp(DenseOperator(A), b)
+        inners.append(res.inner)
+        outers.append(res.outer)
+        fbacks.append(res.fallback)
     table_rows.append((kap, np.mean(outers), np.mean(inners), np.mean(fbacks)))
 
 with open(TABLES / "nncg_synthetic.tex", "w") as fh:
