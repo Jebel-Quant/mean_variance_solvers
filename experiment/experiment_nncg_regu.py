@@ -41,10 +41,12 @@ from pathlib import Path
 
 import numpy as np
 from scipy.linalg import solve_triangular
+from cvx.linalg import DenseOperator
 from scipy.optimize import nnls as scipy_nnls
 from util.runner import output_dirs
 
-from nncg_ref import shaw, phillips, solve_nnqp, kkt_violation
+from nncg import kkt_violation, solve_nnqp
+from problems import phillips, shaw
 
 HERE = Path(__file__).parent
 _, TABLES = output_dirs(HERE)
@@ -99,10 +101,11 @@ rows = []
 for alpha in ALPHAS:
     A = ridge(gram, alpha) if alpha > 0 else gram
     ka = cond(A)
-    res = solve_nnqp(A, rhs, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
-    x = res["x"]
-    kkt = kkt_violation(A, rhs, x)
-    certified = bool(res["converged"] and kkt < 1e-6)
+    op = DenseOperator(A)
+    res = solve_nnqp(op, rhs, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
+    x = res.x
+    kkt = kkt_violation(op, rhs, x)
+    certified = bool(res.converged and kkt < 1e-6)
     active = int(np.sum(x <= 1e-8))                   # components pinned at zero
     err_star = float(np.max(np.abs(x - x_true)))
     if alpha > 0:
@@ -110,11 +113,11 @@ for alpha in ALPHAS:
         err_lh = float(np.max(np.abs(x - x_lh)))
     else:
         err_lh = np.nan
-    rows.append((alpha, ka, certified, res["outer"], res["inner"],
+    rows.append((alpha, ka, certified, res.outer, res.inner,
                  active, kkt, err_star, err_lh))
     lh = "--" if np.isnan(err_lh) else f"{err_lh:.1e}"
     print(f"{alpha:>8.0e}  {ka:>11.2e}  {('yes' if certified else 'NO'):>5}  "
-          f"{res['outer']:>5}  {res['inner']:>7}  {active:>6}  {kkt:>9.1e}  "
+          f"{res.outer:>5}  {res.inner:>7}  {active:>6}  {kkt:>9.1e}  "
           f"{err_star:>9.1e}  {lh:>9}")
 
 star = next(r for r in rows if r[0] == ALPHA_STAR)
@@ -131,14 +134,14 @@ gp = np.random.default_rng(0).standard_normal(PHIL_N)
 dp_noisy = dp + NOISE_REL * np.linalg.norm(dp) * gp / np.linalg.norm(gp)
 Ap = ridge(Mp.T @ Mp, ALPHA_STAR)
 bp = Mp.T @ dp_noisy
-resp = solve_nnqp(Ap, bp, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
-xp = resp["x"]
+resp = solve_nnqp(DenseOperator(Ap), bp, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
+xp = resp.x
 xp_lh = lawson_hanson(Ap, bp)
 phil_active = int(np.sum(xp <= 1e-8))
 phil_truezeros = int(np.sum(xp_true == 0.0))
 phil_recov = float(np.max(np.abs(xp - xp_true)))
 phil_err_lh = float(np.max(np.abs(xp - xp_lh)))
-print(f"\nphillips n = {PHIL_N}: outer {resp['outer']}, active {phil_active} "
+print(f"\nphillips n = {PHIL_N}: outer {resp.outer}, active {phil_active} "
       f"(true zeros {phil_truezeros}), recovery |x-x*| = {phil_recov:.1e}, "
       f"agree with LH = {phil_err_lh:.1e}")
 
@@ -194,6 +197,6 @@ with open(TABLES / "nncg_regu_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgPhilTrueZeros}}{{{phil_truezeros}}}\n")
     fh.write(f"\\newcommand{{\\nncgPhilRecov}}{{{phil_recov:.0e}}}\n")
     fh.write(f"\\newcommand{{\\nncgPhilErrLH}}{{{phil_err_lh:.0e}}}\n")
-    fh.write(f"\\newcommand{{\\nncgPhilOuter}}{{{resp['outer']}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilOuter}}{{{resp.outer}}}\n")
 print(f"Saved {TABLES / 'nncg_regu_defs.tex'}")
 print("\nDone.")

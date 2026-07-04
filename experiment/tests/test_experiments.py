@@ -38,7 +38,7 @@ SCRIPTS = {
         "tables/rmt_solver_comparison.tex",
         "graphs/rmt_frontier.pdf",
     ],
-    # companion "Non-Negative Conjugate Gradients" note (nncg_ref.py reference solver)
+    # companion "Non-Negative Conjugate Gradients" note (nncg package + problems.py)
     "experiment_nncg.py": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
     "experiment_nncg_bench.py": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
     "experiment_nncg_regu.py": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],

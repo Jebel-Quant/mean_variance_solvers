@@ -49,9 +49,11 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
+from cvx.linalg import DenseOperator
 from util.runner import SMOKE, output_dirs
 
-from nncg_ref import make_problem, shaw, solve_nnqp
+from nncg import solve_nnqp
+from problems import make_problem, shaw
 
 HERE = Path(__file__).parent
 GRAPHS, TABLES = output_dirs(HERE)
@@ -103,12 +105,12 @@ def run_clarabel(A, b):
 
 def run_as_direct(A, b):
     """Algorithm 1 with a dense direct inner solve."""
-    return solve_nnqp(A, b, inner="exact")["x"]
+    return solve_nnqp(DenseOperator(A), b, inner="exact").x
 
 
 def run_as_cg(A, b):
     """Algorithm 1 with the matrix-free CG inner solve (the paper's method)."""
-    return solve_nnqp(A, b)["x"]
+    return solve_nnqp(DenseOperator(A), b).x
 
 
 METHODS = [
