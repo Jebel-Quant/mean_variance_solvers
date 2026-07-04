@@ -1,6 +1,6 @@
 \section{Reduction to Unconstrained SPD Solves}\label{sec:reduction}
 
-Fix a candidate free set $\mathcal{F} \subseteq \{1,\dots,n\}$ and set $x_i = 0$ for
+We now fix a candidate free set $\mathcal{F} \subseteq \{1,\dots,n\}$ and set $x_i = 0$ for
 $i \notin \mathcal{F}$. On $\mathcal{F}$ the bound-constrained problem~\eqref{eq:bqp} reduces
 to the \emph{unconstrained} strictly convex quadratic
 \[
@@ -13,19 +13,14 @@ whose stationarity condition is the SPD linear system
 \end{equation}
 The active-set loop of Section~\ref{sec:nonneg} solves a sequence of such systems, one per
 outer step, and the inequality $x \geq 0$ is imposed by which indices $\mathcal{F}$ contains,
-never inside the linear solve. The inner solver is CG.
+never inside the linear solve. The inner solver is the proposed CG method.
 
 \paragraph{Matrix-free operator.}
-CG accesses $A_{\mathcal{F}}$ only through the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never as
-an explicit matrix. When $A = M^\top M$ this factors as
-$A_{\mathcal{F}}\,v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
-$M_{\mathcal{F}} = M_{:,\mathcal{F}}$: two products with the $m \times |\mathcal{F}|$ submatrix
-at $O(m\,|\mathcal{F}|)$, so the Gram matrix is never formed and no $O(n^2)$ storage is used,
-the standard CG-on-the-normal-equations arrangement~\cite{golub2013,paige1975,choi2006} applied
-to a column subset that changes between outer steps. This mat-vec is one of the two operations
-the whole method requires of $A$; Section~\ref{sec:operators} isolates that contract and lists
-the backends that implement it. When a variable is released in the primal step, the operator is
-rebuilt on the reduced free set and CG restarts on the smaller system.
+As a Krylov subspace method the only thing that CG requires for $A_{\mathcal{F}}$ is the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never as an explicit matrix. When considering the free set $\mathcal{F}$ for $A = M^\top M$ this factors as $A_{\mathcal{F}}\,v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
+$M_{\mathcal{F}} = M_{:,\mathcal{F}}$, which are two products with the $m \times |\mathcal{F}|$ submatrix
+at $O(m\,|\mathcal{F}|)$, so the Gram matrix is never formed and no $O(n^2)$ storage is used. This is equivalent to the standard CG-on-the-normal-equations arrangement~\cite{golub2013,paige1975,choi2006} applied to a column subset that changes between outer steps. This mat-vec is one of the two operations
+the whole method requires of $A$. In Section~\ref{sec:operators} we discuss the details of how to  implement this. When a variable is released in the primal step, the operator is
+rebuilt on the reduced free set and CG restarts on the smaller system. We now state the standard convergence result for CG.
 
 \begin{proposition}[CG convergence~{\cite{greenbaum1997,trefethenbau1997}}]\label{prop:cg}
   Let $A_{\mathcal{F}}$ be SPD with spectral condition number
@@ -40,18 +35,11 @@ rebuilt on the reduced free set and CG restarts on the smaller system.
   $A_{\mathcal{F}}$-energy norm of the error $e = x_{\mathcal{F}} - x_k$.
 \end{proposition}
 
-The rate is $O(\sqrt\kappa)$: reaching a fixed relative energy-norm tolerance takes
-$O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations. The bound is the Chebyshev minimax
-argument (the $k$-th CG error is majorised by the best degree-$k$ polynomial on
+The rate of convergence is thus $O(\sqrt\kappa)$ so that reaching a fixed relative energy-norm tolerance takes $O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations. The bound follows from a Chebyshev minimax
+argument that states that the $k$-th CG error is majorised by the best degree-$k$ polynomial on
 $[\lambda_{\min}, \lambda_{\max}]$ normalised at the origin, which is a scaled Chebyshev
-polynomial~\cite[Lecture~38]{trefethenbau1997}), so clustered spectra beat it: CG converges
-superlinearly once the extremal eigenvalues are resolved, which is exactly the behaviour the
-synthetic study of Section~\ref{sec:results} measures. Because $A \succ 0$ forces every
-$A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and
-Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the
-count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather
-than a plain gradient iteration: the projected-gradient comparator of
-Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
+polynomial~\cite[Lecture~38]{trefethenbau1997}. Clustered spectra beat this bound: CG converges superlinearly once the extremal eigenvalues are resolved, which is exactly the behaviour the synthetic study of Section~\ref{sec:results} measures. Because $A \succ 0$ forces every
+$A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather than a plain gradient iteration: the projected-gradient comparator of Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
 
 \paragraph{Eliminating the equality multipliers.}
 For the equality-augmented problem~\eqref{eq:eqp}, stationarity and feasibility on the free
@@ -63,7 +51,7 @@ set are the $(|\mathcal{F}|+p)\times(|\mathcal{F}|+p)$ saddle-point system~\cite
   \begin{pmatrix} b_{\mathcal{F}} \\ c \end{pmatrix},
   \qquad B_{\mathcal{F}} = B_{:,\mathcal{F}} \in \mathbb{R}^{p\times|\mathcal{F}|}.
 \end{equation}
-Rather than solve the indefinite system directly, eliminate $\lambda$ by the Schur
+Rather than solving the indefinite system directly we can eliminate $\lambda$ using the Schur
 complement. Stationarity gives $x_{\mathcal{F}} = A_{\mathcal{F}}^{-1}(b_{\mathcal{F}} +
 B_{\mathcal{F}}^\top\lambda) = v_0 + V_1\lambda$ in terms of the SPD solves
 \[
@@ -82,12 +70,11 @@ system
   x_{\mathcal{F}} = v_0 + V_1\lambda,
 \]
 where $S$, the Schur complement, is SPD because $A_{\mathcal{F}} \succ 0$ and $B_{\mathcal{F}}$
-has full row rank; the multiplier is $\lambda = S^{-1}(c - B_{\mathcal{F}}v_0)$ and the
-$p\times p$ solve is a dense Cholesky, negligible for the small $p$ typical of balance
-conditions. The single-normalisation case $p=1$, $B=\mathbf{1}^\top$, $c=\beta$ recovers the
-two solves $v_0, v_1 = A_{\mathcal{F}}^{-1}\mathbf{1}$ with the scalar
-$\lambda = (\beta - \mathbf{1}^\top v_0)/(\mathbf{1}^\top v_1)$, and the pure-normalisation
-case $b=0$, $\beta=1$ collapses to the single solve $x_{\mathcal{F}} = v_1/(\mathbf{1}^\top v_1)$.
+has full row rank. The Lagrange multiplier is given via $\lambda = S^{-1}(c - B_{\mathcal{F}}v_0)$ and the
+$p\times p$ solve can be done using a dense Cholesky decomposition at negligible cost. 
+
+The single-normalisation case $p=1$, $B=\mathbf{1}^\top$, $c=\beta$ recovers the
+two solves $v_0, v_1 = A_{\mathcal{F}}^{-1}\mathbf{1}$ with the scalar $\lambda = (\beta - \mathbf{1}^\top v_0)/(\mathbf{1}^\top v_1)$, and the pure-normalisation case $b=0$, $\beta=1$ collapses to the single solve $x_{\mathcal{F}} = v_1/(\mathbf{1}^\top v_1)$. 
 Thus each outer step costs $p+1$ matrix-free CG solves; the multipliers are recovered
 analytically and never appear in the linear solve, keeping every inner system SPD and directly
 amenable to Proposition~\ref{prop:cg}. The $p+1$ right-hand sides share the operator

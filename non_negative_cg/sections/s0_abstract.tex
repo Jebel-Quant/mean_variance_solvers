@@ -19,14 +19,13 @@ pivots of the linear complementarity problem $(A,\,{-b})$; because $A$ is a $P$-
 every principal submatrix is invertible and each pivot is well defined. The central result
 concerns termination: guarding a fast block-pivot path with a least-index Bland fallback, we
 prove the loop reaches the unique global minimiser in finitely many outer steps with
-\emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}), removing the hypothesis
+\emph{no} non-degeneracy assumption, removing the hypothesis
 that classical block-principal-pivoting termination arguments require. A synthetic study shows
 the fallback is never entered on generic data yet genuinely necessary: on an adversarial family
 of anti-correlated designs the unguarded batch path cycles, and the fallback is what terminates
 it. The guarantee is
 robust to inexactness: once CG's residual tolerance is tied to the decision threshold, the
-inexact loop provably visits the same free sets as the exact one
-(Lemma~\ref{lem:inexact}). A loop-free
+inexact loop provably visits the same free sets as the exact one. A loop-free
 projected-gradient comparator, which enforces the constraints simultaneously but forgoes the
 Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alongside it.
 
@@ -37,7 +36,7 @@ governed by $\kappa$, any regularisation or preconditioner that compresses the s
 (including the ridge/Tikhonov splitting $A \mapsto (1-\alpha)A + \alpha R^\top R$ that also
 guarantees the $P$-matrix property) reduces the iteration count directly. We record the
 per-step and total complexity of the method against dense factorisation and first-order
-baselines, and discuss its behaviour on synthetic SPD test problems. The algorithm is used
-as the computational kernel of the companion papers~\cite{schmelzer2026matrixfree,%
-schmelzer2026rmt}.
+baselines, and discuss its behaviour on synthetic SPD test problems. The algorithm serves as
+the computational kernel of two companion papers, on matrix-free portfolio construction and
+on random-matrix-theory corrections to the mean-variance frontier.
 \end{abstract}
