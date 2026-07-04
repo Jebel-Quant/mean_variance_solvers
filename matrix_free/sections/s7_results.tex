@@ -58,6 +58,7 @@ $\lambda_{\min}$ by even a moderate $\alpha$ dramatically reduces the condition 
 Table~\ref{tab:sp500} reports timings and iteration counts on this dataset for the various solvers we consider.
 
 \input{tables/sp500_defs}
+\input{tables/sp500_sleeves_def}
 \begin{table}[htbp]
 \centering
 \footnotesize
@@ -73,6 +74,9 @@ Method & Time (s) & Iterations & Speedup \\
 \midrule
 \multicolumn{4}{l}{\textit{With oracle LW shrinkage ($\alpha_{\mathrm{LW}} \approx 0.017$, \cite{ledoit2004})}} \\[2pt]
 \dataSpLwOracle
+\midrule
+\multicolumn{4}{l}{\textit{Balance systems ($\alpha = 0.5$): budget vs.\ sector sleeves}} \\[2pt]
+\dataSpSleeves
 \bottomrule
 \end{tabular}
 \caption{S\&P~500 universe: 494 assets, 1213 trading days (Jul~2021--May~2026). Speedup relative to
@@ -89,6 +93,13 @@ At $\alpha=0.5$, CG is $22\times$ faster than Clarabel's direct API (algorithmic
 ``Iterations'' counts inner solver iterations (CG, Proximal, Clarabel, OSQP).
 The OAS estimator \cite{chen2010} ($\alpha_{\mathrm{OAS}} \approx 0.010$, same target) gives
 results nearly identical to the oracle LW panel and is omitted.
+The balance-systems panel solves the same $\alpha=0.5$ problem under $p\in\{1,4,8\}$
+equality constraints (the budget alone, then random partitions of the universe into
+$4$ and $8$ sector sleeves each holding a prescribed share of the budget) through the
+same production solvers; its speedups are relative to \texttt{cvxpy (Clarabel)} solving
+the matching $p$-constraint problem. CG cost grows with the $p$ right-hand sides of the
+Schur reduction (Section~\ref{sec:pd}) while the outer active-set count and the dense-KKT
+time are essentially $p$-invariant.
 $^\dagger$Proximal gradient is included as a matrix-free first-order comparator, not a Krylov method.}
 \label{tab:sp500}
 \end{table}
@@ -124,6 +135,17 @@ This reflects the structural mismatch between the Frobenius objective that produ
 condition number that governs solver speed: the oracle is largely blind to the near-zero noise eigenvalues
 that cause ill-conditioning.
 Note that all iteration counts depend on the factor structure of equity returns and may differ in other market regimes.
+
+The final panel confirms that the same solvers carry a general balance system $Bw=c$ at
+a cost comparable to the budget. Moving from the budget ($p=1$) to $4$ and $8$ sector
+sleeves leaves the outer active-set count unchanged and the dense-KKT time flat
+($\approx 0.011$\,s), because the working-set combinatorics are set by the non-negativity
+structure, not by $B$. Matrix-free CG pays only for the extra right-hand sides of the
+Schur reduction: its total inner count scales with $p$ ($83$, $439$, $776$) and its wall
+time from $0.0069$\,s to $0.0235$\,s, still a two-orders-of-magnitude speedup over the
+interior-point reference at every $p$. The $p=1$ row reproduces the budget benchmark, so
+the balance generalisation costs nothing at the budget and grows only with the number of
+constraints actually imposed.
 
 \subsection{FTSE 100 robustness check}
 
