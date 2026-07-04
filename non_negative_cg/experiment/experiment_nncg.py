@@ -96,6 +96,32 @@ def solve_projgrad(A, b, x_star, tol=1e-6, maxit=2000000):
     return maxit, False
 
 
+def solve_fista(A, b, x_star, tol=1e-6, maxit=2000000):
+    """FISTA (Beck--Teboulle 2009): accelerated projected gradient for
+    min_{x>=0} 1/2 x^T A x - b^T x. Same per-step cost as solve_projgrad
+    (one mat-vec plus the orthant projection) but the O(sqrt kappa) rate:
+    the projected-gradient step is taken at an extrapolated point y_k, with
+    the momentum weight (t_k - 1)/t_{k+1} of the standard t-sequence.
+
+    Counts iterations to reach relative solution error ||x-x*||/||x*|| <= tol.
+    Returns (iterations, converged).
+    """
+    L = float(np.linalg.eigvalsh(A)[-1])
+    tau = 1.0 / L
+    x = np.zeros_like(b)                       # x_{k-1}
+    y = x.copy()                               # extrapolated point
+    t = 1.0
+    xs_norm = float(np.linalg.norm(x_star))
+    for it in range(1, maxit + 1):
+        x_new = np.maximum(y - tau * (A @ y - b), 0.0)   # PG step at y
+        t_new = 0.5 * (1.0 + np.sqrt(1.0 + 4.0 * t * t))
+        y = x_new + ((t - 1.0) / t_new) * (x_new - x)
+        x, t = x_new, t_new
+        if np.linalg.norm(x - x_star) / xs_norm <= tol:
+            return it, True
+    return maxit, False
+
+
 def fit_slope(xs, ys):
     """Least-squares slope of log(ys) against log(xs)."""
     lx, ly = np.log(np.asarray(xs, float)), np.log(np.asarray(ys, float))
