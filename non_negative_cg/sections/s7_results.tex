@@ -26,8 +26,8 @@ Projected gradient (matrix-free)     & $O(nm)$         & $O(\kappa)$            
 $A = M^\top M$, $M \in \mathbb{R}^{m \times n}$. Here $k = |\mathcal{F}| \leq n$ is the
 free-set size, $s$ the number of active-set outer steps, $\kappa = \kappa(A_\alpha)$ the
 condition number after the split~\eqref{eq:regsplit}, and $r$ the factor rank of a
-diagonal-plus-low-rank operator (Section~\ref{sec:operators}). The last four rows share the
-active-set loop and differ only in the backend~(Section~\ref{sec:operators}): matrix-free CG
+diagonal-plus-low-rank operator (Section~\ref{sec:reduction}). The last four rows share the
+active-set loop and differ only in the backend~(Section~\ref{sec:reduction}): matrix-free CG
 and the Woodbury factor solve both avoid assembling $A$, the former iteratively at
 $O(\sqrt\kappa)$ inner steps, the latter by an exact rank-$r$ inverse. The active-set rows differ only in the
 inner solve: matrix-free CG applies $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ at $O(km)$ and
@@ -68,12 +68,15 @@ the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below us
 (support $50\%$) averaged over five seeds, with the smaller $n=120$ where the projected-gradient
 $O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
 NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the comparator
-directly from their definitions; the external-solver benchmark below is a second script whose
-only additional dependencies are SciPy and Clarabel. The algorithms are also released as the
+directly from their definitions; the matrix-free deblurring study is likewise NumPy-only,
+while the external-solver benchmark below and the \texttt{shaw}/\texttt{phillips} ill-posed
+study are two further scripts whose only additional dependency is SciPy (and, for the
+benchmark, Clarabel). The algorithms are also released as the
 open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
 suite is this study: planted recovery, the equality-augmented solve, trajectory agreement
-under inexact solves, the warm-start single-step property, and the adversarial family that
-forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
+under inexact solves, the warm-start single-step property, the \texttt{shaw}/\texttt{phillips}
+regularisation and recovery runs, the matrix-free deblurring solve, and the adversarial family
+that forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
 lets CG converge faster than the worst-case bound, so the measured growth is an
 \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a fitted exponent.
 
@@ -188,6 +191,73 @@ seed with an order of magnitude fewer inner iterations.}
 \label{tab:nncg_rankdef}
 \end{table}
 
+\emph{An official ill-posed problem.} The synthetic family is planted for control; to confirm
+the same behaviour on a recognised instance we take the \texttt{shaw} problem from Hansen's
+Regularization Tools~\cite{hansen1994regutools,shaw1972}, a severely ill-posed one-dimensional
+image-restoration model whose exact solution, a sum of two Gaussians, is strictly positive and
+hence a genuine non-negative least-squares target. Its symmetric kernel $M$ is numerically
+rank-deficient, so the Gram operator $A = M^\top M$ ($n = \nncgReguN{}$) is numerically
+singular, $\kappa(A) \approx \nncgReguKappa{}$; adding $\nncgReguNoise{}$ relative noise to the
+data makes the unconstrained least-squares solution oscillate negative, so non-negativity
+binds as an active regulariser. Table~\ref{tab:nncg_regu} repeats the split sweep of
+Table~\ref{tab:nncg_rankdef} on this operator. At $\alpha = 0$ the loop cannot certify a
+solution: the singular free block leaves CG stalling on the inconsistent system, the outer
+budget is exhausted, and the KKT residual stays at $O(10)$. Any $\alpha > 0$ restores the
+$P$-matrix property and the loop terminates in a handful of outer steps with a KKT
+certificate; at the representative $\alpha = \nncgReguAlpha{}$ (which lowers $\kappa$ to
+$\nncgReguKappaReg{}$) it converges in $\nncgReguOuter{}$ outer steps with $\nncgReguActive{}$
+constraints active, agreeing with SciPy's Lawson--Hanson on the same regularised operator to
+$\nncgReguErrLH{}$. The speed advantage over Lawson--Hanson is the one the synthetic benchmark
+already records: the block loop reaches the $\nncgReguSupp{}$-nonzero solution in
+$\nncgReguOuter{}$ outer steps, whereas Lawson--Hanson admits a single index per pivot and so
+needs on the order of $\nncgReguSupp{}$ of them; on the regularised operator this is a
+$\nncgBenchShawLHvsASCG{}\times$ wall-clock speedup at $n = \nncgBenchShawN{}$, at an identical
+solution. The official problem tells the planted one's story: without the split,
+termination is luck; with it, the guarantee holds. A second Regularization Tools
+problem, \texttt{phillips}~\cite{hansen1994regutools,phillips1962} ($n = \nncgPhilN{}$), has a
+known non-negative solution that is exactly zero outside a central interval, so the active set
+is large and structured: the loop recovers the signal, certifies KKT optimality, and pins
+$\nncgPhilActive{}$ variables at the bound against the $\nncgPhilTrueZeros{}$ true zeros,
+agreeing with Lawson--Hanson to $\nncgPhilErrLH{}$.
+
+\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely; the
+method's reason for existing is the regime where that is impossible. A separable Gaussian blur
+$B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
+non-negative deconvolution~\cite{hansen2006deblurring} whose Gram operator $A = B^\top B$ has
+$n = N^2$ unknowns; the matrix-free loop (the operator solver of Section~\ref{sec:reduction},
+reaching $A$ only through $v \mapsto B^\top(Bv)$) never forms it. At $N = \nncgDeblurNside{}$,
+so $n = \nncgDeblurDim{}$, a dense $A$ would occupy $\nncgDeblurDenseGB{}$\,GB; with a ridge
+split for the $P$-matrix property the loop instead runs in $O(n)$ working memory, terminating
+in $\nncgDeblurOuter{}$ outer steps ($\nncgDeblurInner{}$ CG iterations total) with a KKT
+certificate and $\nncgDeblurActive{}$ of $\nncgDeblurDim{}$ pixels pinned at the non-negativity
+bound (Figure~\ref{fig:nncg_deblur}). Identical loop, identical proof; only the operator
+changes.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{graphs/nncg_deblur}
+\caption{Matrix-free non-negative deblurring at $N = \nncgDeblurNside{}$
+($n = \nncgDeblurDim{}$ unknowns): the true scene, its Gaussian blur with additive noise, and
+the reconstruction from the matrix-free active-set loop (Algorithm~\ref{alg:elim} with
+\texttt{solve\_nnqp\_op}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
+never forms it, a dense $A$ being $\nncgDeblurDenseGB{}$\,GB. The black background is recovered
+by the $\nncgDeblurActive{}$ active non-negativity constraints.}
+\label{fig:nncg_deblur}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_regu}
+\caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
+Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
+CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
+pinned at the bound. At $\alpha = 0$ the numerically singular Gram operator
+($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
+with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
+\label{tab:nncg_regu}
+\end{table}
+
 \emph{Preconditioning.} Section~\ref{sec:conditioning}'s claim that a preconditioner slots
 into the loop unchanged is tested on operators with a well-conditioned core and a badly
 scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
@@ -251,7 +321,7 @@ explicitly assembled $A$ (BLAS-3 factorisations beat memory-bound mat-vecs at th
 and it is $\kappa$-insensitive, whereas the CG inner cost grows as $\sqrt\kappa$
 (Table~\ref{tab:nncg_bench}: a factor \nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$).
 The matrix-free inner solve is not the point of this dense benchmark; its regime is the one
-the operator abstraction of Section~\ref{sec:operators} targets (Gram and structured
+the matrix-free operator of Section~\ref{sec:reduction} targets (Gram and structured
 operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps),
 which the companion papers quantify. Third, every solver recovers the planted optimum:
 Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance

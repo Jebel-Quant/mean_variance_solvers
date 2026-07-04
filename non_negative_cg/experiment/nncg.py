@@ -3,8 +3,10 @@
 Implements, directly from the paper's definitions and with NumPy only:
 
   * make_problem     -- the planted-optimum synthetic SPD family (Section 7.2)
+  * shaw / phillips  -- Hansen's ill-posed NNLS test problems (Section 7.2)
   * cg / pcg         -- (Jacobi-preconditioned) conjugate gradients (Prop. 3.1)
   * solve_nnqp       -- the active-set / block-principal-pivoting loop (Algorithm 1)
+  * solve_nnqp_op    -- its matrix-free variant, A supplied as an operator (Section 3)
   * solve_nnqp_eq    -- its equality-augmented variant, Bx = c (Section 3)
   * kkt_violation    -- the KKT certificate of Section 2
 
@@ -44,6 +46,56 @@ def make_problem(n, kappa, support_frac=0.5, seed=0):
     s_star[off] = rng.uniform(0.5, 1.5, size=n - k)
     b = A @ x_star - s_star
     return A, b, x_star, s_star
+
+
+def shaw(n):
+    """The `shaw` test problem from Hansen's Regularization Tools.
+
+    A one-dimensional image-restoration model: a first-kind Fredholm integral
+    equation discretised by the midpoint rule on (-pi/2, pi/2). Returns the
+    symmetric kernel matrix M (n x n), the exact solution x (two Gaussian
+    humps, strictly positive, hence a genuine non-negative target), and the
+    right-hand side d = M x. M is numerically rank-deficient, so the Gram
+    operator A = M^T M is numerically singular; see experiment_nncg_regu.py.
+    """
+    h = np.pi / n
+    i = np.arange(1, n + 1)
+    s = (i - 0.5) * h - np.pi / 2                    # midpoints in (-pi/2, pi/2)
+    S, T = np.meshgrid(s, s, indexing="ij")
+    co = np.cos(S) + np.cos(T)
+    u = np.pi * (np.sin(S) + np.sin(T))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        sinc = np.where(u == 0.0, 1.0, np.sin(u) / u)
+    M = (co ** 2) * (sinc ** 2) * h
+    a1, c1, t1 = 2.0, 6.0, 0.8                        # Hansen's canonical params
+    a2, c2, t2 = 1.0, 2.0, -0.5
+    x = a1 * np.exp(-c1 * (s - t1) ** 2) + a2 * np.exp(-c2 * (s - t2) ** 2)
+    return M, x, M @ x
+
+
+def phillips(n):
+    """The `phillips` test problem from Hansen's Regularization Tools.
+
+    A deconvolution with a symmetric banded Toeplitz kernel M. The exact
+    solution phi(t) = 1 + cos(pi t/3) on |t| <= 3 (zero outside) is
+    non-negative with a known support, so about half the components sit at the
+    bound: a genuinely large, structured active set, and (with light noise) a
+    signal the solver should recover. Returns (M, x, d = M x); n must be a
+    multiple of 4.
+    """
+    if n % 4 != 0:
+        raise ValueError("phillips: n must be a multiple of 4")
+    h = 12.0 / n
+    n4 = n // 4
+    c = np.cos(np.arange(-1, n4 + 1) * 4.0 * np.pi / n)
+    r = np.zeros(n)
+    r[:n4] = h + 9.0 / (h * np.pi ** 2) * (2 * c[1:n4 + 1] - c[:n4] - c[2:n4 + 2])
+    r[n4] = h / 2.0 + 9.0 / (h * np.pi ** 2) * (np.cos(4.0 * np.pi / n) - 1.0)
+    diff = np.abs(np.subtract.outer(np.arange(n), np.arange(n)))
+    M = r[diff]                                       # symmetric Toeplitz kernel
+    t = (np.arange(1, n + 1) - 0.5) * h - 6.0         # grid on (-6, 6)
+    x = np.where(np.abs(t) < 3.0, 1.0 + np.cos(np.pi * t / 3.0), 0.0)
+    return M, x, M @ x
 
 
 def cg(matvec, rhs, tol=1e-8, maxit=100000, x0=None):
@@ -177,6 +229,68 @@ def solve_nnqp(A, b, tol=1e-8, cg_tol=1e-10, p_max=3, inner="cg", track=False,
 
     return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback,
             "traj": traj, "converged": converged, "free": free}
+
+
+def solve_nnqp_op(matvec, b, tol=1e-8, cg_tol=1e-10, p_max=3,
+                  cg_maxit=100000, max_outer=None):
+    """Matrix-free active-set loop: identical logic to solve_nnqp, but A is
+    supplied only as an operator `matvec(x) = A @ x` and is never assembled.
+
+    The free-block solve restricts the operator to the current free set by
+    embedding the reduced vector into full space, applying matvec, and reading
+    back the free coordinates -- so no n-by-n matrix, and no O(n^2) storage,
+    is ever formed. This is the operator abstraction of Section 3: the same
+    loop and termination proof run on any object that supplies a mat-vec (a
+    Gram operator M^T(M v), a Kronecker blur, a diagonal-plus-low-rank factor).
+    """
+    n = len(b)
+    free = np.ones(n, dtype=bool)
+    x = np.zeros(n)
+    N_bar = n + 1
+    patience = p_max
+    outer = inner_total = fallback = 0
+    converged = True
+
+    while True:
+        if max_outer is not None and outer >= max_outer:
+            converged = False
+            break
+        idx = np.flatnonzero(free)
+
+        def matvec_F(vF, idx=idx):                    # A_F v, matrix-free
+            v = np.zeros(n)
+            v[idx] = vF
+            return matvec(v)[idx]
+
+        xF, k_step = cg(matvec_F, b[idx], tol=cg_tol, maxit=cg_maxit)
+        outer += 1
+        inner_total += k_step
+
+        x = np.zeros(n)
+        x[idx] = xF
+        s = matvec(x) - b                             # reduced gradient
+
+        prim = np.flatnonzero(free & (x < -tol))
+        dual = np.flatnonzero((~free) & (s < -tol))
+        viol = np.concatenate([prim, dual])
+        N = viol.size
+        if N == 0:
+            break
+        if N < N_bar or patience > 0:
+            if N < N_bar:
+                N_bar = N
+                patience = p_max
+            else:
+                patience -= 1
+            free[prim] = False
+            free[dual] = True
+        else:
+            fallback += 1
+            i_star = int(viol.min())
+            free[i_star] = not free[i_star]
+
+    return {"x": x, "outer": outer, "inner": inner_total, "fallback": fallback,
+            "converged": converged, "free": free}
 
 
 def solve_nnqp_eq(A, b, B, c, tol=1e-8, cg_tol=1e-10, p_max=3):

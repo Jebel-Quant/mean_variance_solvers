@@ -19,8 +19,7 @@ CG is initialised from the zero vector, so its iteration counts are deterministi
 and exactly reproducible, independent of any random seed. The proximal-gradient baseline (Section~\ref{sec:solvers}) instead starts from a
 random point on the simplex and estimates its Lipschitz step by power iteration, so its iteration count varies
 mildly across runs (on the S\&P~500 problem at $\alpha=0.5$, $825 \pm 87$ over ten runs); we report the count from
-the minimum-time run. All implementations are available in the companion package
-\cite{fast_minimum_variance}.
+the minimum-time run.
 
 
 \subsection{S\&P~500 benchmark}

@@ -39,12 +39,9 @@ RMT-determined structure, randomised preprocessing, and an end-to-end
 complexity and accuracy account.
 
 \paragraph{Contributions}
-This paper makes four contributions, each self-contained relative to the
-companion paper~\cite{fast_minimum_variance}.
-The companion paper uses a different estimator structure and a different inner
-solver; the Woodbury treatment, the crossover analysis, the rSVD preprocessing
-treatment, and the total pipeline complexity accounting developed here are absent
-from it.
+This paper makes four contributions: the Woodbury treatment, the crossover
+analysis, the rSVD preprocessing treatment, and the total pipeline complexity
+accounting developed here.
 
 \emph{First}, we give a complete treatment of the randomised SVD preprocessing
 step (Section~\ref{sec:preprocessing}). The companion paper uses a dense
@@ -117,8 +114,6 @@ covariance estimation.
 This paper is self-contained: Algorithm~\ref{alg:woodbury} gives the complete
 primal-dual active-set solver including the Woodbury inner solve, and
 Section~\ref{sec:preprocessing} develops the rSVD preprocessing independently.
-A companion paper~\cite{fast_minimum_variance} addresses the same portfolio
-problem with an iterative inner solver and a different covariance structure.
 
 \paragraph{Outline}
 Section~\ref{sec:problem} states the problem. Section~\ref{sec:rmt} constructs

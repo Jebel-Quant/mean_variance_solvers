@@ -50,7 +50,7 @@ import scipy.sparse as sp
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
 
-from nncg import make_problem, solve_nnqp
+from nncg import make_problem, shaw, solve_nnqp
 
 HERE = Path(__file__).parent
 GRAPHS = HERE.parent / "graphs"
@@ -203,6 +203,49 @@ for kap in KAPPAS_B:
 
 
 # ---------------------------------------------------------------------------
+# Sweep 3: wall-clock on the official `shaw` ill-posed NNLS problem
+#          (active set vs Lawson-Hanson on the regularised Gram operator)
+# ---------------------------------------------------------------------------
+
+SHAW_NS = [256, 512, 1024]
+SHAW_ALPHA = 1e-4                                     # matches experiment_nncg_regu.py
+SHAW_NOISE = 1e-3
+SHAW_REP = 3                                          # min over repeats
+
+print()
+print("=" * 78)
+print(f"Wall-clock on shaw (alpha={SHAW_ALPHA:.0e}, noise={SHAW_NOISE:.0e}, "
+      f"min over {SHAW_REP} runs)")
+print("=" * 78)
+print(f"{'n':>6}  {'LH (s)':>10}  {'AS+dir (s)':>11}  {'AS+CG (s)':>11}  "
+      f"{'LH/AS+CG':>9}")
+
+shaw_lh_vs_ascg = {}
+shaw_lh_vs_asd = {}
+for n in SHAW_NS:
+    M, _, d = shaw(n)
+    rng = np.random.default_rng(0)
+    g = rng.standard_normal(n)
+    d_noisy = d + SHAW_NOISE * np.linalg.norm(d) * g / np.linalg.norm(g)
+    gram = M.T @ M
+    A = (1.0 - SHAW_ALPHA) * gram + SHAW_ALPHA * (np.trace(gram) / n) * np.eye(n)
+    b = M.T @ d_noisy
+    t = {}
+    for name, fn in [("lh", run_lawson_hanson), ("asd", run_as_direct),
+                     ("ascg", run_as_cg)]:
+        best = np.inf
+        for _ in range(SHAW_REP):
+            t0 = time.perf_counter()
+            fn(A, b)
+            best = min(best, time.perf_counter() - t0)
+        t[name] = best
+    shaw_lh_vs_ascg[n] = t["lh"] / t["ascg"]
+    shaw_lh_vs_asd[n] = t["lh"] / t["asd"]
+    print(f"{n:>6}  {t['lh']:>10.3f}  {t['asd']:>11.3f}  {t['ascg']:>11.3f}  "
+          f"{shaw_lh_vs_ascg[n]:>8.0f}x")
+
+
+# ---------------------------------------------------------------------------
 # Figure: time vs n
 # ---------------------------------------------------------------------------
 
@@ -272,5 +315,12 @@ with open(TABLES / "nncg_bench_defs.tex", "w") as fh:
              f"{{{times['Interior point (Clarabel)'][i_last] / t_asd:.0f}}}\n")
     fh.write(f"\\newcommand{{\\nncgBenchLHvsASCG}}"
              f"{{{times['Lawson--Hanson (SciPy)'][i_last] / t_ascg:.0f}}}\n")
+    # shaw ill-posed problem: speedup over Lawson-Hanson at the largest size
+    shaw_nmax = SHAW_NS[-1]
+    fh.write(f"\\newcommand{{\\nncgBenchShawN}}{{{shaw_nmax}}}\n")
+    fh.write(f"\\newcommand{{\\nncgBenchShawLHvsASCG}}"
+             f"{{{shaw_lh_vs_ascg[shaw_nmax]:.0f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgBenchShawLHvsASD}}"
+             f"{{{shaw_lh_vs_asd[shaw_nmax]:.0f}}}\n")
 print(f"Saved {TABLES / 'nncg_bench_defs.tex'}")
 print("\nDone.")

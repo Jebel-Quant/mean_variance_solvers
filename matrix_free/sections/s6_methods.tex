@@ -113,8 +113,7 @@ S\&P~500 system has $\kappa \approx 109{,}000$); only when shrinkage compresses 
 to $O(1)$ does its iteration count become competitive. The companion paper also
 explains why the \emph{unaccelerated} method is the honest first-order comparator --
 Nesterov momentum would match the $O(\sqrt\kappa)$ rate but not the Krylov subspace; a
-FISTA variant~\cite{beck2009}, available in the companion
-package~\cite{fast_minimum_variance}, empirically needs $1.5$--$1.8\times$ fewer
+FISTA variant~\cite{beck2009} empirically needs $1.5$--$1.8\times$ fewer
 iterations than plain proximal gradient yet remains $7$--$10\times$ slower than CG on
 the S\&P~500 benchmark at $\alpha=0.5$.
 
