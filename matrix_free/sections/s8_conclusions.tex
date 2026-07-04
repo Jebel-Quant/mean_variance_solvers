@@ -3,15 +3,15 @@
 The long-only minimum variance portfolio is conventionally solved by forming an $n\times n$
 covariance matrix and passing it to a general-purpose solver. This paper shows that the
 covariance matrix is unnecessary: the problem reduces to a handful of symmetric positive
-definite linear solves -- one per balance constraint, plus one for a return tilt, with
-the multipliers eliminated through a $p\times p$ Schur complement -- and non-negativity
+definite linear solves (one per balance constraint, plus one for a return tilt, with
+the multipliers eliminated through a $p\times p$ Schur complement) and non-negativity
 is enforced by an active-set loop. The method works entirely with
 the $T\times n$ returns matrix; the covariance matrix is never assembled during
 the solve.
 
 The empirical results on 494 S\&P~500 constituents over five years confirm the practical
-value of this approach. Against the same solvers invoked through their native APIs --
-the fair comparison, free of any modelling-layer overhead -- CG is $5.7\times$ faster than
+value of this approach. Against the same solvers invoked through their native APIs
+(the fair comparison, free of any modelling-layer overhead), CG is $5.7\times$ faster than
 Clarabel without shrinkage and $22\times$ faster under heavy shrinkage ($\alpha=0.5$); the
 larger $156\times$ and $661\times$ figures, measured against CVXPY-wrapped Clarabel, additionally
 absorb the problem-construction overhead of a general-purpose modelling layer and should be
@@ -28,7 +28,7 @@ even a well-engineered general QP solver cannot match algorithms that exploit th
 positive-definite structure and operate without assembling the covariance matrix.
 
 Heavy LW shrinkage compresses $\kappa$ as a free by-product of out-of-sample stability
-tuning -- a connection not previously made explicit in the portfolio optimisation literature.
+tuning, a connection not previously made explicit in the portfolio optimisation literature.
 The statistically optimal $\alpha \approx 0.017$ barely helps conditioning, because the
 Frobenius loss is dominated by large, well-estimated eigenvalues that are far from zero;
 the near-zero noise eigenvalues, the sole cause of $\kappa \approx 109{,}000$, contribute

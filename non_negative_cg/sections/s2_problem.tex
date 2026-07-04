@@ -44,7 +44,7 @@ $-\lambda^\top(Bx - c)$ with a multiplier $\lambda \in \mathbb{R}^p$, so the red
 becomes $s = A x - b - B^\top\lambda$ and the free-set stationarity reads
 $(Ax)_i = b_i + (B^\top\lambda)_i$ for $i \in \mathcal{F}$: on the free set the gradient is
 pinned to the row space of $B$, with $\lambda$ the vector of shadow prices of the $p$ balance
-conditions. The KKT system is now a \emph{mixed} complementarity problem -- the free block
+conditions. The KKT system is now a \emph{mixed} complementarity problem: the free block
 carries the equality $B_{\mathcal{F}}x_{\mathcal{F}} = c$ alongside the sign conditions.
 Section~\ref{sec:reduction} shows that $\lambda$ need not be carried as an unknown in the
 linear solve; it is recovered in closed form from $p+1$ SPD solves and a $p\times p$ Schur
@@ -62,7 +62,7 @@ any candidate free set is well posed, so CG applies at every outer step
 (Section~\ref{sec:reduction}). And $\mathrm{LCP}(A,\,{-b})$ with a $P$-matrix has a unique
 solution reachable by principal pivoting~\cite{murty1988,judice1994}, which is the backbone of
 the finite-termination guarantee in Section~\ref{sec:nonneg}. When $A$ is only positive
-semidefinite -- as in a rank-deficient least-squares problem, $m < n$ -- the regularisation of
+semidefinite (as in a rank-deficient least-squares problem, $m < n$), the regularisation of
 Section~\ref{sec:conditioning} restores $A \succ 0$ and with it the $P$-matrix property.
 
 The complementarity structure~\eqref{eq:lcp} reduces the search for $x$ to a search over free

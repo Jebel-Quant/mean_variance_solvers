@@ -12,13 +12,13 @@ the Marchenko--Pastur (MP) law identifies eigenvalues below the bulk edge
 $\hat\lambda_+$ as uninformative, consistent with noise, while eigenvalues above
 $\hat\lambda_+$ carry genuine factor structure. The ``constant residual eigenvalue''
 (CRE) cleaning method~\cite{laloux1999,bun2017,bouchaud2003} replaces the noise
-eigenvalues with their average $\bar\lambda$ -- preserving the trace of
-$\hat\Sigma$ -- and produces the estimator
+eigenvalues with their average $\bar\lambda$ (preserving the trace of
+$\hat\Sigma$) and produces the estimator
 \[
   T_0^{\mathrm{RMT}} = \bar\lambda I + U_k(\Lambda_k - \bar\lambda I)U_k^\top,
 \]
 where $(U_k, \Lambda_k)$ are the $k$ eigenpairs above $\hat\lambda_+$.
-On S\&P~500 data, $k = 23$ and $\kappa(T_0^{\mathrm{RMT}}) \approx 343$ --
+On S\&P~500 data, $k = 23$ and $\kappa(T_0^{\mathrm{RMT}}) \approx 343$,
 roughly $300$ times better conditioned than $\hat\Sigma$.
 
 Implementations of CRE cleaning in the public domain typically form
@@ -74,15 +74,15 @@ returned weights, an exact critical-line sweep built on the same Woodbury
 kernel that traces every frontier breakpoint (Section~\ref{ssec:cla}), a
 $k$-sensitivity audit showing that the MP threshold choice
 is not a sensitive hyperparameter (Section~\ref{sec:ksensitivity}), and an
-out-of-sample backtest on two universes -- S\&P~500 and FTSE~100 -- showing
+out-of-sample backtest on two universes (S\&P~500 and FTSE~100) showing
 that the cleaned estimator carries no measurable statistical penalty relative
 to standard shrinkage (Section~\ref{ssec:oos}).
 
 \emph{Fourth}, we delineate the scope of the structural trick
 (Remarks~\ref{rem:rie} and~\ref{rem:ridge}): ridge terms, diagonal loadings,
 externally specified factor models, and linear equality constraints preserve
-the Woodbury structure, whereas statistically richer cleanings -- nonlinear
-shrinkage and general rotationally invariant estimators -- do not.
+the Woodbury structure, whereas statistically richer cleanings (nonlinear
+shrinkage and general rotationally invariant estimators) do not.
 
 \paragraph{Relation to existing work}
 Laloux et al.~\cite{laloux1999} and Plerou et al.~\cite{plerou1999} introduced
