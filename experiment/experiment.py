@@ -25,15 +25,15 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 # dependencies = [
 #     "pandas",
 #     "scikit-learn",
-#     "fast-minimum-variance",
 #     "pyarrow",
+#     "numpy",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
+#     "clarabel",
+#     "osqp",
+#     "scipy",
+#     "cvxpy",
 # ]
-#
-# [tool.uv.sources]
-# # balance systems (B, c) and the cvx-linalg>=0.9.6 restricted() perf fix are not
-# # yet released; run against the local checkout until the next release, then
-# # restore the git/PyPI source.
-# fast-minimum-variance = { path = "../../fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -42,16 +42,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from util.runner import _fmt_time, print_table, run_timed, write_table_defs
+from util.runner import SMOKE, _fmt_time, output_dirs, print_table, run_timed, write_table_defs
 
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import (
+from minvar import (
+    MinVarProblem,
     lw_alpha_and_target,
     oas_alpha_and_target,
 )
 
 HERE = Path(__file__).parent
-TABLES = HERE / "tables"
+_GRAPHS_BASE, TABLES = output_dirs(HERE)
 
 # Solver rows written to the paper tables (first-order methods are treated in the
 # nncg companion paper and excluded here).
@@ -105,7 +105,7 @@ def _make_entry(prob, fn, is_kkt=False):
 
 
 for dataset_name, data_file in DATASETS.items():
-    GRAPHS = HERE / "graphs" / dataset_name
+    GRAPHS = _GRAPHS_BASE / dataset_name
     GRAPHS.mkdir(exist_ok=True)
 
     print("=" * 70)
@@ -115,6 +115,8 @@ for dataset_name, data_file in DATASETS.items():
     df = pd.read_parquet(data_file)
     R = df.to_numpy()
     R = R - R.mean(axis=0)
+    if SMOKE:  # exercise every panel on a small universe rather than the full one
+        R = R[:, :60]
     _T, N = R.shape
 
     alpha_lw, target = lw_alpha_and_target(R)

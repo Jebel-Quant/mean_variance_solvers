@@ -45,11 +45,10 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17.
 #     "numpy",
 #     "pandas",
 #     "pyarrow",
-#     "fast-minimum-variance",
+#     "scikit-learn",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
 # ]
-#
-# [tool.uv.sources]
-# fast-minimum-variance = { git = "https://github.com/Jebel-Quant/fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -60,15 +59,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from util.runner import SMOKE, output_dirs
 
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import lw_alpha_and_target
+from minvar import MinVarProblem, lw_alpha_and_target
 
 HERE = Path(__file__).parent
-GRAPHS = HERE / "graphs"
-TABLES = HERE / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -90,7 +86,7 @@ HOLD = 21  # rebalance / holding period (~1 trading month)
 ANN = 252  # trading days per year
 ALPHAS = [0.01, 0.017, 0.03, 0.05, 0.10, 0.20, 0.30, 0.50, 0.70, 0.90]
 BLOCK = 21  # bootstrap block length (one month, captures serial structure)
-N_BOOT = 2000  # bootstrap resamples
+N_BOOT = 200 if SMOKE else 2000  # bootstrap resamples
 BOOT_SEED = 0
 
 # ---------------------------------------------------------------------------

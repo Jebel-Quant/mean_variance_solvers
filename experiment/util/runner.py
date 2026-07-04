@@ -2,12 +2,35 @@
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
+#: Smoke-test mode: set ``EXPERIMENT_SMOKE=1`` to shrink every sweep and cap
+#: timing repeats to one, so the end-to-end test suite exercises each code path
+#: quickly rather than reproducing the paper-scale runs. The scripts also honor
+#: ``EXPERIMENT_OUT`` (see ``output_dirs``) so a smoke run writes its reduced
+#: figures/tables to a scratch directory instead of the committed ones.
+SMOKE = os.environ.get("EXPERIMENT_SMOKE") == "1"
+
+
+def output_dirs(here):
+    """Return ``(graphs_dir, tables_dir)`` under ``EXPERIMENT_OUT`` (default ``here``).
+
+    Redirecting outputs keeps a smoke run from overwriting the committed
+    full-resolution graphs and tables.
+    """
+    base = Path(os.environ.get("EXPERIMENT_OUT", here))
+    graphs, tables = base / "graphs", base / "tables"
+    graphs.mkdir(parents=True, exist_ok=True)
+    tables.mkdir(parents=True, exist_ok=True)
+    return graphs, tables
+
 
 def run_timed(fn, repeats=3):
-    """Return (result, best_wall_time_s) over `repeats` calls."""
+    """Return (result, best_wall_time_s) over `repeats` calls (one in smoke mode)."""
+    if SMOKE:
+        repeats = 1
     best = float("inf")
     result = None
     for _ in range(repeats):
