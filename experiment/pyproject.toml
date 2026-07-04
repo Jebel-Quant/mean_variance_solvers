@@ -1,0 +1,49 @@
+# Shared environment for the experiment/ study.
+#
+# The figure/table scripts depend on nothing beyond nncg (the matrix-free
+# active-set NNQP method under study) and the local baselines.py comparison
+# solvers over cvx.linalg operators — fast_minimum_variance is no longer used.
+# Each script still carries its own PEP 723 header, so `uv run <script>.py`
+# keeps working standalone; this file collects the union of those headers'
+# dependencies into one project so `make venv` (i.e. `uv sync`) can build a
+# single persistent .venv for interactive work, editing, IDEs, and `make test`.
+#
+# This is not a distributable package (package = false below); it exists only
+# to pin the environment the scripts run in.
+
+[project]
+name = "mean-variance-experiments"
+version = "0.0.0"
+description = "Figure and table generation for the mean-variance / RMT / NNCG papers"
+requires-python = ">=3.11"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "scikit-learn",
+    # solver stack: nncg (method under study) + baselines.py comparison solvers
+    "nncg==0.2.2",
+    "cvx-linalg",
+    "clarabel",
+    "osqp",
+    "scipy",
+    # CVXPY reference solver (ground-truth; measures modeling-layer overhead)
+    "cvxpy",
+    # fetch_sp500.py / fetch_ftse100.py (raw data download)
+    "yfinance",
+    "lxml",
+    "requests",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: end-to-end experiment runs (deselect with '-m \"not slow\"')",
+]

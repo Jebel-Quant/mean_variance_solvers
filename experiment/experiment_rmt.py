@@ -33,12 +33,14 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17, scikit-learn 1.x.
 #     "numpy",
 #     "pandas",
 #     "scikit-learn",
-#     "fast-minimum-variance",
 #     "pyarrow",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
+#     "clarabel",
+#     "osqp",
+#     "scipy",
+#     "cvxpy",
 # ]
-#
-# [tool.uv.sources]
-# fast-minimum-variance = { git = "https://github.com/Jebel-Quant/fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -54,8 +56,8 @@ from sklearn.utils.extmath import randomized_svd
 from util.runner import run_timed
 
 from simulate import simulate_equity_returns
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import (
+from minvar import (
+    MinVarProblem,
     rmt_target_and_alpha,
 )
 

@@ -45,11 +45,10 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17.
 #     "numpy",
 #     "pandas",
 #     "pyarrow",
-#     "fast-minimum-variance",
+#     "scikit-learn",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
 # ]
-#
-# [tool.uv.sources]
-# fast-minimum-variance = { git = "https://github.com/Jebel-Quant/fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -61,8 +60,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import lw_alpha_and_target
+from minvar import MinVarProblem, lw_alpha_and_target
 
 HERE = Path(__file__).parent
 GRAPHS = HERE / "graphs"

@@ -25,15 +25,15 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 # dependencies = [
 #     "pandas",
 #     "scikit-learn",
-#     "fast-minimum-variance",
 #     "pyarrow",
+#     "numpy",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
+#     "clarabel",
+#     "osqp",
+#     "scipy",
+#     "cvxpy",
 # ]
-#
-# [tool.uv.sources]
-# # balance systems (B, c) and the cvx-linalg>=0.9.6 restricted() perf fix are not
-# # yet released; run against the local checkout until the next release, then
-# # restore the git/PyPI source.
-# fast-minimum-variance = { path = "../../fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ import numpy as np
 import pandas as pd
 from util.runner import _fmt_time, print_table, run_timed, write_table_defs
 
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import (
+from minvar import (
+    MinVarProblem,
     lw_alpha_and_target,
     oas_alpha_and_target,
 )

@@ -26,11 +26,13 @@ Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 #     "matplotlib",
 #     "numpy",
 #     "scikit-learn",
-#     "fast-minimum-variance",
+#     "nncg==0.2.2",
+#     "cvx-linalg",
+#     "clarabel",
+#     "osqp",
+#     "scipy",
+#     "cvxpy",
 # ]
-#
-# [tool.uv.sources]
-# fast-minimum-variance = { git = "https://github.com/Jebel-Quant/fast_minimum_variance" }
 # ///
 
 from __future__ import annotations
@@ -44,8 +46,8 @@ import numpy as np
 from util.runner import run_timed, write_frontier_def
 
 from simulate import simulate_equity_returns
-from fast_minimum_variance.minvar_problem import _MinVarProblem as MinVarProblem
-from fast_minimum_variance.shrinkage.util import (
+from minvar import (
+    MinVarProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
 )
@@ -78,15 +80,14 @@ print("=" * 70)
 
 T_FIXED = 1250
 ns = [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000]
-times = {k: [] for k in ("kkt", "cg", "proximal", "fista")}
+times = {k: [] for k in ("kkt", "cg", "proximal")}
 
 print(
     f"{'n':>6}  {'k_active':>8}  {'kkt(s)':>10}  {'kkt_out':>8}"
     f"  {'cg(s)':>10}  {'cg_out':>7}  {'cg_in':>7}"
     f"  {'prox(s)':>10}  {'prox_in':>8}"
-    f"  {'fista(s)':>10}  {'fista_in':>9}"
 )
-print("-" * 110)
+print("-" * 90)
 
 for n in ns:
     R = simulate_equity_returns(n, T_FIXED, rng=n)
@@ -97,17 +98,14 @@ for n in ns:
     k_active = int((w_kkt > 1e-6).sum())
     (_, cg_outer, cg_inner), t_cg = run_timed(lambda p=prob: p.solve_cg())
     (_, prox_inner), t_prox = run_timed(lambda p=prob: p.solve_proximal())
-    (_, fista_inner), t_fista = run_timed(lambda p=prob: p.solve_fista())
 
     times["kkt"].append(t_kkt)
     times["cg"].append(t_cg)
     times["proximal"].append(t_prox)
-    times["fista"].append(t_fista)
     print(
         f"{n:>6}  {k_active:>8}  {t_kkt:>10.4f}  {kkt_outer:>8}"
         f"  {t_cg:>10.4f}  {cg_outer:>7}  {cg_inner:>7}"
         f"  {t_prox:>10.4f}  {prox_inner:>8}"
-        f"  {t_fista:>10.4f}  {fista_inner:>9}"
     )
 
 # Empirical scaling exponent for CG (log-log least squares over n >= 300).

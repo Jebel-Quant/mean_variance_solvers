@@ -12,7 +12,7 @@
 # below needs editing.
 PAPERS := $(filter-out experiment,$(patsubst %/Makefile,%,$(wildcard */Makefile)))
 
-.PHONY: help compile figures clean arxiv check
+.PHONY: help compile figures test clean arxiv check
 
 # Self-documenting help: lists every target with a `## description` comment.
 help:  ## Show this overview of available commands
@@ -36,6 +36,9 @@ figures:  ## Regenerate every paper's figures and tables (runs the experiment)
 			echo "==> $(MAKE) -C $$p figures"; $(MAKE) -C $$p figures; \
 		fi; \
 	done
+
+test:  ## Run the experiment test suite (baselines, minvar, and end-to-end runs)
+	$(MAKE) -C experiment test
 
 check:  ## Run the CI quality gate (undefined refs, dash asides, bib placeholders, stale solver rows)
 	./scripts/check_papers.sh
