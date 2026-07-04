@@ -53,7 +53,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.utils.extmath import randomized_svd
-from util.runner import run_timed
+from util.runner import SMOKE, output_dirs, run_timed
 
 from simulate import simulate_equity_returns
 from minvar import (
@@ -62,10 +62,7 @@ from minvar import (
 )
 
 HERE = Path(__file__).parent
-GRAPHS = HERE / "graphs"
-TABLES = HERE / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -180,13 +177,15 @@ mu_ef = betas_ef * (0.10 / 250)
 tgt_rmt_ef, lr_rmt_ef, k_rmt_ef, alpha_rmt_ef = rmt_target_and_alpha(R_ef)
 Sigma_rmt_ef = tgt_rmt_ef
 
-rhos_ef = np.linspace(0, 2, 50)
+rhos_ef = np.linspace(0, 2, 6 if SMOKE else 50)
 N_PTS = len(rhos_ef)
 
 print(f"  RMT: alpha={alpha_rmt_ef:.4f}, k={k_rmt_ef} signal factors")
 
 
 def _cold_sweep(solve_fn_name, prob_fn, repeats=3):
+    if SMOKE:
+        repeats = 1
     best_total = float("inf")
     best_times = None
     for _ in range(repeats):
@@ -203,6 +202,8 @@ def _cold_sweep(solve_fn_name, prob_fn, repeats=3):
 
 
 def _warm_sweep_kkt(prob_fn, repeats=3):
+    if SMOKE:
+        repeats = 1
     best_total = float("inf")
     best_times = None
     for _ in range(repeats):
@@ -296,6 +297,8 @@ tgt_sp_b, lr_sp_b, k_sp_b, alpha_sp_b = rmt_target_and_alpha(R_sp)
 
 
 def _sp_cold(solve_fn_name, prob, repeats=3):
+    if SMOKE:
+        repeats = 1
     best = float("inf")
     for _ in range(repeats):
         t0 = _time.perf_counter()
@@ -471,7 +474,7 @@ print("D: Scaling  (Cholesky vs Woodbury + preprocessing, T=1250 fixed)")
 print("=" * 70)
 
 T_FIXED = 1250
-ns = [300, 500, 750, 1000, 1500, 2000, 3000]
+ns = [300, 500] if SMOKE else [300, 500, 750, 1000, 1500, 2000, 3000]
 t_kkt_scale = []  # KKT-Cholesky (no target_lr)
 t_wb_solve = []  # Woodbury solve only
 t_wb_dense_prep = []  # dense eigendecomp preprocessing

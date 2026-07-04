@@ -43,7 +43,7 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from util.runner import run_timed, write_frontier_def
+from util.runner import SMOKE, output_dirs, run_timed, write_frontier_def
 
 from simulate import simulate_equity_returns
 from minvar import (
@@ -53,9 +53,7 @@ from minvar import (
 )
 
 HERE = Path(__file__).parent
-GRAPHS = HERE / "graphs"
-TABLES = HERE / "tables"
-GRAPHS.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -79,7 +77,7 @@ print("Runtime vs n  (T=1250 fixed, LW shrinkage, long-only minimum variance)")
 print("=" * 70)
 
 T_FIXED = 1250
-ns = [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000]
+ns = [100, 300, 500] if SMOKE else [50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000]
 times = {k: [] for k in ("kkt", "cg", "proximal")}
 
 print(
@@ -135,7 +133,7 @@ print("=" * 70)
 n_iter, T_iter = 500, 250
 R_iter = simulate_equity_returns(n_iter, T_iter, rng=1)
 _, tgt_iter = lw_alpha_and_target(R_iter)
-alphas = np.linspace(0.01, 0.99, 40)
+alphas = np.linspace(0.01, 0.99, 6 if SMOKE else 40)
 cg_iters = []
 
 print(f"{'alpha':>8}  {'outer':>7}  {'inner':>8}")
@@ -209,11 +207,13 @@ alpha_ef = 0.5
 Sigma_ef = (1 - alpha_ef) * (R_ef.T @ R_ef) / T_ef + alpha_ef * tgt_ef
 print(f"Frontier alpha (LW) = {alpha_ef}")
 
-rhos_ef = np.linspace(0, 2, 50)
+rhos_ef = np.linspace(0, 2, 6 if SMOKE else 50)
 
 
 def _sweep_cold(solve_fn, repeats=3, ef_alpha=None, ef_target=None):
     """Return best-of-repeats list of per-point cold-start times."""
+    if SMOKE:
+        repeats = 1
     _alpha = alpha_ef if ef_alpha is None else ef_alpha
     _target = tgt_ef if ef_target is None else ef_target
     runs = []
@@ -236,7 +236,7 @@ ef_times_cg_cold = _sweep_cold(lambda p: p.solve_cg(), repeats=3)
 print("Running CG warm-start sweep...")
 ef_warm_runs = []
 ef_vols, ef_rets, ef_active = [], [], []
-for rep in range(3):
+for rep in range(1 if SMOKE else 3):
     sweep_times = []
     warm = None
     vols_r, rets_r, act_r = [], [], []

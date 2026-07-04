@@ -59,14 +59,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from util.runner import SMOKE, output_dirs
 
 from minvar import MinVarProblem, lw_alpha_and_target
 
 HERE = Path(__file__).parent
-GRAPHS = HERE / "graphs"
-TABLES = HERE / "tables"
-GRAPHS.mkdir(exist_ok=True)
-TABLES.mkdir(exist_ok=True)
+GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
     {
@@ -88,7 +86,7 @@ HOLD = 21  # rebalance / holding period (~1 trading month)
 ANN = 252  # trading days per year
 ALPHAS = [0.01, 0.017, 0.03, 0.05, 0.10, 0.20, 0.30, 0.50, 0.70, 0.90]
 BLOCK = 21  # bootstrap block length (one month, captures serial structure)
-N_BOOT = 2000  # bootstrap resamples
+N_BOOT = 200 if SMOKE else 2000  # bootstrap resamples
 BOOT_SEED = 0
 
 # ---------------------------------------------------------------------------
