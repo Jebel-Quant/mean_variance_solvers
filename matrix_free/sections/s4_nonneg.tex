@@ -18,8 +18,8 @@ to satisfy
   \nabla_i f(w) = \tfrac{2}{T}(X^\top Xw)_i - \rho\hat\mu_i\;,
 \]
 where $\lambda \in \mathbb{R}^p$ collects the balance multipliers recovered analytically
-from Section~\ref{sec:pd} -- in the budget case, the single shadow price of full
-investment. An excluded asset that violates this condition would decrease
+from Section~\ref{sec:pd} (in the budget case, the single shadow price of full
+investment). An excluded asset that violates this condition would decrease
 portfolio variance if held at a small positive weight; it is re-added to the active set
 and the loop repeats. The loop terminates when both primal and dual feasibility hold;
 together with stationarity from the inner solve this certifies global optimality.
@@ -166,8 +166,8 @@ The cross-solve warm start is implemented in \texttt{solve\_cg\_warm}
 against cold-started CG on a 50-point frontier sweep.
 
 \medskip
-A loop-free alternative -- projected gradient, which enforces the constraints at
-every step by projecting onto the simplex -- is analysed in the companion
+A loop-free alternative (projected gradient, which enforces the constraints at
+every step by projecting onto the simplex) is analysed in the companion
 paper~\cite{schmelzer2026nncg}: it is not a Krylov method, forgoes the subspace
 structure, and converges at $O(\kappa)$ against the $O(\sqrt{\kappa})$ of the CG inner
 solver at the same $O(nT)$ per-step cost. Section~\ref{sec:results} benchmarks it as a

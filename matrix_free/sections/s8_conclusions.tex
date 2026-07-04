@@ -3,8 +3,8 @@
 The long-only minimum variance portfolio is conventionally solved by forming an $n\times n$
 covariance matrix and passing it to a general-purpose solver. This paper shows that the
 covariance matrix is unnecessary: the problem reduces to a handful of symmetric positive
-definite linear solves -- one per balance constraint, plus one for a return tilt, with
-the multipliers eliminated through a $p\times p$ Schur complement -- and non-negativity
+definite linear solves (one per balance constraint, plus one for a return tilt, with
+the multipliers eliminated through a $p\times p$ Schur complement) and non-negativity
 is enforced by an active-set loop. The method works entirely with
 the $T\times n$ returns matrix; the covariance matrix is never assembled during
 the solve.
