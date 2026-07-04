@@ -28,7 +28,11 @@ the fallback is never entered on generic data yet genuinely necessary: on an adv
 of anti-correlated designs the unguarded batch path cycles, and the fallback is what terminates
 it. The guarantee is
 robust to inexactness: once CG's residual tolerance is tied to the decision threshold, the
-inexact loop provably visits the same free sets as the exact one. A loop-free
+inexact loop provably visits the same free sets as the exact one. The guarantee attaches to
+the outer loop rather than the inner solver, so the active-set method stands as an
+intermediate result in its own right: the same loop, with the same termination proof, accepts
+a direct factorisation of each free-set system in place of CG, combining just as readily with
+direct methods when the reduced blocks are small or structured. A loop-free
 projected-gradient comparator, which enforces the constraints simultaneously but forgoes the
 Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alongside it.
 
