@@ -230,7 +230,20 @@ so $n = \nncgDeblurDim{}$, a dense $A$ would occupy $\nncgDeblurDenseGB{}$\,GB; 
 split for the $P$-matrix property the loop instead runs in $O(n)$ working memory, terminating
 in $\nncgDeblurOuter{}$ outer steps ($\nncgDeblurInner{}$ CG iterations total) with a KKT
 certificate and $\nncgDeblurActive{}$ of $\nncgDeblurDim{}$ pixels pinned at the non-negativity
-bound. Identical loop, identical proof; only the operator changes.
+bound (Figure~\ref{fig:nncg_deblur}). Identical loop, identical proof; only the operator
+changes.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\linewidth]{graphs/nncg_deblur}
+\caption{Matrix-free non-negative deblurring at $N = \nncgDeblurNside{}$
+($n = \nncgDeblurDim{}$ unknowns): the true scene, its Gaussian blur with additive noise, and
+the reconstruction from the matrix-free active-set loop (Algorithm~\ref{alg:elim} with
+\texttt{solve\_nnqp\_op}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
+never forms it, a dense $A$ being $\nncgDeblurDenseGB{}$\,GB. The black background is recovered
+by the $\nncgDeblurActive{}$ active non-negativity constraints.}
+\label{fig:nncg_deblur}
+\end{figure}
 
 \begin{table}[ht]
 \centering
