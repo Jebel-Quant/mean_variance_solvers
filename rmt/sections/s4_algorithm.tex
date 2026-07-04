@@ -114,7 +114,7 @@ an artefact of the data-generating process. The Markowitz efficient frontier is 
 continuous piecewise-linear curve in weight space as a function of $\rho$; at each
 breakpoint, generically, exactly one asset enters or leaves the active set~\cite{markowitz1956}.
 Between breakpoints the active set is constant. Choosing a fine enough $\rho$
-grid -- e.g.\ $50$ equally spaced points -- ensures that adjacent solves share
+grid (e.g.\ $50$ equally spaced points) ensures that adjacent solves share
 all but a few active assets regardless of whether the returns are synthetic or
 real, and regardless of the covariance estimator used.
 
@@ -188,8 +188,8 @@ Proposition~\ref{prop:crossover} is about $3\times$; the measured per-step
 advantage is larger ($5\times$ warm, Table~\ref{tab:solvers}), which is
 consistent with the Woodbury working set ($k \times k$) fitting in
 lower cache levels than the assembled $n_a \times n_a$ system, though we have
-not instrumented the memory hierarchy directly. When $n_a \leq k$ -- which
-does not occur for long-only equity portfolios in our experiments -- the
+not instrumented the memory hierarchy directly. When $n_a \leq k$ (which
+does not occur for long-only equity portfolios in our experiments) the
 solver should fall back to the KKT-Cholesky branch; the Woodbury solve itself
 remains valid for all $n_a \geq 1$, since
 $W = \Delta_k^{-1} + \bar\lambda^{-1}U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$

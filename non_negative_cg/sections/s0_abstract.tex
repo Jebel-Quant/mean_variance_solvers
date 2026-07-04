@@ -19,7 +19,7 @@ pivots of the linear complementarity problem $(A,\,{-b})$; because $A$ is a $P$-
 every principal submatrix is invertible and each pivot is well defined. The central result
 concerns termination: guarding a fast block-pivot path with a least-index Bland fallback, we
 prove the loop reaches the unique global minimiser in finitely many outer steps with
-\emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}) -- removing the hypothesis
+\emph{no} non-degeneracy assumption (Theorem~\ref{thm:termination}), removing the hypothesis
 that classical block-principal-pivoting termination arguments require. A synthetic study shows
 the fallback is never entered on generic data yet genuinely necessary: on an adversarial family
 of anti-correlated designs the unguarded batch path cycles, and the fallback is what terminates
@@ -33,9 +33,9 @@ Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alo
 Each inner solve is matrix-free. When $A = M^\top M$ arises as a Gram matrix, the operator
 $v \mapsto M^\top(M v)$ is applied without ever forming $A$, so CG on the normal equations
 costs two products with $M$ per iteration and no $O(n^2)$ storage. Because the inner rate is
-governed by $\kappa$, any regularisation or preconditioner that compresses the spectrum --
-including the ridge/Tikhonov splitting $A \mapsto (1-\alpha)A + \alpha R^\top R$ that also
-guarantees the $P$-matrix property -- reduces the iteration count directly. We record the
+governed by $\kappa$, any regularisation or preconditioner that compresses the spectrum
+(including the ridge/Tikhonov splitting $A \mapsto (1-\alpha)A + \alpha R^\top R$ that also
+guarantees the $P$-matrix property) reduces the iteration count directly. We record the
 per-step and total complexity of the method against dense factorisation and first-order
 baselines, and discuss its behaviour on synthetic SPD test problems. The algorithm is used
 as the computational kernel of the companion papers~\cite{schmelzer2026matrixfree,%

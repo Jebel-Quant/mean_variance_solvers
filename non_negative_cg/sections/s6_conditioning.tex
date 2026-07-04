@@ -36,9 +36,9 @@ regularisation~\cite{golub2013,lawson1974}.
 \end{proposition}
 
 The split does double duty. It lowers $\kappa$ and hence the iteration count of both solvers
-(Propositions~\ref{prop:cg} and~\ref{prop:proj}), and -- because $A_\alpha \succ 0$ strictly
+(Propositions~\ref{prop:cg} and~\ref{prop:proj}), and, because $A_\alpha \succ 0$ strictly
 whenever $\alpha > 0$, even when $A$ is only positive semidefinite (a rank-deficient
-least-squares operator with $m < n$) -- it restores the $P$-matrix property on which
+least-squares operator with $m < n$), it restores the $P$-matrix property on which
 Theorem~\ref{thm:termination} depends. A strictly positive $\alpha$ is therefore the natural
 setting for the active-set loop: it simultaneously conditions the inner solve and guarantees
 that every principal submatrix is invertible.
@@ -52,6 +52,6 @@ still accesses $A_{\mathcal{F}}$ only through its mat-vec~\cite{golub2013,benzi2
 regularising split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner: it
 changes the problem, but toward a target the application deems statistically or structurally
 preferable, so the conditioning gain comes at no modelling cost. The companion
-papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} develop concrete instances -- a
-scaled-identity split and a low-rank-plus-identity target inverted by the Woodbury identity --
+papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} develop concrete instances (a
+scaled-identity split and a low-rank-plus-identity target inverted by the Woodbury identity)
 and quantify the resulting iteration savings on their structured operators.

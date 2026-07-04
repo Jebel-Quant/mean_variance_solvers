@@ -33,7 +33,7 @@ Active-set sizes averaged $n_a = 42$ across the frontier (warm start).
         explicitly assembling $T_{0,\mathcal{A}}^{\mathrm{RMT}}$ as a dense
         $n_a \times n_a$ matrix via a rank-$k$ symmetric update and then
         factoring by Cholesky.
-  \item \textbf{Woodbury}: Algorithm~\ref{alg:woodbury} as stated -- the inner
+  \item \textbf{Woodbury}: Algorithm~\ref{alg:woodbury} as stated: the inner
         solve uses the Woodbury identity and never assembles an $n_a \times n_a$
         matrix.
 \end{itemize}
@@ -93,7 +93,7 @@ more than $20\times$ faster than KKT-Cholesky on a single cold minimum-variance
 solve ($28\times$ on unrounded timings) and $5\times$ faster warm. For the single-solve setting the warm start uses the
 converged active set from an immediately preceding cold solve at the same
 $\rho=0$, measuring the incremental re-solve cost when the covariance is
-refreshed but the optimal active set has not changed -- the scenario for daily
+refreshed but the optimal active set has not changed, the scenario for daily
 rebalancing. The warm-start advantage is not an artefact of the synthetic
 data-generating process: the Markowitz frontier is piecewise linear in weight
 space with generically single-asset exchanges at breakpoints
@@ -101,7 +101,7 @@ space with generically single-asset exchanges at breakpoints
 
 \paragraph{Interior-point baselines}
 The fair interior-point reference is the direct Clarabel call: just over $60$\,ms per
-solve, more than two orders of magnitude above Woodbury cold -- attributable to the
+solve, more than two orders of magnitude above Woodbury cold, attributable to the
 $n \times n$ dense quadratic form the interior-point method must factor at
 each of its iterations, against the $k \times k$ correction matrix of the
 direct method. The CVXPY route adds a further $\sim 25\times$ on top
@@ -155,9 +155,9 @@ but is charged no preprocessing here.}
 Two caveats frame this experiment. First, the growth law $k \approx n/21$ is
 observed on the real data at a single size ($k = 23$ at $n = 494$) and is
 \emph{built into} the synthetic generator; the large-$n$ conclusions are
-conditional on it. Second, under that law both methods scale cubically --
-Cholesky as $O(n_a^3)$ with $n_a \propto n$, Woodbury as $O(n_a k^2)$ with
-$k \propto n$ -- so the asymptotic gap is a constant factor, not an order.
+conditional on it. Second, under that law both methods scale cubically
+(Cholesky as $O(n_a^3)$ with $n_a \propto n$, Woodbury as $O(n_a k^2)$ with
+$k \propto n$), so the asymptotic gap is a constant factor, not an order.
 The \emph{measured} ratio nevertheless grows from $26\times$ at $n=500$ to
 $86\times$ at $n=3000$, consistent with the $n_a \times n_a$ working set
 falling out of cache while the $k \times k$ correction matrix does not. If
@@ -172,7 +172,7 @@ $n > 750$.
 \emph{Randomised SVD preprocessing is competitive throughout}. The rSVD path
 ($0.051$\,s at $n=3000$) is $25\times$ faster than dense preprocessing; combined
 with the Woodbury solve ($0.003$\,s), the total pipeline is $4.2\times$ faster
-than KKT-Cholesky alone ($0.224$\,s) -- confirming the headline claim of the
+than KKT-Cholesky alone ($0.224$\,s), confirming the headline claim of the
 abstract. For $S \geq 2$ portfolio solves (any frontier sweep, monthly rebalance
 sequence, etc.) the preprocessing cost amortises further, making the pipeline
 advantage grow with the number of solves.
@@ -203,7 +203,7 @@ Remark~\ref{rem:cla} observed that on each active set the solution is affine
 in $\rho$, so the exact frontier can be traced breakpoint-to-breakpoint with
 one Woodbury solve per segment. We implement this sweep and run it on the
 Section~\ref{ssec:solvers} problem ($n = 500$, $k = 22$, $\rho \in [0, 2]$).
-The exact frontier has $144$ breakpoints and is traced in $9$\,ms -- the same
+The exact frontier has $144$ breakpoints and is traced in $9$\,ms, the same
 cost as the $50$-point warm grid sweep ($9$\,ms, Table~\ref{tab:solvers}) while
 returning the complete piecewise-affine solution path rather than $50$ samples
 of it. Evaluating the CLA path at the $50$ grid values reproduces the
@@ -226,7 +226,7 @@ minimum-variance backtests on two universes: the S\&P~500
 matter less). In both cases: estimation window $L = 504$ days, monthly
 rebalancing, buy-and-hold drift between rebalances. Assets with zero
 full-sample variance or more than $20\%$ exact-zero returns (delisted names
-forward-filled flat, late listings padded with zeros) are excluded -- a
+forward-filled flat, late listings padded with zeros) are excluded: a
 zero-variance asset absorbs the entire minimum-variance portfolio and renders
 the comparison meaningless.
 Four strategies are compared: the RMT-CRE portfolio of this paper
@@ -260,7 +260,7 @@ with comparable turnover; on the FTSE~100 it is the lowest-volatility strategy
 outright ($10.88\%$ against $10.97\%$ and $11.06\%$), though the margin is
 again within noise. In the well-sampled FTSE regime the three estimators
 nearly coincide, as expected when $n/L$ is small. We do not claim statistical
-superiority for CRE -- only that the estimator whose structure enables the
+superiority for CRE, only that the estimator whose structure enables the
 direct solver carries no measurable out-of-sample penalty in either regime,
 despite using no tuning parameter beyond the MP threshold. This is consistent
 with the larger comparative literature on RMT

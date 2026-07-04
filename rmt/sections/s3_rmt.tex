@@ -38,7 +38,7 @@ eigenvalues are replaced by their average,
   \;=\; \frac{1}{\,n-k\,}\sum_{j > k} \lambda_j
   \;=\; \frac{\mathrm{tr}(\hat\Sigma) - \sum_{j \leq k}\lambda_j}{n-k}\,,
 \]
-which preserves the trace -- total variance -- of the sample covariance.
+which preserves the trace (total variance) of the sample covariance.
 The resolution of the identity $U_k U_k^\top + U_0 U_0^\top = I$ gives
 \[
   T_0^{\mathrm{RMT}}
@@ -49,8 +49,8 @@ where
 $\Delta_k = \Lambda_k - \bar\lambda I = \mathrm{diag}(\delta_1, \ldots, \delta_k)$
 with $\delta_j = \lambda_j - \bar\lambda > 0$ for all $j$ (since
 $\lambda_j > \hat\lambda_+ > \hat\sigma^2 > \bar\lambda$).
-This is exactly the ``constant residual eigenvalue'' (CRE) -- or eigenvalue
-clipping -- estimator introduced by Laloux et al.~\cite{laloux1999} and studied
+This is exactly the ``constant residual eigenvalue'' (CRE), or eigenvalue
+clipping, estimator introduced by Laloux et al.~\cite{laloux1999} and studied
 in depth by Bun, Bouchaud and Potters~\cite{bun2017}. It was later popularised
 among quantitative-finance practitioners by L\'opez de
 Prado~\cite{lopezdeprado2018}, whose accessible implementations brought the
@@ -86,7 +86,7 @@ is $\bar\lambda > 0$.
 $T_0^{\mathrm{RMT}}$ achieves $\kappa = \lambda_{\max}(\hat\Sigma)/\bar\lambda$:
 noise eigenvalues are lifted to the floor $\bar\lambda$, signal eigenvalues are
 preserved. On S\&P~500 data this gives $\kappa \approx 343$, versus
-$\kappa(\hat\Sigma) \approx 106{,}000$ -- an improvement by a factor of roughly
+$\kappa(\hat\Sigma) \approx 106{,}000$, an improvement by a factor of roughly
 $300$. The low condition number is a consequence of replacing the
 $(n-k)$-dimensional noise subspace eigenvalue spectrum (which spans
 several decades) with a single value $\bar\lambda$; it also keeps the
@@ -96,7 +96,7 @@ $k \times k$ Woodbury correction matrix $W$ well-conditioned regardless of $n$.
 \begin{remark}[Relation to optimal RMT cleaning]\label{rem:rie}
 CRE clipping is the simplest member of the family of rotationally invariant
 estimators (RIE). It is not loss-optimal: the oracle RIE replaces \emph{every}
-eigenvalue -- bulk and signal alike -- by a value determined by the
+eigenvalue (bulk and signal alike) by a value determined by the
 eigenvector overlaps of Ledoit and P\'ech\'e~\cite{ledoitpeche2011}, and these
 oracle values are not constant across the bulk; nonlinear
 shrinkage~\cite{ledoit2012,ledoit2020} and the RIE of Bun et
@@ -118,9 +118,9 @@ empirical question; on our data it is small
 
 \begin{remark}[Externally specified factor models]\label{rem:external_factors}
 The MP threshold provides a data-driven rule for selecting $k$, but the Woodbury
-solver applies for any choice of $k$. Practitioners with an external factor model --
-a commercial risk model with pre-specified style and industry factors, or a PCA
-with $k$ fixed by cross-validation -- can set $k = k_{\mathrm{ext}}$ and supply
+solver applies for any choice of $k$. Practitioners with an external factor model
+(a commercial risk model with pre-specified style and industry factors, or a PCA
+with $k$ fixed by cross-validation) can set $k = k_{\mathrm{ext}}$ and supply
 the corresponding eigenpairs directly, bypassing the MP threshold entirely. The
 key structural assumption for the Woodbury solve is not the source of $k$ but
 the replacement of the remaining $n - k$ eigenvalues by a single scalar $\bar\lambda$.

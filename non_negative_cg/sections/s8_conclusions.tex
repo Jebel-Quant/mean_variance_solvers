@@ -2,7 +2,7 @@
 
 Conjugate gradients solves SPD systems; it does not, unaided, respect $x \geq 0$. This note
 supplies the missing layer. The bound-constrained quadratic $\min_{x\geq0}
-\tfrac{1}{2}x^\top A x - b^\top x$ -- and its least-squares and equality-augmented ($Bx = c$) variants --
+\tfrac{1}{2}x^\top A x - b^\top x$, and its least-squares and equality-augmented ($Bx = c$) variants,
 reduces, on any fixed free set, to an unconstrained SPD solve that CG performs matrix-free;
 non-negativity is enforced around it by a primal-dual active-set loop whose asset toggles are
 the principal pivots of $\mathrm{LCP}(A,\,{-b})$. Because $A \succ 0$ is a $P$-matrix,

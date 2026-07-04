@@ -16,7 +16,7 @@ the bound and dropped from $\mathcal{F}$. Once all free variables are non-negati
 equality-augmented case, with $\lambda$ from Section~\ref{sec:reduction}) at every bound
 variable: a bound index $i$ with $s_i < 0$ would lower $f$ if released, so it is re-admitted
 to $\mathcal{F}$. The loop terminates when no variable violates either test, i.e.\ when
-$x \geq 0$, $s \geq 0$ and complementary slackness hold to tolerance -- exactly the KKT
+$x \geq 0$, $s \geq 0$ and complementary slackness hold to tolerance, exactly the KKT
 system~\eqref{eq:lcp}, which for the strictly convex $f$ certifies the unique global minimiser.
 
 Toggling an index between $\mathcal{F}$ and $\mathcal{B}$ is a \emph{principal pivot} on
@@ -98,7 +98,7 @@ Section~\ref{sec:reduction}.
 \emph{Step 2 (termination implies global optimality).}
 Free-set stationarity gives $s_i = 0$ for $i \in \mathcal{F}$. The loop exits only when
 $N = 0$: (i) all free $x_i \geq 0$ and (ii) all bound $s_i \geq 0$. These are exactly
-$x \geq 0$, $s \geq 0$, $x_i s_i = 0$ -- the KKT system~\eqref{eq:lcp}. Strict convexity of
+$x \geq 0$, $s \geq 0$, $x_i s_i = 0$: the KKT system~\eqref{eq:lcp}. Strict convexity of
 $f$ makes them sufficient for the unique global minimiser; it therefore suffices to show the
 loop cannot run forever.
 
@@ -130,10 +130,10 @@ ceiling is the number of complementary bases, $2^n$.
 
 The $2^n$ ceiling establishes \emph{finiteness} only; it is not an efficiency estimate. The
 guarantee is unconditional: the least-index fallback removes the non-degeneracy hypothesis that
-earlier active-set arguments need, and it is the fallback -- not the batch exchange -- that the
+earlier active-set arguments need, and it is the fallback, not the batch exchange, that the
 proof rests on. In practice the fallback is rarely reached, because a batch step fails to
 reduce $N$ only when a dropped index is immediately re-added (or vice versa), which forces
-$s_i = 0$ exactly for some toggled $i$ -- a codimension-one, hence non-generic,
+$s_i = 0$ exactly for some toggled $i$: a codimension-one, hence non-generic,
 condition~\cite{judice1994}; block principal pivoting therefore converges in a handful of outer
 steps on typical data, with the fast path alone certifying optimality.
 Section~\ref{ssec:synthetic} exhibits the flip side: an anti-correlated design family that
@@ -208,14 +208,14 @@ entries being zero in both.
 \begin{remark}[Reading the margin condition]\label{rem:inexact}
 Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
 excluded: the threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
-lemma -- like the theorem it protects -- needs no non-degeneracy assumption. Moreover, since
+lemma, like the theorem it protects, needs no non-degeneracy assumption. Moreover, since
 $\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
 with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
 algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a
 \emph{relative} residual $\varepsilon_{\mathrm{cg}}$, then
 $\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$ and
 condition~\eqref{eq:inexactcond} becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone.
-(iii) The margin $\mu$ is not computable a priori -- the lemma is a license, not a recipe: it
+(iii) The margin $\mu$ is not computable a priori; the lemma is a license, not a recipe: it
 guarantees that \emph{some} finite tolerance reproduces the exact trajectory, and in practice
 a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffices
 (Section~\ref{ssec:synthetic} verifies trajectory-for-trajectory agreement at
@@ -234,12 +234,12 @@ $\Pi_C(y) = \max(y, 0)$ componentwise; for the single normalisation $\mathbf{1}^
 $x\geq0$ it is the simplex slice $\Delta_\beta$, projected onto in $O(n\log n)$ by a single
 sort-and-threshold pass~\cite{duchi2008,condat2016}. For a general equality system $Bx=c$,
 however, the projection onto $\mathcal{P} = \{x\geq0: Bx=c\}$ is itself a non-negative
-quadratic program with no closed form, so projected gradient loses its per-step simplicity --
+quadratic program with no closed form, so projected gradient loses its per-step simplicity,
 one reason the active-set loop, whose cost rises only by the $p$ extra right-hand sides of
 Section~\ref{sec:reduction}, is the method of choice once $p>1$. The step size is $\tau = 1/L$ with
 $L = \lambda_{\max}(A)$, estimated once by power iteration on the same (matrix-free) operator.
-There is no outer loop and no linear solve: each step is one gradient evaluation -- two products
-with $M$ when $A = M^\top M$ -- plus a projection.
+There is no outer loop and no linear solve: each step is one gradient evaluation (two products
+with $M$ when $A = M^\top M$) plus a projection.
 
 \begin{proposition}[Projected-gradient convergence~{\cite{nesterov2004}}]\label{prop:proj}
   Let $A \succ 0$, so $f$ is $\mu$-strongly convex and $L$-smooth with
@@ -259,8 +259,8 @@ below by $\mu\|x_k-x^\star\|^2$, so $\|x_{k+1}-x^\star\|^2 \le (1-\mu/L)\|x_k-x^
 \end{proof}
 
 The iteration count scales as $O(\kappa)$, against $O(\sqrt\kappa)$ for the CG inner loop
-(Proposition~\ref{prop:cg}). Both methods pay the same per-step cost -- one operator
-application -- so the $\sqrt\kappa$ gap in iteration counts is a runtime gap on
+(Proposition~\ref{prop:cg}). Both methods pay the same per-step cost (one operator
+application), so the $\sqrt\kappa$ gap in iteration counts is a runtime gap on
 ill-conditioned problems. Nesterov acceleration would lift the projected-gradient rate to
 $O(\sqrt\kappa)$, but CG attains that rate \emph{optimally} within the Krylov subspace: each
 iterate minimises $f$ over $\mathcal{K}_k(A_{\mathcal{F}}, b_{\mathcal{F}})$, a strictly richer
@@ -273,8 +273,8 @@ accuracy suffices.
 
 \subsection{Warm-starting}\label{ssec:warm}
 
-For a parametric family of problems -- e.g.\ a sequence $b(\theta_1), b(\theta_2), \dots$ of
-right-hand sides, or a swept normalisation $\beta$ -- consecutive minimisers usually differ in
+For a parametric family of problems (e.g.\ a sequence $b(\theta_1), b(\theta_2), \dots$ of
+right-hand sides, or a swept normalisation $\beta$), consecutive minimisers usually differ in
 only a few active constraints. Passing the previous problem's $(\mathcal{F}, x)$ pair as the
 initial state of the next solve reduces both the outer count (the free set needs fewer primal
 and dual adjustments) and the inner count (CG starts from a small initial residual, its guess
@@ -313,9 +313,9 @@ $\ln(1/\rho) \geq 2/(\sqrt\kappa + 1)$; solving $2\rho^k\lVert e_0\rVert \leq \t
 yields the bound.
 \end{proof}
 
-When the support does drift, no comparable a-priori bound is available -- the loop is not
+When the support does drift, no comparable a-priori bound is available (the loop is not
 monotone in the free set, as the adversarial family of Section~\ref{ssec:synthetic} makes
-plain -- but the empirical picture is simple: the warm-started outer count tracks the support
+plain), but the empirical picture is simple: the warm-started outer count tracks the support
 drift $|\mathcal{F} \,\triangle\, \mathcal{F}'|$ and collapses to one whenever the drift is
 zero, exactly as the proposition prescribes (Section~\ref{ssec:synthetic}). A direct inner
 solver profits only from the warm free set, having no analogue of an initial guess; the

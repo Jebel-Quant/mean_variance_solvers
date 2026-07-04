@@ -106,15 +106,15 @@ regime $m < n$, where only $\alpha > 0$ makes the system well posed
 Across $\kappa \in [10, 10^6]$ the active-set loop terminates in at most $\nncgMaxOuter$ outer
 steps (Table~\ref{tab:nncg_synthetic}), adjusting the free set by a few indices per step and
 reaching the correct support in a count that tracks its distance from the initial full set, not
-$n$. The patience budget is never exhausted -- the Bland fallback of
+$n$. The patience budget is never exhausted: the Bland fallback of
 Theorem~\ref{thm:termination} guarantees termination but is not entered on generic data, exactly
 the codimension-one argument of Section~\ref{sec:nonneg}.
 
 \emph{(iii) CG beats projected gradient by a widening $\sqrt\kappa$ factor.}
 Figure~\ref{fig:nncg_cgpg} plots both matrix-free methods at matched per-step cost. Both run
 faster than their worst-case bounds on the clustered spectrum, but projected gradient's growth
-exponent is about twice CG's, so their ratio grows as $\kappa^{\nncgRatioSlope}$ -- essentially
-the predicted $\sqrt\kappa$ -- from parity at $\kappa=10$ to $\nncgPGratio\times$ at
+exponent is about twice CG's, so their ratio grows as $\kappa^{\nncgRatioSlope}$ (essentially
+the predicted $\sqrt\kappa$) from parity at $\kappa=10$ to $\nncgPGratio\times$ at
 $\kappa = \nncgKappaMax$. This is the $O(\sqrt\kappa)$-versus-$O(\kappa)$ separation of
 Propositions~\ref{prop:cg} and~\ref{prop:proj}, widening with $\kappa$ and closing under heavy
 regularisation.
@@ -146,9 +146,9 @@ question of whether it is needed at all; the following family answers it. Let th
 $M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$ with small $\xi$ and a
 ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix: pushing a variable to the bound flips
 the sign of its partner's entry, so a batch drop systematically over-shoots and a later batch
-add restores it -- the codimension-one near-tie event of Section~\ref{sec:nonneg} made
+add restores it, the codimension-one near-tie event of Section~\ref{sec:nonneg} made
 systematic. On this family ($n = 20$, \nncgFbSeeds{} seeds) \emph{pure} block principal
-pivoting -- Algorithm~\ref{alg:elim} with unbounded patience and exact inner solves --
+pivoting (Algorithm~\ref{alg:elim} with unbounded patience and exact inner solves)
 revisits a previously seen free set and cycles without terminating on \nncgFbCycles{} of
 \nncgFbSeeds{} seeds. The guarded loop, exactly as stated (default patience, CG inner
 solves), converges on all \nncgFbSeeds{}: on \nncgFbFired{} seeds the patience budget is
@@ -160,20 +160,20 @@ fast path genuinely cycles, and the fallback is what terminates it.
 \emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
 regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
 $M \in \mathbb{R}^{100\times 200}$, so every free block with $|\mathcal{F}| > m = 100$ is
-singular -- including the initial one, since the loop starts from
+singular, including the initial one, since the loop starts from
 $\mathcal{F} = \{1,\dots,n\}$. The failure at $\alpha = 0$ is instructive in its anatomy.
 When the planted support lies \emph{below} the rank, the first inner solve can never meet its
 tolerance (the residual stalls at the component of $b_{\mathcal{F}}$ outside the range of
 $A_{\mathcal{F}}$, so the iteration cap is hit and the iterate carries no certificate), yet
 the uncertified signs may still identify the support, after which the shrunken free blocks
-are regular: the loop then reaches the optimum on \nncgRankConvLow{} of five seeds -- at an
-order of magnitude more inner iterations -- and fails to converge on the remainder. When the
+are regular: the loop then reaches the optimum on \nncgRankConvLow{} of five seeds (at an
+order of magnitude more inner iterations) and fails to converge on the remainder. When the
 optimal support \emph{exceeds} the rank, the final free block is itself singular, no
 certificate is ever available, and the loop converges on \nncgRankConvHigh{} of five seeds.
 Any $\alpha > 0$ restores the $P$-matrix premise of Theorem~\ref{thm:termination}, and with
 it both reliability and speed: every run converges, recovering the planted optimum to
 $\nncgRankOkErr$. The point is sharpened rather than softened by the partial successes at
-$\alpha = 0$: what regularisation buys is not merely conditioning but the \emph{guarantee} --
+$\alpha = 0$: what regularisation buys is not merely conditioning but the \emph{guarantee};
 without it, termination is luck.
 
 \begin{table}[ht]
@@ -241,19 +241,19 @@ solver Clarabel~\cite{clarabel2024}, against Algorithm~\ref{alg:elim} with a dir
 the matrix-free CG inner solve. Figure~\ref{fig:nncg_bench} reports wall-clock times against
 $n$ at $\kappa = 10^4$; Table~\ref{tab:nncg_bench} the $\kappa$-sensitivity at $n = 500$ and
 the accuracy of every solver against the planted optimum. Three observations. First, the
-active-set loop dominates both baselines on this family -- at $n = \nncgBenchRatioN$ by a
+active-set loop dominates both baselines on this family, at $n = \nncgBenchRatioN$ by a
 factor of \nncgBenchLHvsASD{} over Lawson--Hanson and \nncgBenchIPvsASD{} over Clarabel (direct
-inner solve) -- for the structural reason of Section~\ref{sec:nonneg}: block pivoting reaches
+inner solve), for the structural reason of Section~\ref{sec:nonneg}: block pivoting reaches
 the optimal support in single-digit outer steps, where Lawson--Hanson moves one index per
 iteration and the interior point pays its Newton solves on the full $n \times n$ system.
 Second, between the two inner solvers, the \emph{direct} block solve is the faster on a dense,
-explicitly assembled $A$ -- BLAS-3 factorisations beat memory-bound mat-vecs at these sizes --
+explicitly assembled $A$ (BLAS-3 factorisations beat memory-bound mat-vecs at these sizes)
 and it is $\kappa$-insensitive, whereas the CG inner cost grows as $\sqrt\kappa$
 (Table~\ref{tab:nncg_bench}: a factor \nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$).
 The matrix-free inner solve is not the point of this dense benchmark; its regime is the one
-the operator abstraction of Section~\ref{sec:operators} targets -- Gram and structured
-operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps
--- which the companion papers quantify. Third, every solver recovers the planted optimum:
+the operator abstraction of Section~\ref{sec:operators} targets (Gram and structured
+operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps),
+which the companion papers quantify. Third, every solver recovers the planted optimum:
 Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance
 ($10^{-8}$), Clarabel to its default interior-point tolerance ($10^{-4}$); the active-set
 methods certify KKT optimality exactly rather than to a duality-gap tolerance.
@@ -280,7 +280,7 @@ at its duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
 
-Quantitative wall-clock studies on structured operators arising in applications -- including
-scaling with problem size and warm-started parametric sweeps -- are reported in the companion
+Quantitative wall-clock studies on structured operators arising in applications (including
+scaling with problem size and warm-started parametric sweeps) are reported in the companion
 papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt}, whose numerical sections instantiate
 Algorithm~\ref{alg:elim} with the matrix-free CG inner solver analysed here.
