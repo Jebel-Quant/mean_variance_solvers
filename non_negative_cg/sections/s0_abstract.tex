@@ -4,13 +4,15 @@ system $A x = b$; it does not, on its own, respect the inequality $x \geq 0$. Th
 develops \emph{non-negative conjugate gradients}: a solver for the bound-constrained
 quadratic
 \[
-  \min_{x \geq 0}\; \tfrac{1}{2}\,x^\top A x - b^\top x, \qquad A \succ 0,
-  \qquad\bigl(\text{plus a general linear system } Bx = c \text{ in the equality-augmented variant}\bigr),
+  \min_{x}\; \tfrac{1}{2}\,x^\top A x - b^\top x
+  \quad\text{subject to}\quad x \geq 0,\;\; Bx = c,
+  \qquad A \succ 0,
 \]
-and its equality-augmented and least-squares variants, that
-enforces $x \geq 0$ by wrapping
+that enforces $x \geq 0$ by wrapping
 CG in an outer active-set loop while retaining CG's $O(\sqrt\kappa)$ Krylov convergence,
-where $\kappa = \kappa(A)$ is the spectral condition number.
+where $\kappa = \kappa(A)$ is the spectral condition number. The equality system $Bx = c$ is
+present in the equality-augmented variant and absent in the plain bound-constrained and
+least-squares forms.
 
 The wrapper is a primal-dual active-set method. It solves the unconstrained system over a
 working set of \emph{free} variables, releases any that come back negative (the primal
@@ -36,8 +38,8 @@ costs two products with $M$ per iteration and no $O(n^2)$ storage. Because the i
 governed by $\kappa$, any regularisation or preconditioner that compresses the spectrum
 (including the ridge/Tikhonov splitting $A \mapsto (1-\alpha)A + \alpha R^\top R$ that also
 guarantees the $P$-matrix property) reduces the iteration count directly. We record the
-per-step and total complexity of the method against dense factorisation, and discuss its
-behaviour on synthetic SPD test problems. The algorithm serves as
+per-step and total complexity of the method against dense factorisation and first-order
+baselines, and discuss its behaviour on synthetic SPD test problems. The algorithm serves as
 the computational kernel of two companion papers, on matrix-free portfolio construction and
 on random-matrix-theory corrections to the mean-variance frontier.
 \end{abstract}

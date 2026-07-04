@@ -26,8 +26,8 @@ Projected gradient (matrix-free)     & $O(nm)$         & $O(\kappa)$            
 $A = M^\top M$, $M \in \mathbb{R}^{m \times n}$. Here $k = |\mathcal{F}| \leq n$ is the
 free-set size, $s$ the number of active-set outer steps, $\kappa = \kappa(A_\alpha)$ the
 condition number after the split~\eqref{eq:regsplit}, and $r$ the factor rank of a
-diagonal-plus-low-rank operator (Section~\ref{sec:operators}). The last four rows share the
-active-set loop and differ only in the backend~(Section~\ref{sec:operators}): matrix-free CG
+diagonal-plus-low-rank operator (Section~\ref{sec:reduction}). The last four rows share the
+active-set loop and differ only in the backend~(Section~\ref{sec:reduction}): matrix-free CG
 and the Woodbury factor solve both avoid assembling $A$, the former iteratively at
 $O(\sqrt\kappa)$ inner steps, the latter by an exact rank-$r$ inverse. The active-set rows differ only in the
 inner solve: matrix-free CG applies $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ at $O(km)$ and
@@ -251,7 +251,7 @@ explicitly assembled $A$ (BLAS-3 factorisations beat memory-bound mat-vecs at th
 and it is $\kappa$-insensitive, whereas the CG inner cost grows as $\sqrt\kappa$
 (Table~\ref{tab:nncg_bench}: a factor \nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$).
 The matrix-free inner solve is not the point of this dense benchmark; its regime is the one
-the operator abstraction of Section~\ref{sec:operators} targets (Gram and structured
+the matrix-free operator of Section~\ref{sec:reduction} targets (Gram and structured
 operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps),
 which the companion papers quantify. Third, every solver recovers the planted optimum:
 Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance
