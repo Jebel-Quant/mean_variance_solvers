@@ -68,14 +68,15 @@ the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below us
 (support $50\%$) averaged over five seeds, with the smaller $n=120$ where the projected-gradient
 $O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
 NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the comparator
-directly from their definitions; the external-solver benchmark below and the \texttt{shaw}
-ill-posed study are two further scripts whose only additional dependency is SciPy (and, for
-the benchmark, Clarabel). The algorithms are also released as the
+directly from their definitions; the matrix-free deblurring study is likewise NumPy-only,
+while the external-solver benchmark below and the \texttt{shaw}/\texttt{phillips} ill-posed
+study are two further scripts whose only additional dependency is SciPy (and, for the
+benchmark, Clarabel). The algorithms are also released as the
 open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
 suite is this study: planted recovery, the equality-augmented solve, trajectory agreement
-under inexact solves, the warm-start single-step property, the \texttt{shaw} regularisation
-sweep, and the adversarial family that
-forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
+under inexact solves, the warm-start single-step property, the \texttt{shaw}/\texttt{phillips}
+regularisation and recovery runs, the matrix-free deblurring solve, and the adversarial family
+that forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
 lets CG converge faster than the worst-case bound, so the measured growth is an
 \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a fitted exponent.
 
@@ -212,7 +213,24 @@ $\nncgReguOuter{}$ outer steps, whereas Lawson--Hanson admits a single index per
 needs on the order of $\nncgReguSupp{}$ of them; on the regularised operator this is a
 $\nncgBenchShawLHvsASCG{}\times$ wall-clock speedup at $n = \nncgBenchShawN{}$, at an identical
 solution. The official problem tells the planted one's story: without the split,
-termination is luck; with it, the guarantee holds.
+termination is luck; with it, the guarantee holds. A second Regularization Tools
+problem, \texttt{phillips}~\cite{hansen1994regutools,phillips1962} ($n = \nncgPhilN{}$), has a
+known non-negative solution that is exactly zero outside a central interval, so the active set
+is large and structured: the loop recovers the signal, certifies KKT optimality, and pins
+$\nncgPhilActive{}$ variables at the bound against the $\nncgPhilTrueZeros{}$ true zeros,
+agreeing with Lawson--Hanson to $\nncgPhilErrLH{}$.
+
+\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely; the
+method's reason for existing is the regime where that is impossible. A separable Gaussian blur
+$B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
+non-negative deconvolution~\cite{hansen2006deblurring} whose Gram operator $A = B^\top B$ has
+$n = N^2$ unknowns; the matrix-free loop (the operator solver of Section~\ref{sec:reduction},
+reaching $A$ only through $v \mapsto B^\top(Bv)$) never forms it. At $N = \nncgDeblurNside{}$,
+so $n = \nncgDeblurDim{}$, a dense $A$ would occupy $\nncgDeblurDenseGB{}$\,GB; with a ridge
+split for the $P$-matrix property the loop instead runs in $O(n)$ working memory, terminating
+in $\nncgDeblurOuter{}$ outer steps ($\nncgDeblurInner{}$ CG iterations total) with a KKT
+certificate and $\nncgDeblurActive{}$ of $\nncgDeblurDim{}$ pixels pinned at the non-negativity
+bound. Identical loop, identical proof; only the operator changes.
 
 \begin{table}[ht]
 \centering

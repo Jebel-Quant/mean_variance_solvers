@@ -43,7 +43,7 @@ import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
 
-from nncg import shaw, solve_nnqp, kkt_violation
+from nncg import shaw, phillips, solve_nnqp, kkt_violation
 
 HERE = Path(__file__).parent
 TABLES = HERE.parent / "tables"
@@ -121,6 +121,29 @@ star = next(r for r in rows if r[0] == ALPHA_STAR)
 
 
 # ---------------------------------------------------------------------------
+# A second official problem: `phillips`, with a known non-negative solution
+# (zero outside |t| < 3) -- recovery, and a large structured active set.
+# ---------------------------------------------------------------------------
+
+PHIL_N = 512
+Mp, xp_true, dp = phillips(PHIL_N)
+gp = np.random.default_rng(0).standard_normal(PHIL_N)
+dp_noisy = dp + NOISE_REL * np.linalg.norm(dp) * gp / np.linalg.norm(gp)
+Ap = ridge(Mp.T @ Mp, ALPHA_STAR)
+bp = Mp.T @ dp_noisy
+resp = solve_nnqp(Ap, bp, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
+xp = resp["x"]
+xp_lh = lawson_hanson(Ap, bp)
+phil_active = int(np.sum(xp <= 1e-8))
+phil_truezeros = int(np.sum(xp_true == 0.0))
+phil_recov = float(np.max(np.abs(xp - xp_true)))
+phil_err_lh = float(np.max(np.abs(xp - xp_lh)))
+print(f"\nphillips n = {PHIL_N}: outer {resp['outer']}, active {phil_active} "
+      f"(true zeros {phil_truezeros}), recovery |x-x*| = {phil_recov:.1e}, "
+      f"agree with LH = {phil_err_lh:.1e}")
+
+
+# ---------------------------------------------------------------------------
 # LaTeX table + macros
 # ---------------------------------------------------------------------------
 
@@ -165,5 +188,12 @@ with open(TABLES / "nncg_regu_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgReguSupp}}{{{N - star[5]}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguKKT}}{{{star[6]:.0e}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguErrLH}}{{{star[8]:.0e}}}\n")
+    # phillips: recovery of a known non-negative signal + structured active set
+    fh.write(f"\\newcommand{{\\nncgPhilN}}{{{PHIL_N}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilActive}}{{{phil_active}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilTrueZeros}}{{{phil_truezeros}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilRecov}}{{{phil_recov:.0e}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilErrLH}}{{{phil_err_lh:.0e}}}\n")
+    fh.write(f"\\newcommand{{\\nncgPhilOuter}}{{{resp['outer']}}}\n")
 print(f"Saved {TABLES / 'nncg_regu_defs.tex'}")
 print("\nDone.")
