@@ -3,6 +3,7 @@
 Implements, directly from the paper's definitions and with NumPy only:
 
   * make_problem     -- the planted-optimum synthetic SPD family (Section 7.2)
+  * shaw             -- Hansen's `shaw` ill-posed NNLS test problem (Section 7.2)
   * cg / pcg         -- (Jacobi-preconditioned) conjugate gradients (Prop. 3.1)
   * solve_nnqp       -- the active-set / block-principal-pivoting loop (Algorithm 1)
   * solve_nnqp_eq    -- its equality-augmented variant, Bx = c (Section 3)
@@ -44,6 +45,31 @@ def make_problem(n, kappa, support_frac=0.5, seed=0):
     s_star[off] = rng.uniform(0.5, 1.5, size=n - k)
     b = A @ x_star - s_star
     return A, b, x_star, s_star
+
+
+def shaw(n):
+    """The `shaw` test problem from Hansen's Regularization Tools.
+
+    A one-dimensional image-restoration model: a first-kind Fredholm integral
+    equation discretised by the midpoint rule on (-pi/2, pi/2). Returns the
+    symmetric kernel matrix M (n x n), the exact solution x (two Gaussian
+    humps, strictly positive, hence a genuine non-negative target), and the
+    right-hand side d = M x. M is numerically rank-deficient, so the Gram
+    operator A = M^T M is numerically singular; see experiment_nncg_regu.py.
+    """
+    h = np.pi / n
+    i = np.arange(1, n + 1)
+    s = (i - 0.5) * h - np.pi / 2                    # midpoints in (-pi/2, pi/2)
+    S, T = np.meshgrid(s, s, indexing="ij")
+    co = np.cos(S) + np.cos(T)
+    u = np.pi * (np.sin(S) + np.sin(T))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        sinc = np.where(u == 0.0, 1.0, np.sin(u) / u)
+    M = (co ** 2) * (sinc ** 2) * h
+    a1, c1, t1 = 2.0, 6.0, 0.8                        # Hansen's canonical params
+    a2, c2, t2 = 1.0, 2.0, -0.5
+    x = a1 * np.exp(-c1 * (s - t1) ** 2) + a2 * np.exp(-c2 * (s - t2) ** 2)
+    return M, x, M @ x
 
 
 def cg(matvec, rhs, tol=1e-8, maxit=100000, x0=None):

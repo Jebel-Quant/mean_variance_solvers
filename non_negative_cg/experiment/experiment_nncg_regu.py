@@ -43,36 +43,11 @@ import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
 
-from nncg import solve_nnqp, kkt_violation
+from nncg import shaw, solve_nnqp, kkt_violation
 
 HERE = Path(__file__).parent
 TABLES = HERE.parent / "tables"
 TABLES.mkdir(exist_ok=True)
-
-
-def shaw(n):
-    """The `shaw` test problem from Hansen's Regularization Tools.
-
-    One-dimensional image restoration model: a first-kind Fredholm integral
-    equation discretised by the midpoint rule on (-pi/2, pi/2). Returns the
-    symmetric kernel matrix M (n x n), the exact solution x (two Gaussian
-    humps, strictly positive), and the right-hand side d = M x.
-    """
-    h = np.pi / n
-    i = np.arange(1, n + 1)
-    s = (i - 0.5) * h - np.pi / 2                    # midpoints in (-pi/2, pi/2)
-    S, T = np.meshgrid(s, s, indexing="ij")
-    co = np.cos(S) + np.cos(T)
-    u = np.pi * (np.sin(S) + np.sin(T))
-    with np.errstate(divide="ignore", invalid="ignore"):
-        sinc = np.where(u == 0.0, 1.0, np.sin(u) / u)
-    M = (co ** 2) * (sinc ** 2) * h
-    # exact solution: two Gaussians (Hansen's canonical parameters)
-    a1, c1, t1 = 2.0, 6.0, 0.8
-    a2, c2, t2 = 1.0, 2.0, -0.5
-    x = a1 * np.exp(-c1 * (s - t1) ** 2) + a2 * np.exp(-c2 * (s - t2) ** 2)
-    d = M @ x
-    return M, x, d
 
 
 def ridge(gram, alpha):
@@ -187,6 +162,7 @@ with open(TABLES / "nncg_regu_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgReguKappaReg}}{{{expo_only(star[1])}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguOuter}}{{{star[3]}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguActive}}{{{star[5]}}}\n")
+    fh.write(f"\\newcommand{{\\nncgReguSupp}}{{{N - star[5]}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguKKT}}{{{star[6]:.0e}}}\n")
     fh.write(f"\\newcommand{{\\nncgReguErrLH}}{{{star[8]:.0e}}}\n")
 print(f"Saved {TABLES / 'nncg_regu_defs.tex'}")

@@ -206,7 +206,12 @@ $P$-matrix property and the loop terminates in a handful of outer steps with a K
 certificate; at the representative $\alpha = \nncgReguAlpha{}$ (which lowers $\kappa$ to
 $\nncgReguKappaReg{}$) it converges in $\nncgReguOuter{}$ outer steps with $\nncgReguActive{}$
 constraints active, agreeing with SciPy's Lawson--Hanson on the same regularised operator to
-$\nncgReguErrLH{}$. The official problem tells the planted one's story: without the split,
+$\nncgReguErrLH{}$. The speed advantage over Lawson--Hanson is the one the synthetic benchmark
+already records: the block loop reaches the $\nncgReguSupp{}$-nonzero solution in
+$\nncgReguOuter{}$ outer steps, whereas Lawson--Hanson admits a single index per pivot and so
+needs on the order of $\nncgReguSupp{}$ of them; on the regularised operator this is a
+$\nncgBenchShawLHvsASCG{}\times$ wall-clock speedup at $n = \nncgBenchShawN{}$, at an identical
+solution. The official problem tells the planted one's story: without the split,
 termination is luck; with it, the guarantee holds.
 
 \begin{table}[ht]
