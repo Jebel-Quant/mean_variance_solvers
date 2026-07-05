@@ -1,5 +1,11 @@
 \section{The RMT-Cleaned Covariance Estimator}\label{sec:rmt}
 
+Let $X \in \mathbb{R}^{T \times n}$ be the demeaned return matrix for $n$ assets
+over $T$ periods and $\hat\Sigma = X^\top X / T$ the sample covariance. This
+section replaces the noise eigenvalues of $\hat\Sigma$ with a single value,
+producing the low-rank-plus-identity estimator on which the portfolio problem of
+Section~\ref{sec:problem} is posed.
+
 \subsection{Marchenko--Pastur spectral separation}
 
 The Marchenko--Pastur (MP) law~\cite{marchenko1967} describes the limiting spectral

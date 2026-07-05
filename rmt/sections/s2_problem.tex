@@ -1,15 +1,14 @@
 \section{Problem Setup}\label{sec:problem}
 
-Let $X \in \mathbb{R}^{T \times n}$ be the demeaned return matrix for $n$ assets
-over $T$ periods. The long-only mean-variance portfolio solves
+The long-only mean-variance portfolio solves
 \[
   \min_{w}\; w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w
   \quad\text{subject to}\quad
   \mathbf{1}^\top w = 1,\quad w \geq 0\,,
 \]
 where $\rho \geq 0$ is a return-tilt weight, $\hat\mu$ is a vector of expected
-returns, and $T_0^{\mathrm{RMT}}$ is the RMT-cleaned covariance estimator defined
-in Section~\ref{sec:rmt}.\footnote{The symbol $T_0$ for the cleaned estimator
+returns, and $T_0^{\mathrm{RMT}}$ is the RMT-cleaned covariance estimator
+constructed in the previous section (Section~\ref{sec:rmt}).\footnote{The symbol $T_0$ for the cleaned estimator
 follows standard shrinkage-target notation; it is unrelated to the sample size $T$.}
 
 \begin{remark}[Why not blend with the sample covariance?]\label{rem:blend}
