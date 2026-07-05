@@ -108,7 +108,7 @@ principal submatrix $\hat\Sigma_{\mathrm{LW},\mathcal{A}}$ is SPD, and with
 $B_{\mathcal{A}}$ of full row rank the Schur elimination of Section~\ref{sec:pd} is
 well posed at every outer step. The problem is then the equality-augmented
 non-negative quadratic treated in \cite{schmelzer2026nncg}, and
-Algorithm~\ref{alg:elim} is the loop analysed there. Theorem~5.1 of
+Algorithm~\ref{alg:elim} is the loop analysed there. Theorem~4.1 of
 \cite{schmelzer2026nncg} gives finite termination at the unique global minimiser; its
 exit condition is precisely the $N = 0$ test of Algorithm~\ref{alg:elim}, which
 certifies the long-only KKT conditions.
@@ -118,11 +118,11 @@ The guarantee is unconditional (the least-index fallback removes the non-degener
 hypothesis that classical block-principal-pivoting arguments require) and it is
 robust to the inexactness of the CG inner solves: once CG's residual tolerance is tied
 to the KKT decision threshold $\varepsilon$, the inexact loop provably visits the same
-active sets as the exact one \cite[Lemma~5.1]{schmelzer2026nncg}. The fallback is a
+active sets as the exact one \cite[Lemma~4.1]{schmelzer2026nncg}. The fallback is a
 safety net that generic data never triggers: a batch step fails to make progress only
 on a codimension-one, hence non-generic, configuration of $X$, though an adversarial
 family of anti-correlated designs shows the guard is genuinely necessary
-\cite[Section~7.2]{schmelzer2026nncg}. In practice the outer loop never reaches the
+\cite[Section~6.2]{schmelzer2026nncg}. In practice the outer loop never reaches the
 fallback: across both equity universes and all shrinkage levels reported here it
 terminates in $s$ between $6$ and $18$ outer steps
 (Tables~\ref{tab:sp500}--\ref{tab:ftse}), with the active set changing by only a few
@@ -155,7 +155,7 @@ active set needs fewer primal and dual adjustments) and CG iterations (the
 initial residual is small). When the optimal support does not move between
 adjacent $\rho$ points, the warm-started loop terminates in a single outer step
 and the inner iteration count scales with the logarithm of the parameter step
-\cite[Proposition~5.2]{schmelzer2026nncg}.
+\cite[Proposition~4.2]{schmelzer2026nncg}.
 The mechanism is the same for a direct solver
 such as KKT, but KKT profits only from the warm active set: direct
 factorisation has no analogue of an initial guess.

@@ -52,7 +52,8 @@ where the budget multiplier
 $\theta = (1 - \tfrac{\rho}{2}\,\mathbf{1}^\top v_2) / (\mathbf{1}^\top v_1)$
 is recovered analytically from $\mathbf{1}^\top w^\star_\mathcal{A} = 1$.
 
-Non-negativity is enforced by the following primal-dual outer loop. Throughout,
+Non-negativity is enforced by the primal-dual active-set outer loop of the
+companion paper~\cite{schmelzer2026nncg}. Throughout,
 the objective gradient is
 \[
   g \;=\; 2\,T_0^{\mathrm{RMT}} w - \rho\,\hat\mu\,,
@@ -65,46 +66,46 @@ $g_j = 2\theta$ for every $j \in \mathcal{A}$, so the common active-set
 gradient value recovers the multiplier exactly; the implementation uses the
 median over $\mathcal{A}$, which is exact up to roundoff.
 
-\begin{itemize}
-  \item \emph{Primal step}: if $w_{\mathcal{A},i} < -\varepsilon$ for some
-        $i \in \mathcal{A}$, remove the most negative such asset and re-solve.
-  \item \emph{Dual step}: compute $g_i$ for $i \notin \mathcal{A}$ and let
-        $\nu = \mathrm{median}_{j \in \mathcal{A}}(g_j)$.
-        If $g_i < \nu - \varepsilon$ for some excluded asset, add the most
-        violated asset to $\mathcal{A}$ and re-solve.
-  \item \emph{Termination}: stop when $w_{\mathcal{A},i} \geq -\varepsilon$ for all
-        $i \in \mathcal{A}$ and $g_i \geq \nu - \varepsilon$ for all
-        $i \notin \mathcal{A}$.
-\end{itemize}
+The loop drops any active asset whose weight turns negative (the \emph{primal
+step}) and re-admits any excluded asset whose reduced gradient satisfies
+$g_i < \nu - \varepsilon$, with $\nu = \mathrm{median}_{j \in \mathcal{A}}(g_j)$
+(the \emph{dual step}), re-solving the restricted subproblem after each exchange
+and stopping once $w_{\mathcal{A},i} \geq -\varepsilon$ for all
+$i \in \mathcal{A}$ and $g_i \geq \nu - \varepsilon$ for all
+$i \notin \mathcal{A}$. These toggles are the principal pivots of the
+$P$-matrix linear complementarity problem $(T_0^{\mathrm{RMT}},\,-\rho\hat\mu)$:
+because
+$T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top \succ 0$
+for every $\mathcal{A}$ (all $\delta_j > 0$ and $\bar\lambda > 0$), every
+principal submatrix is invertible, each pivot is well defined, and the
+restricted subproblem has a unique optimum.
 
-\begin{proposition}[Finite termination]\label{prop:termination}
-Under generic non-degeneracy of the KKT conditions (no two primal weights are
-simultaneously at zero; no two excluded assets are tied for the largest dual
-violation), the primal-dual outer loop terminates in finitely many iterations.
-\end{proposition}
-
-\begin{proof}
-Since $T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$
-with $\bar\lambda > 0$ and $\delta_j > 0$ for all $j$, we have
-$T_{0,\mathcal{A}}^{\mathrm{RMT}} \succ 0$ for every $\mathcal{A}$, so the
-restricted subproblem has a unique optimum. Each outer step exchanges a single
-asset. Under the non-degeneracy assumption the restricted dual objective
-strictly decreases at each complete primal-dual exchange by the standard
-parametric QP pivot argument~\cite{nocedal2006}; consequently no active set is
-visited twice. Since the $2^n$ subsets of $\{1,\ldots,n\}$ are finite, the
-algorithm terminates.
-\end{proof}
+The outer loop, its finite-termination proof, and the pivot schedule that makes
+it robust are developed in full generality in the companion
+paper~\cite{schmelzer2026nncg} for the equality-augmented non-negative quadratic
+$\min_{x \geq 0,\, Bx = c}\tfrac12 x^\top A x - b^\top x$ with $A \succ 0$, of
+which the budget-constrained RMT problem is the instance
+$A = T_0^{\mathrm{RMT}}$, $b = \rho\hat\mu$, $B = \mathbf{1}^\top$, $c = 1$.
+Theorem~4.1 there gives finite termination at the unique global minimiser
+\emph{with no non-degeneracy assumption}: guarding a batch block-pivot fast path
+with a least-index (Bland) fallback removes the hypothesis that the classical
+parametric-QP pivot argument~\cite{nocedal2006} requires. The fallback is
+dormant on generic data yet provably necessary on an adversarial family of
+anti-correlated designs \cite[Section~6.2]{schmelzer2026nncg}. Crucially for the
+present paper, the same loop and the same proof accept a \emph{direct}
+factorisation of each free-set system in place of an iterative inner solve: the
+Woodbury solve of Section~\ref{sec:algorithm} is exactly that direct free-set
+solver, so its termination is inherited without further assumptions.
 
 \begin{remark}[Implementation safeguards]\label{rem:safeguards}
-Non-degeneracy is generic but cannot be verified a priori. The reference
-implementation therefore carries two safeguards: an iteration cap, and a check
-that the active set changed between consecutive outer steps. As an
-acceleration, assets whose weights are strongly negative
-($w_i < -10\,\varepsilon$) are dropped in bulk before the single-exchange rule
-applies; in all experiments of Section~\ref{sec:results} the safeguards never
-triggered and bulk drops did not affect the returned portfolio (the converged
-weights agree with interior-point solutions to solver accuracy,
-Section~\ref{ssec:solvers}).
+The reference implementation runs the batch fast path (assets whose weights are
+strongly negative, $w_i < -10\,\varepsilon$, are dropped together before any
+single-exchange step) and carries an iteration cap and an active-set-change
+check as a lightweight stand-in for the least-index fallback
+of~\cite{schmelzer2026nncg}. In all experiments of Section~\ref{sec:results}
+neither safeguard triggered and the batch drops did not affect the returned
+portfolio (the converged weights agree with interior-point solutions to solver
+accuracy, Section~\ref{ssec:solvers}).
 \end{remark}
 
 \begin{remark}[Tolerance scale]\label{rem:tolerance}

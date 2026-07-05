@@ -91,7 +91,11 @@ The tolerance $\varepsilon = 10^{-6}$ governs both the primal feasibility check
 (line~7: drop assets with $w < -\varepsilon$) and the dual violation threshold
 (line~12: admit assets with $g_i < \nu - \varepsilon$); see
 Remark~\ref{rem:tolerance} for its scale. This is a standard KKT tolerance for
-active-set methods~\cite{nocedal2006}.
+active-set methods~\cite{nocedal2006}. The outer loop wrapping the Woodbury
+inner solve is the primal-dual active-set method of~\cite{schmelzer2026nncg}
+(Section~\ref{sec:problem}), whose finite-termination guarantee applies here
+with the Woodbury solve as its direct free-set solver; this paper contributes
+that inner solve, not the loop.
 
 Two further features of Algorithm~\ref{alg:woodbury} deserve emphasis.
 
