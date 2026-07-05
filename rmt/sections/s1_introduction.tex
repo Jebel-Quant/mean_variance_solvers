@@ -23,15 +23,15 @@ roughly $300$ times better conditioned than $\hat\Sigma$.
 
 Implementations of CRE cleaning in the public domain typically form
 $T_0^{\mathrm{RMT}}$ as a dense $n \times n$ matrix and pass it to a
-general-purpose solver (CVXPY, interior-point, etc.); see e.g.\ the reference
+general-purpose quadratic-program solver; see e.g.\ the reference
 implementations accompanying~\cite{lopezdeprado2018}. This paper exploits the
 low-rank-plus-identity structure
 $T_0^{\mathrm{RMT}} = \bar\lambda I + U_k \Delta_k U_k^\top$, which renders
 the matrix inverse available in closed form via the Woodbury identity, without
 assembling either the $n \times n$ covariance or the $n_a \times n_a$ active-set
 restriction. The result is a direct active-set portfolio solver that is
-substantially faster than both general-purpose interior-point solvers and the
-KKT-Cholesky approach of assembling the restricted system and factoring.
+substantially faster than the KKT-Cholesky approach of assembling the restricted
+system and factoring.
 Exploiting factor structure in portfolio quadratic programmes via the
 Sherman--Morrison--Woodbury identity goes back at least to
 Perold~\cite{perold1984}; the contribution here is the combination with
@@ -71,11 +71,10 @@ the Woodbury structure, whereas statistically richer cleanings (nonlinear
 shrinkage and general rotationally invariant estimators) do not.
 
 \emph{Fourth, empirical validation.} We compare Woodbury directly against
-KKT-Cholesky, a tuned interior-point baseline (Clarabel called natively on
-pre-assembled data), and CVXPY on the same RMT problem
-(Section~\ref{sec:results}), with optimality cross-checks of the returned
-weights and an exact critical-line sweep built on the same Woodbury kernel that
-traces every frontier breakpoint (Section~\ref{ssec:cla}). A $k$-sensitivity
+KKT-Cholesky on the same RMT problem (Section~\ref{sec:results}), with a KKT
+optimality certificate for the returned weights and an exact critical-line sweep
+built on the same Woodbury kernel that traces every frontier breakpoint
+(Section~\ref{ssec:cla}). A $k$-sensitivity
 audit shows the MP threshold is not a sensitive hyperparameter
 (Section~\ref{sec:ksensitivity}), and rolling out-of-sample backtests on two
 universes (S\&P~500 and FTSE~100) show the cleaned estimator carries no

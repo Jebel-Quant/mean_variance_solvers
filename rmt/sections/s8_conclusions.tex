@@ -19,11 +19,10 @@ correction matrix $W$ instead, cheaper in flops precisely when $k < n_a$
 (Proposition~\ref{prop:crossover}), which holds throughout the long-only
 equity regime. The measured wall-clock advantage is $5\times$ warm and
 $19\times$ cold vs KKT-Cholesky on a $50$-point synthetic frontier sweep, and
-more than $20\times$ cold on a real S\&P~500 minimum-variance solve. Against
-interior-point solvers the advantage is two orders of magnitude (Clarabel
-called natively) and over three orders of magnitude (CVXPY out of the box).
-The returned weights agree with interior-point solutions to solver accuracy
-and attain marginally lower objective values. The same Woodbury kernel powers
+more than $20\times$ cold on a real S\&P~500 minimum-variance solve.
+The returned weights satisfy the KKT optimality conditions to solver accuracy,
+and Woodbury reproduces the KKT-Cholesky solution to machine precision. The same
+Woodbury kernel powers
 an exact critical-line sweep that traces all $144$ frontier breakpoints for
 the cost of a $50$-point grid (Section~\ref{ssec:cla}).
 
