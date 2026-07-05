@@ -39,47 +39,48 @@ RMT-determined structure, randomised preprocessing, and an end-to-end
 complexity and accuracy account.
 
 \paragraph{Contributions}
-This paper makes four contributions: the Woodbury treatment, the crossover
-analysis, the rSVD preprocessing treatment, and the total pipeline complexity
-accounting developed here.
+This paper makes three algorithmic contributions and one empirical
+contribution.
 
-\emph{First}, we give a complete treatment of the randomised SVD preprocessing
-step (Section~\ref{sec:preprocessing}). The companion paper uses a dense
-eigendecomposition of $\hat\Sigma$ for simplicity; at large $n$ this
-costs $O(n^2 T + n^3)$ and re-introduces the $n^2$ storage the matrix-free
-approach aims to avoid. A randomised truncated SVD applied directly to $X$
-computes the top-$k$ eigenpairs of $\hat\Sigma$ in $O(nTk)$ time and $O(nk)$
-storage; the measured portfolio impact of the approximation is below three
-basis points in any weight. For daily rolling windows we additionally
-implement an incremental rank-two update of the tracked eigenpairs that
-avoids re-sketching altogether.
+\emph{First, a direct Woodbury portfolio solver.} The low-rank-plus-identity
+form of $T_0^{\mathrm{RMT}}$ renders the active-set inner solve available in
+closed form via the Woodbury identity, at $O(n_a k^2 + k^3)$ per outer step in
+place of the $O(n_a^2 k + n_a^3)$ assemble-and-factor cost, without forming
+either the $n \times n$ covariance or its $n_a \times n_a$ active-set
+restriction (Section~\ref{sec:algorithm}). We derive the exact crossover
+condition against KKT-Cholesky (Proposition~\ref{prop:crossover}): the Woodbury
+inner solve is cheaper per outer step precisely when $k < n_a$, a condition
+satisfied throughout the long-only equity regime ($k/n_a$ between roughly $0.2$
+and $0.7$ in our experiments), and we account for the total pipeline cost over
+a sweep of $S$ related solves (Proposition~\ref{prop:pipeline}), under which the
+$O(nTk)$ preprocessing amortises to $O(nTk/S)$ per solve.
 
-\emph{Second}, we derive the exact crossover condition for Woodbury vs.\
-KKT-Cholesky (Proposition~\ref{prop:crossover}): the Woodbury inner solve
-requires fewer flops per outer step precisely when $k < n_a$, a condition
-satisfied throughout the long-only equity regime
-($k/n_a$ between roughly $0.2$ and $0.7$ in our experiments). We also account
-for the total pipeline cost over a sweep of $S$ related solves
-(Proposition~\ref{prop:pipeline}), under which the $O(nTk)$ preprocessing
-amortises to $O(nTk/S)$ per solve.
+\emph{Second, randomised-SVD preprocessing.} The naive path forms $\hat\Sigma$
+and takes a dense eigendecomposition, at $O(n^2 T + n^3)$ cost and $O(n^2)$
+storage. A randomised truncated SVD applied directly to $X$ computes the
+top-$k$ eigenpairs of $\hat\Sigma$ in $O(nTk)$ time and $O(nk)$ storage
+(Section~\ref{sec:preprocessing}); the measured portfolio impact of the
+approximation is below three basis points in any weight. For daily rolling
+windows we additionally implement an incremental rank-two update of the tracked
+eigenpairs that avoids re-sketching altogether.
 
-\emph{Third}, we provide a direct numerical comparison of Woodbury against
-KKT-Cholesky, a tuned interior-point baseline (Clarabel called natively on
-pre-assembled data), and CVXPY on the same RMT problem
-(Section~\ref{sec:results}), together with optimality cross-checks of the
-returned weights, an exact critical-line sweep built on the same Woodbury
-kernel that traces every frontier breakpoint (Section~\ref{ssec:cla}), a
-$k$-sensitivity audit showing that the MP threshold choice
-is not a sensitive hyperparameter (Section~\ref{sec:ksensitivity}), and an
-out-of-sample backtest on two universes (S\&P~500 and FTSE~100) showing
-that the cleaned estimator carries no measurable statistical penalty relative
-to standard shrinkage (Section~\ref{ssec:oos}).
-
-\emph{Fourth}, we delineate the scope of the structural trick
+\emph{Third, the scope of the structural trick}
 (Remarks~\ref{rem:rie} and~\ref{rem:ridge}): ridge terms, diagonal loadings,
 externally specified factor models, and linear equality constraints preserve
 the Woodbury structure, whereas statistically richer cleanings (nonlinear
 shrinkage and general rotationally invariant estimators) do not.
+
+\emph{Fourth, empirical validation.} We compare Woodbury directly against
+KKT-Cholesky, a tuned interior-point baseline (Clarabel called natively on
+pre-assembled data), and CVXPY on the same RMT problem
+(Section~\ref{sec:results}), with optimality cross-checks of the returned
+weights and an exact critical-line sweep built on the same Woodbury kernel that
+traces every frontier breakpoint (Section~\ref{ssec:cla}). A $k$-sensitivity
+audit shows the MP threshold is not a sensitive hyperparameter
+(Section~\ref{sec:ksensitivity}), and rolling out-of-sample backtests on two
+universes (S\&P~500 and FTSE~100) show the cleaned estimator carries no
+measurable statistical penalty relative to standard shrinkage
+(Section~\ref{ssec:oos}).
 
 \paragraph{Relation to existing work}
 Laloux et al.~\cite{laloux1999} and Plerou et al.~\cite{plerou1999} introduced
@@ -116,9 +117,10 @@ primal-dual active-set solver including the Woodbury inner solve, and
 Section~\ref{sec:preprocessing} develops the rSVD preprocessing independently.
 
 \paragraph{Outline}
-Section~\ref{sec:problem} states the problem. Section~\ref{sec:rmt} constructs
-the cleaned estimator. Section~\ref{sec:algorithm} develops the Woodbury portfolio
-algorithm and the crossover analysis. Section~\ref{sec:preprocessing} covers
-randomised SVD preprocessing. Section~\ref{sec:ksensitivity} analyses sensitivity
-to the threshold $k$. Section~\ref{sec:results} reports timing, scaling, and
-out-of-sample results. Section~\ref{sec:conclusions} concludes.
+Section~\ref{sec:rmt} constructs the cleaned estimator.
+Section~\ref{sec:problem} states the long-only problem.
+Section~\ref{sec:algorithm} develops the active-set reduction, the Woodbury
+portfolio algorithm, and the crossover analysis. Section~\ref{sec:preprocessing} covers
+randomised SVD preprocessing. Section~\ref{sec:results} reports timing, scaling,
+threshold sensitivity (Section~\ref{sec:ksensitivity}), and out-of-sample
+results. Section~\ref{sec:conclusions} concludes.
