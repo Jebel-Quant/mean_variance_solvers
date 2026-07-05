@@ -1,34 +1,34 @@
 \begin{abstract}
-The sample covariance matrix of equity returns is severely ill-conditioned:
-a small number of pervasive risk factors dominate the eigenvalue spectrum
-while several hundred noise eigenvalues crowd near zero. Random matrix theory
-identifies the signal factors via the Marchenko--Pastur bulk edge and replaces
-the noise eigenvalues with their average, yielding the trace-preserving
-``constant residual eigenvalue'' (CRE) estimator
-$T_0^{\mathrm{RMT}} = \bar\lambda I + U_k\Delta_k U_k^\top$, which on a
-five-year S\&P~500 sample improves the condition number by a factor of
-roughly~$300$.
+The sample covariance matrix of equity returns is severely ill-conditioned: a
+small number of pervasive risk factors dominate the spectrum while several hundred
+noise directions crowd the correlation bulk. Random matrix theory cleans the
+sample \emph{correlation} $C = D^{-1/2}\hat\Sigma\,D^{-1/2}$: it identifies the
+signal factors via the Marchenko--Pastur bulk edge and replaces the noise
+eigenvalues with their average, yielding the trace-preserving ``constant residual
+eigenvalue'' (CRE) estimator $C_0 = \bar\mu I + U_k\Delta_k U_k^\top$, which on a
+five-year S\&P~500 sample improves the condition number of the correlation by a
+factor of roughly $290$ (to $\kappa \approx 313$).
 
-We exploit the low-rank-plus-identity structure of this estimator: the Woodbury
-identity gives the exact inverse of the active-set system at
-$O(n_a k^2 + k^3)$ per outer step of a primal-dual active-set method,
-replacing the $O(n_a^2 k + n_a^3)$ assemble-and-factor approach. The $p$ linear
-balance constraints $Bw=c$ (the fully-invested budget $\mathbf{1}^\top w = 1$ as
-the leading case) are eliminated analytically through a $p \times p$ Schur
-complement. The Woodbury
-solve requires fewer flops precisely when $k < n_a$, a condition that holds
-throughout the long-only equity regime. The requisite eigenpairs are computed
-once by a randomised SVD applied directly to the return matrix at $O(nTk)$,
-without forming $\hat\Sigma$, so that for a sweep of $S$ related solves the
-preprocessing amortises to $O(nTk/S)$ per solve.
+The minimum-variance portfolio is solved in the standardised coordinates
+$y = D^{1/2}w$ ($D$ the asset variances), an exact change of variables that poses
+the problem against $C_0$. We exploit its scalar-identity-plus-low-rank structure:
+the Woodbury identity gives the exact inverse of the active-set system at
+$O(n_a k^2 + k^3)$ per outer step of a primal-dual active-set method, replacing the
+$O(n_a^2 k + n_a^3)$ assemble-and-factor approach. The $p$ linear balance
+constraints $Bw=c$ (the fully-invested budget $\mathbf{1}^\top w = 1$ as the
+leading case) are eliminated analytically through a $p \times p$ Schur complement.
+The Woodbury solve requires fewer flops when $k < n_a$, which holds across
+essentially all of the long-only frontier. The requisite eigenpairs are computed
+once by a randomised SVD applied directly to the return matrix at $O(nTk)$, without
+forming $\hat\Sigma$, so that for a sweep of $S$ related solves the preprocessing
+amortises to $O(nTk/S)$ per solve.
 
 On efficient-frontier sweeps the measured advantage over the assemble-and-factor
-baseline is fivefold warm and roughly twentyfold cold, growing with $n$, and an
-exact critical-line sweep built on the same kernel traces every frontier
-breakpoint for the cost of a coarse grid.
-The returned weights satisfy the KKT optimality conditions to solver accuracy, the
-Marchenko--Pastur threshold is shown to be an insensitive hyperparameter, and
-rolling out-of-sample backtests on two universes confirm that the cleaned
-estimator carries no measurable statistical penalty relative to standard
-shrinkage.
+baseline is fivefold warm and roughly fifteenfold cold, growing with $n$, and an
+exact critical-line sweep built on the same kernel traces the frontier for the cost
+of a coarse grid. The returned weights satisfy the KKT optimality conditions to
+solver accuracy, the Marchenko--Pastur threshold is shown to be an insensitive
+hyperparameter, and rolling out-of-sample backtests on two universes confirm that
+the cleaned estimator carries no measurable statistical penalty relative to
+standard shrinkage.
 \end{abstract}

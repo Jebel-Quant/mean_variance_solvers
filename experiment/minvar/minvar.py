@@ -114,32 +114,40 @@ def oas_alpha_and_target(x: Matrix) -> tuple[float, Matrix]:
 
 
 def rmt_target_and_alpha(x: Matrix) -> tuple[Matrix, tuple[float, Matrix, Vector], int, float]:
-    """RMT-clipped shrinkage target with ``alpha = 1``.
+    """RMT-clipped *correlation* target ``C0`` with ``alpha = 1``.
 
-    Sample-covariance eigenvalues above the Marchenko-Pastur bulk edge
-    ``bar_lambda * (1 + sqrt(n/T))^2`` are kept (signal); the rest are clipped
-    to the noise floor ``bar_lambda``. The target is
+    Random-matrix cleaning is applied to the sample correlation
+    ``C = D^{-1/2} Sigma D^{-1/2}`` (``D = diag(Sigma)``), whose Marchenko-Pastur
+    bulk edge is ``(1 + sqrt(n/T))^2`` (unit variance for standardised returns).
+    Correlation eigenvalues above the edge are kept (signal); the rest are
+    clipped to the trace-preserving noise floor ``mu_bar = (n - sum lambda_k)/(n - k)``,
+    giving the scalar-identity-plus-low-rank cleaned correlation
 
-        T0 = bar_lambda * I + U_k @ diag(lambda_k - bar_lambda) @ U_k^T
+        C0 = mu_bar * I + U_k @ diag(lambda_k - mu_bar) @ U_k^T.
 
-    over the ``k`` signal eigenpairs. Returns ``(target, lr_factors, k, 1.0)``
-    where ``lr_factors = (bar_lambda, U_k, delta_k)`` feeds the low-rank
-    :class:`~cvx.linalg.FactorOperator` path.
+    The minimum-variance problem is solved in the standardised coordinates
+    ``y = D^{1/2} w`` against ``C0`` (the paper's change of variables): because
+    ``w >= 0 <=> y >= 0`` and ``w^T Sigma0 w = y^T C0 y`` this is exact, and it
+    keeps the well-conditioned scalar-identity Woodbury path. The caller maps the
+    solution back with ``w = D^{-1/2} y``. Returns ``(C0, lr_factors, k, 1.0)``
+    with ``lr_factors = (mu_bar, U_k, delta_k)``.
     """
     t, n = x.shape
     cov = (x.T @ x) / t
-    bar_lam = float(np.trace(cov) / n)
-    mp_upper = bar_lam * (1.0 + np.sqrt(n / t)) ** 2
+    std = np.sqrt(np.diag(cov))
+    corr = cov / np.outer(std, std)  # sample correlation (unit diagonal)
+    mp_upper = (1.0 + np.sqrt(n / t)) ** 2  # MP edge, sigma^2 = 1 for a correlation
 
-    eigs, vecs = np.linalg.eigh(cov)  # ascending
+    eigs, vecs = np.linalg.eigh(corr)  # ascending
     signal = eigs > mp_upper
     k = int(signal.sum())
     eigs_k = eigs[signal]
     vecs_k = vecs[:, signal]
 
-    delta_k = eigs_k - bar_lam
-    target = bar_lam * np.eye(n) + vecs_k @ np.diag(delta_k) @ vecs_k.T
-    lr_factors = (bar_lam, vecs_k, delta_k)
+    mu_bar = float((n - eigs_k.sum()) / (n - k))  # trace-preserving bulk mean (tr C = n)
+    delta_k = eigs_k - mu_bar
+    target = mu_bar * np.eye(n) + vecs_k @ np.diag(delta_k) @ vecs_k.T
+    lr_factors = (mu_bar, vecs_k, delta_k)
     return target, lr_factors, k, 1.0
 
 
@@ -169,8 +177,9 @@ class MinVarProblem:
         rho: Return-tilt coefficient (``0`` for pure minimum variance).
         mu: Optional ``(n,)`` expected-return vector (used when ``rho != 0``).
         target_lr: Optional ``(bar_lambda, U_k, delta_k)`` low-rank factors of a
-            diagonal-plus-low-rank target, applied through a
-            :class:`~cvx.linalg.FactorOperator` (never formed at ``n x n``).
+            scalar-identity-plus-low-rank target ``bar_lambda*I + U_k diag(delta_k) U_k^T``,
+            applied through a :class:`~cvx.linalg.FactorOperator` (never formed at
+            ``n x n``).
         B: Optional ``(p, n)`` balance system; ``None`` is the budget ``1^T w = 1``.
         c: Optional ``(p,)`` balance targets.
     """

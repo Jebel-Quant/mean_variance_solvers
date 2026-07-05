@@ -1,165 +1,149 @@
-\section{The RMT-Cleaned Covariance Estimator}\label{sec:rmt}
+\section{The RMT-Cleaned Correlation Estimator}\label{sec:rmt}
 
 Let $X \in \mathbb{R}^{T \times n}$ be the demeaned return matrix for $n$ assets
-over $T$ periods and $\hat\Sigma = X^\top X / T$ the sample covariance. This
-section replaces the noise eigenvalues of $\hat\Sigma$ with a single value,
-producing the low-rank-plus-identity estimator on which the portfolio problem of
-Section~\ref{sec:problem} is posed.
+over $T$ periods, $\hat\Sigma = X^\top X / T$ the sample covariance,
+$D = \mathrm{diag}(\hat\Sigma)$ the diagonal of asset variances, and
+$C = D^{-1/2}\hat\Sigma\,D^{-1/2}$ the sample correlation. Individual variances are
+well estimated even in the high-dimensional regime; the noise that destabilises
+the portfolio lives in the \emph{correlation} structure. Random-matrix cleaning is
+therefore applied to $C$, whose Marchenko--Pastur bulk is a clean band, and the
+cleaned covariance is rebuilt as $\Sigma_0 = D^{1/2} C_0 D^{1/2}$. The
+minimum-variance problem is solved in the standardised coordinates $y = D^{1/2} w$
+(Section~\ref{sec:algorithm}), which recovers the scalar-identity Woodbury
+structure and its conditioning.
 
 \subsection{Marchenko--Pastur spectral separation}
 
 The Marchenko--Pastur (MP) law~\cite{marchenko1967} describes the limiting spectral
-distribution of $\hat\Sigma = X^\top X / T$ when $X$ has i.i.d.\ entries with
-variance $\sigma^2$ and $n, T \to \infty$ with $n/T \to c \in (0,1)$. Under the
-null hypothesis that $\hat\Sigma$ is a rescaled Wishart matrix (no true signal),
-the bulk of the empirical spectral distribution (ESD) is supported on
-$[\lambda_-, \lambda_+]$ where
+distribution of a sample correlation of standardised series when $n, T \to \infty$
+with $n/T \to c \in (0,1)$. Under the null of no correlation structure the bulk of
+the empirical spectral distribution is supported on $[\lambda_-, \lambda_+]$ where
 \[
-  \lambda_{\pm} = \sigma^2(1 \pm \sqrt{c})^2\,.
+  \lambda_{\pm} = (1 \pm \sqrt{c})^2\,,
 \]
-In finite samples, $\sigma^2$ is estimated by the average entry-level variance
-$\hat\sigma^2 = \norm{X}_F^2/(nT) = \mathrm{tr}(\hat\Sigma)/n$ (the grand mean
-eigenvalue) and $c$ is replaced by $n/T$, giving the empirical edges
-$\hat\lambda_\pm = \hat\sigma^2(1 \pm \sqrt{n/T})^2$.
+the unit-variance form ($\sigma^2 = 1$) that a correlation matrix enforces by
+construction, $\mathrm{tr}(C) = n$. In finite samples $c$ is replaced by $n/T$,
+giving the empirical upper edge $\hat\lambda_+ = (1 + \sqrt{n/T})^2$.
 
-Eigenvalues above $\hat\lambda_+$ are not explained by the null and are attributed
-to genuine covariance structure. Eigenvalues below $\hat\lambda_+$ are consistent
-with noise and carry no reliable directional information. We denote by $k$ the
-number of signal eigenvalues: $k = |\{j : \lambda_j(\hat\Sigma) > \hat\lambda_+\}|$.
-For S\&P~500 data with $n=494$ and $T=1213$, $\hat\lambda_+ \approx 1.22 \times 10^{-3}$
-and $k = 23$; for the factor-calibrated synthetic model of
-Section~\ref{sec:results}, the detected $k$ grows approximately as $n/21$ in this
-regime.
+Correlation eigenvalues above $\hat\lambda_+$ carry genuine factor structure;
+those below are consistent with noise and carry no reliable directional
+information. We denote by $k$ the number of signal eigenvalues,
+$k = |\{j : \lambda_j(C) > \hat\lambda_+\}|$. For S\&P~500 data with $n = 494$ and
+$T = 1213$, $\hat\lambda_+ \approx 2.28$ and $k = 17$; for the factor-calibrated
+synthetic model of Section~\ref{sec:results} the detected $k$ grows roughly as
+$n/24$ in this regime. Working with the correlation rather than the covariance
+matters here: the covariance mixes the (well-estimated) variances into the
+spectrum, so its bulk is not a clean MP band and the edge $\hat\lambda_+$ has no
+scale-free form.
 
-\subsection{Construction of \texorpdfstring{$T_0^{\mathrm{RMT}}$}{T0RMT}}
+\subsection{Construction of \texorpdfstring{$C_0$}{C0} and the cleaned covariance}
 
-Let $\hat\Sigma = U\Lambda U^\top$ be the eigendecomposition of the sample
-covariance. Partition the eigenpairs by the MP edge: let
-$U_k \in \mathbb{R}^{n \times k}$ hold the $k$ signal eigenvectors with
-eigenvalues $\Lambda_k = \mathrm{diag}(\lambda_1, \ldots, \lambda_k)$, and let
-$U_0 \in \mathbb{R}^{n \times (n-k)}$ hold the noise eigenvectors. The bulk
-eigenvalues are replaced by their average,
+Let $C = U\Lambda U^\top$ be the eigendecomposition of the sample correlation.
+Partition the eigenpairs by the MP edge: $U_k \in \mathbb{R}^{n \times k}$ holds
+the $k$ signal eigenvectors with $\Lambda_k = \mathrm{diag}(\lambda_1,\ldots,\lambda_k)$,
+and $U_0$ the noise eigenvectors. The bulk eigenvalues are replaced by their
+average,
 \[
-  \bar\lambda
+  \bar\mu
   \;=\; \frac{1}{\,n-k\,}\sum_{j > k} \lambda_j
-  \;=\; \frac{\mathrm{tr}(\hat\Sigma) - \sum_{j \leq k}\lambda_j}{n-k}\,,
+  \;=\; \frac{n - \sum_{j \leq k}\lambda_j}{n-k}\,,
 \]
-which preserves the trace (total variance) of the sample covariance.
-The resolution of the identity $U_k U_k^\top + U_0 U_0^\top = I$ gives
+which preserves the trace $\mathrm{tr}(C) = n$. The resolution of the identity
+$U_kU_k^\top + U_0U_0^\top = I$ yields the ``constant residual eigenvalue'' (CRE),
+or eigenvalue-clipping, cleaned correlation of Laloux et
+al.~\cite{laloux1999} and Bun, Bouchaud and Potters~\cite{bun2017} (popularised
+for practitioners by L\'opez de Prado~\cite{lopezdeprado2018}),
 \[
-  T_0^{\mathrm{RMT}}
-  = U_k \Lambda_k U_k^\top + \bar\lambda\, U_0 U_0^\top
-  = \bar\lambda I + U_k \Delta_k U_k^\top\,,
+  C_0
+  = U_k \Lambda_k U_k^\top + \bar\mu\, U_0 U_0^\top
+  = \bar\mu\, I + U_k \Delta_k U_k^\top\,,
+  \qquad
+  \Delta_k = \Lambda_k - \bar\mu I = \mathrm{diag}(\delta_1,\ldots,\delta_k)\,,
 \]
-where
-$\Delta_k = \Lambda_k - \bar\lambda I = \mathrm{diag}(\delta_1, \ldots, \delta_k)$
-with $\delta_j = \lambda_j - \bar\lambda > 0$ for all $j$ (since
-$\lambda_j > \hat\lambda_+ > \hat\sigma^2 > \bar\lambda$).
-This is exactly the ``constant residual eigenvalue'' (CRE), or eigenvalue
-clipping, estimator introduced by Laloux et al.~\cite{laloux1999} and studied
-in depth by Bun, Bouchaud and Potters~\cite{bun2017}. It was later popularised
-among quantitative-finance practitioners by L\'opez de
-Prado~\cite{lopezdeprado2018}, whose accessible implementations brought the
-method to a wide audience; the estimator itself is due to the earlier
-random-matrix literature.
+scalar-identity-plus-low-rank, with $\delta_j = \lambda_j - \bar\mu > 0$.
 
-\begin{proposition}[Spectral properties of $T_0^{\mathrm{RMT}}$]\label{prop:rmt_spectrum}
-The RMT-cleaned estimator satisfies:
+The cleaned covariance is $\Sigma_0 = D^{1/2} C_0 D^{1/2}$. Because $D^{1/2}$ is
+positive-diagonal, $\Sigma_0 \succ 0$, and the change of variables $y = D^{1/2} w$
+turns the minimum-variance problem $\min_w w^\top \Sigma_0 w$ subject to $Bw = c$,
+$w \geq 0$ into
+\[
+  \min_{y}\; y^\top C_0\, y
+  \quad\text{subject to}\quad
+  B D^{-1/2}\, y = c,\quad y \geq 0\,,
+\]
+exactly (Section~\ref{sec:algorithm}), since $w^\top\Sigma_0 w = y^\top C_0 y$ and
+$w \geq 0 \Leftrightarrow y \geq 0$. The solve therefore runs against the
+scalar-identity-plus-low-rank $C_0$, not the diagonal-plus-low-rank $\Sigma_0$.
+
+\begin{proposition}[Spectral properties of $C_0$]\label{prop:rmt_spectrum}
+The cleaned correlation satisfies:
 \begin{enumerate}
-  \item $T_0^{\mathrm{RMT}} \succ 0$ with eigenvalues
-        $\{\lambda_1, \ldots, \lambda_k, \bar\lambda, \ldots, \bar\lambda\}$,
-        and $\mathrm{tr}(T_0^{\mathrm{RMT}}) = \mathrm{tr}(\hat\Sigma)$.
-  \item $\kappa(T_0^{\mathrm{RMT}}) = \lambda_{\max}(\hat\Sigma) / \bar\lambda$.
-  \item $T_0^{\mathrm{RMT}} = \hat\Sigma - U_0(\Lambda_0 - \bar\lambda I)U_0^\top$,
-        i.e., $T_0^{\mathrm{RMT}}$ differs from $\hat\Sigma$ only in the noise subspace.
-  \item The matrix-vector product $T_0^{\mathrm{RMT}} v = \bar\lambda v + U_k(\Delta_k(U_k^\top v))$
+  \item $C_0 \succ 0$ with eigenvalues
+        $\{\lambda_1, \ldots, \lambda_k, \bar\mu, \ldots, \bar\mu\}$
+        and $\mathrm{tr}(C_0) = n$.
+  \item $\kappa(C_0) = \lambda_{\max}(C) / \bar\mu$.
+  \item $C_0 = C - U_0(\Lambda_0 - \bar\mu I)U_0^\top$: it differs from $C$ only in
+        the noise subspace.
+  \item The matrix-vector product $C_0 v = \bar\mu v + U_k(\Delta_k(U_k^\top v))$
         costs $O(nk)$ and requires $O(nk)$ storage.
 \end{enumerate}
 \end{proposition}
 
 \begin{proof}
-(1) follows from the eigendecomposition $T_0^{\mathrm{RMT}} = [U_k\;U_0]\,
-\mathrm{diag}(\Lambda_k, \bar\lambda I_{n-k})\,[U_k\;U_0]^\top$,
-$\delta_j > 0$ for all signal eigenpairs, and the definition of $\bar\lambda$
-as the bulk average.
-(2) follows from (1): the maximum eigenvalue is $\lambda_1 > 0$ and the minimum
-is $\bar\lambda > 0$.
+(1) follows from the eigendecomposition
+$C_0 = [U_k\;U_0]\,\mathrm{diag}(\Lambda_k, \bar\mu I_{n-k})\,[U_k\;U_0]^\top$,
+$\delta_j > 0$ for the signal eigenpairs, and the definition of $\bar\mu$; the
+trace is preserved.
+(2) the extreme eigenvalues are $\lambda_1$ and $\bar\mu$.
 (3) is direct algebra.
-(4) The product costs two dense matrix-vector products with $U_k \in \mathbb{R}^{n \times k}$.
+(4) two dense products with $U_k \in \mathbb{R}^{n \times k}$.
 \end{proof}
 
-\begin{remark}[Condition number]
-$T_0^{\mathrm{RMT}}$ achieves $\kappa = \lambda_{\max}(\hat\Sigma)/\bar\lambda$:
-noise eigenvalues are lifted to the floor $\bar\lambda$, signal eigenvalues are
-preserved. On S\&P~500 data this gives $\kappa \approx 343$, versus
-$\kappa(\hat\Sigma) \approx 106{,}000$, an improvement by a factor of roughly
-$300$. The low condition number is a consequence of replacing the
-$(n-k)$-dimensional noise subspace eigenvalue spectrum (which spans
-several decades) with a single value $\bar\lambda$; it also keeps the
-$k \times k$ Woodbury correction matrix $W$ well-conditioned regardless of $n$.
+\begin{remark}[Condition number]\label{rem:kappa}
+Cleaning lifts the noise floor of the correlation to $\bar\mu$ while preserving the
+signal, so $\kappa(C_0) = \lambda_{\max}(C)/\bar\mu \approx 313$ on S\&P~500 data,
+against $\kappa(C) \approx 91{,}000$ for the sample correlation (and
+$\kappa(\hat\Sigma) \approx 106{,}000$ for the sample covariance): an improvement
+of roughly $290\times$. Solving in the standardised coordinates $y = D^{1/2}w$
+inherits this conditioning. The rebuilt covariance $\Sigma_0$ is itself far worse
+conditioned ($\kappa(\Sigma_0) \approx 1{,}400$, inflated by the spread of asset
+variances, a factor of $\approx 49$ between the largest and smallest on this
+sample), which is precisely why the solve is posed in $y$. The single noise floor
+also keeps the $k \times k$ Woodbury correction matrix well-conditioned regardless
+of $n$.
 \end{remark}
 
 \begin{remark}[Relation to optimal RMT cleaning]\label{rem:rie}
-CRE clipping is the simplest member of the family of rotationally invariant
-estimators (RIE). It is not loss-optimal: the oracle RIE replaces \emph{every}
-eigenvalue (bulk and signal alike) by a value determined by the
-eigenvector overlaps of Ledoit and P\'ech\'e~\cite{ledoitpeche2011}, and these
-oracle values are not constant across the bulk; nonlinear
-shrinkage~\cite{ledoit2012,ledoit2020} and the RIE of Bun et
-al.~\cite{bun2017} dominate clipping in Frobenius loss. In particular, CRE
-retains the signal eigenvalues unshrunk although eigenvalues just above the
-edge are biased upward and their eigenvectors imperfectly aligned with the
-population factors (the BBP transition~\cite{baik2005,johnstone2001}). The
-reason this paper nevertheless works with CRE is structural: clipping is the
-member of the family whose output is \emph{low-rank-plus-identity}
-(a spiked structure in the sense of Johnstone~\cite{johnstone2001}), and only
-that structure admits the closed-form Woodbury solve of
-Section~\ref{sec:algorithm}. Nonlinear shrinkage and general RIE produce
-full-rank spectral modifications to which the Woodbury identity does not
-apply; portfolios built on them require a general factorisation. Whether the
-statistical gap matters for long-only minimum-variance portfolios is an
-empirical question; on our data it is small
-(Section~\ref{ssec:oos}).
+CRE clipping is the simplest rotationally invariant estimator (RIE) and is not
+loss-optimal: nonlinear shrinkage~\cite{ledoit2012,ledoit2020} and the oracle RIE
+of Ledoit--P\'ech\'e and Bun et al.~\cite{ledoitpeche2011,bun2017}, which reshape
+\emph{every} eigenvalue, dominate it in Frobenius loss. We nevertheless use CRE
+for a structural reason: clipping is the only member of the family whose cleaned
+correlation is \emph{scalar-identity-plus-low-rank}, the spiked
+form~\cite{johnstone2001} that admits the closed-form Woodbury solve of
+Section~\ref{sec:algorithm}; full-rank RIE modifications would require a general
+factorisation. Whether the statistical gap matters for long-only minimum variance
+is an empirical question, and on our data it is small (Section~\ref{ssec:oos}).
 \end{remark}
 
 \begin{remark}[Externally specified factor models]\label{rem:external_factors}
-The MP threshold provides a data-driven rule for selecting $k$, but the Woodbury
-solver applies for any choice of $k$. Practitioners with an external factor model
-(a commercial risk model with pre-specified style and industry factors, or a PCA
-with $k$ fixed by cross-validation) can set $k = k_{\mathrm{ext}}$ and supply
-the corresponding eigenpairs directly, bypassing the MP threshold entirely. The
-key structural assumption for the Woodbury solve is not the source of $k$ but
-the replacement of the remaining $n - k$ eigenvalues by a single scalar $\bar\lambda$.
-The rSVD preprocessing of Section~\ref{sec:preprocessing} and the complexity
-bound of Proposition~\ref{prop:pipeline} hold with $k$ replaced by $k_{\mathrm{ext}}$.
-When $k_{\mathrm{ext}}$ is known in advance, the preprocessing cost can be reduced
-to $O(nTk_{\mathrm{ext}})$ by targeting only the required number of components
-rather than applying the MP threshold post-hoc.
+The Woodbury solver applies for any choice of $k$: a practitioner with an external
+factor model (a commercial risk model, or a PCA with $k$ fixed by
+cross-validation) can supply $k_{\mathrm{ext}}$ eigenpairs directly, bypassing the
+MP threshold. What the solve requires is not the source of $k$ but the replacement
+of the remaining $n - k$ correlation eigenvalues by a single scalar $\bar\mu$.
 \end{remark}
 
 \subsection{Choice of \texorpdfstring{$k$}{k}}\label{ssec:k_selection}
 
-The threshold $k$ is determined by the MP upper edge $\hat\lambda_+$. In practice
-$k$ is stable across the S\&P~500 sample: varying the estimation window over the
-five-year period gives $k \in [21, 25]$, with the central value $k = 23$.
-An audit at $k - 1$, $k$, and $k + 1$ adds negligible cost (one extra
-Woodbury solve per audit point) and reveals the portfolio's sensitivity to the
-threshold, which is small in the bulk of the frontier (Section~\ref{sec:ksensitivity}).
+The threshold $k$ is determined by the MP upper edge $\hat\lambda_+$; on the
+S\&P~500 sample it is stable near the central value $k = 17$. An audit at $k - 1$,
+$k$, and $k + 1$ adds negligible cost (one extra Woodbury solve per audit point)
+and reveals the portfolio's sensitivity to the threshold, which is small in the
+bulk of the frontier (Section~\ref{sec:ksensitivity}).
 
-Two systematic biases in $k$ deserve mention.
-
-\emph{Finite-sample edge fluctuations}. At finite $T$ the largest noise
-eigenvalue fluctuates around the bulk edge at the Tracy--Widom scale
-$O(T^{-2/3})$~\cite{johnstone2001}, so a small number of noise eigenvalues may
-be classified as signal (or vice versa); refined spectrum estimators such as
-El~Karoui's~\cite{elkaroui2008} reduce this effect. For the sample sizes used
-here ($T \geq 250$) the impact on $k$ is at most one or two eigenvalues, which
-is precisely the perturbation covered by the $k \pm 1$ audit of
-Section~\ref{sec:ksensitivity}.
-
-\emph{Sparse structure below the detection threshold}. Sector correlations below
-the MP edge contribute a diffuse signal that the threshold does not detect. If
-these directions are material for the portfolio, the audit at $k \pm 1$ will
-show sensitivity; in practice, the minimum-variance portfolio is insensitive to
-directions with small eigenvalues because those directions contribute little
-variance.
+Two biases are worth noting: finite-$T$ Tracy--Widom fluctuations of the largest
+noise eigenvalue at scale $O(T^{-2/3})$~\cite{johnstone2001,elkaroui2008}, and
+diffuse sector structure just below the edge. Both perturb $k$ by at most an
+eigenvalue or two, exactly what the $k \pm 1$ audit of
+Section~\ref{sec:ksensitivity} covers.

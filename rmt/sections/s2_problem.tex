@@ -2,42 +2,41 @@
 
 The long-only mean-variance portfolio solves
 \[
-  \min_{w}\; w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w
+  \min_{w}\; w^\top \Sigma_0\, w - \rho\,\hat\mu^\top w
   \quad\text{subject to}\quad
   Bw = c,\quad w \geq 0\,,
 \]
 where $\rho \geq 0$ is a return-tilt weight, $\hat\mu$ is a vector of expected
 returns, $B \in \mathbb{R}^{p \times n}$ of full row rank and $c \in \mathbb{R}^p$
-carry $p \ll n$ linear balance constraints, and $T_0^{\mathrm{RMT}}$ is the
-RMT-cleaned covariance estimator constructed in the previous section
-(Section~\ref{sec:rmt}).\footnote{The symbol $T_0$ for the cleaned estimator
-follows standard shrinkage-target notation; it is unrelated to the sample size $T$.}
+carry $p \ll n$ linear balance constraints, and
+$\Sigma_0 = D^{1/2} C_0 D^{1/2}$ is the RMT-cleaned covariance rebuilt from the
+cleaned correlation $C_0$ of the previous section (Section~\ref{sec:rmt}).
 The fully-invested budget constraint $\mathbf{1}^\top w = 1$ is the case $p = 1$,
 $B = \mathbf{1}^\top$, $c = 1$; it is the leading case throughout, and the reader
 may substitute it wherever a balance system is not written out. General $B$
 additionally accommodates group budgets (sector sleeves summing to prescribed
 weights) and factor neutralities $\beta^\top w = 0$ at the same cost structure.
+The problem is solved in the standardised coordinates $y = D^{1/2} w$ against
+$C_0$ (Section~\ref{sec:algorithm}); the map is exact and preserves the
+well-conditioned scalar-identity Woodbury structure.
 
-\begin{remark}[Why not blend with the sample covariance?]\label{rem:blend}
-A general shrinkage estimator
-$\hat\Sigma_\alpha = (1-\alpha)\hat\Sigma + \alpha T_0^{\mathrm{RMT}}$ with
-$\alpha \in (0,1)$ would re-introduce a fraction of the bulk eigenvalues that
-the cleaning replaces. Our reason for fixing $\alpha = 1$ is algebraic, not
-statistical: only at $\alpha = 1$ does the system matrix retain the
-low-rank-plus-identity form that the Woodbury solve of
-Section~\ref{sec:algorithm} requires. For $\alpha \in (0,1)$ the matrix
-$(1-\alpha)\hat\Sigma_\mathcal{A} + \alpha T_{0,\mathcal{A}}^{\mathrm{RMT}}$
-has full-rank residual structure (no $k \times k$ correction matrix exists)
-and the $O(n_a k^2)$ cost advantage is entirely lost. The statistical case for
-CRE cleaning itself rests on the RMT literature
-(Section~\ref{sec:rmt}); Section~\ref{ssec:oos} reports out-of-sample
-evidence that the cleaned estimator is competitive with standard shrinkage on
-the data used in this paper.
+\begin{remark}[Why not blend with the sample correlation?]\label{rem:blend}
+A shrinkage blend $(1-\alpha)C + \alpha C_0$ with $\alpha \in (0,1)$ would
+re-introduce a fraction of the bulk correlation eigenvalues that the cleaning
+replaces. Our reason for fixing $\alpha = 1$ is algebraic, not statistical: only at
+$\alpha = 1$ does the system matrix retain the scalar-identity-plus-low-rank form
+of $C_0$ that the Woodbury solve of Section~\ref{sec:algorithm} requires. For
+$\alpha \in (0,1)$ the restricted matrix
+$(1-\alpha)C_\mathcal{A} + \alpha C_{0,\mathcal{A}}$ has full-rank residual
+structure (no $k \times k$ correction matrix exists) and the $O(n_a k^2)$ cost
+advantage is lost. The statistical case for CRE cleaning rests on the RMT
+literature (Section~\ref{sec:rmt}); Section~\ref{ssec:oos} reports out-of-sample
+evidence that it is competitive with standard shrinkage on the data used here.
 \end{remark}
 
-The balance constraints $Bw = c$ are eliminated analytically through a
-$p \times p$ Schur complement and the non-negativity constraint $w \geq 0$ is
-enforced by a primal-dual active-set outer loop, each step of which re-solves the
-balance-constrained subproblem on the current active set. Section~\ref{sec:algorithm}
-develops this reduction together with the Woodbury inner solve that is this
-paper's contribution.
+In the standardised coordinates the balance constraints $B D^{-1/2} y = c$ are
+eliminated analytically through a $p \times p$ Schur complement and the
+non-negativity constraint $y \geq 0$ is enforced by a primal-dual active-set outer
+loop, each step of which re-solves the balance-constrained subproblem on the
+current active set. Section~\ref{sec:algorithm} develops this reduction together
+with the Woodbury inner solve that is this paper's contribution.

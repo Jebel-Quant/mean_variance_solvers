@@ -2,13 +2,22 @@
 
 \subsection{Primal-dual active-set reduction}
 
+By the change of variables $y = D^{1/2} w$ of Section~\ref{sec:rmt} the
+minimum-variance problem is solved against the cleaned correlation $C_0$: minimise
+$y^\top C_0\, y - \rho\,\tilde\mu^\top y$ subject to $\tilde B y = c$, $y \geq 0$,
+with $\tilde B = B D^{-1/2}$ and $\tilde\mu = D^{-1/2}\hat\mu$, and the portfolio
+recovered as $w = D^{-1/2} y$. To lighten notation the rest of this section writes
+$w$, $B$, $\hat\mu$ for the standardised weight $y$, the transformed balance matrix
+$\tilde B$, and $\tilde\mu$; every displayed formula is in these standardised
+coordinates and the reported weights are $D^{-1/2}$ times the solve's output.
+
 The balance constraints $Bw = c$ and non-negativity $w \geq 0$
 are handled separately. Fix a set $\mathcal{A} \subseteq \{1,\ldots,n\}$ of
 active assets and write $B_\mathcal{A}$ for the columns of $B$ indexed by
 $\mathcal{A}$. The balance-constrained subproblem on $\mathcal{A}$,
 \[
   \min_{w_\mathcal{A}:\,B_\mathcal{A} w_\mathcal{A}=c}\;
-  w_\mathcal{A}^\top T_{0,\mathcal{A}}^{\mathrm{RMT}}\, w_\mathcal{A}
+  w_\mathcal{A}^\top C_{0,\mathcal{A}}\, w_\mathcal{A}
   - \rho\,\hat\mu_\mathcal{A}^\top w_\mathcal{A}\,,
 \]
 has, by the KKT conditions, the closed-form solution
@@ -16,9 +25,9 @@ has, by the KKT conditions, the closed-form solution
   w^\star_\mathcal{A}
   \;=\; \tfrac12 V_1\,\lambda + \tfrac{\rho}{2} v_2\,,
   \qquad
-  V_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}B_\mathcal{A}^\top \in \mathbb{R}^{n_a \times p}\,,
+  V_1 = (C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top \in \mathbb{R}^{n_a \times p}\,,
   \quad
-  v_2 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\hat\mu_\mathcal{A}\,,
+  v_2 = (C_{0,\mathcal{A}})^{-1}\hat\mu_\mathcal{A}\,,
 \]
 where the $p$ balance multipliers $\lambda \in \mathbb{R}^p$ are recovered
 analytically from feasibility $B_\mathcal{A} w^\star_\mathcal{A} = c$ through the
@@ -26,13 +35,13 @@ $p \times p$ Schur complement
 \[
   S\,\lambda = 2c - \rho\,B_\mathcal{A} v_2\,,
   \qquad
-  S = B_\mathcal{A} V_1 = B_\mathcal{A}(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}B_\mathcal{A}^\top \succ 0\,,
+  S = B_\mathcal{A} V_1 = B_\mathcal{A}(C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top \succ 0\,,
 \]
-which is SPD because $T_{0,\mathcal{A}}^{\mathrm{RMT}} \succ 0$ and $B_\mathcal{A}$
+which is SPD because $C_{0,\mathcal{A}} \succ 0$ and $B_\mathcal{A}$
 has full row rank; the dense $p \times p$ solve is negligible for the small $p$
 typical of balance conditions. In the budget case ($p = 1$,
 $B_\mathcal{A} = \mathbf{1}^\top$, $c = 1$) this collapses to a single vector
-$v_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\mathbf{1}$, a scalar Schur
+$v_1 = (C_{0,\mathcal{A}})^{-1}\mathbf{1}$, a scalar Schur
 complement $S = \mathbf{1}^\top v_1$, and
 $w^\star_\mathcal{A} = \theta v_1 + \tfrac{\rho}{2} v_2$ with
 $\theta = \tfrac{\lambda}{2} = (1 - \tfrac{\rho}{2}\mathbf{1}^\top v_2)/(\mathbf{1}^\top v_1)$.
@@ -41,10 +50,10 @@ Non-negativity is enforced by the primal-dual active-set outer loop of the
 companion paper~\cite{schmelzer2026nncg}. Throughout,
 the objective gradient is
 \[
-  g \;=\; 2\,T_0^{\mathrm{RMT}} w - \rho\,\hat\mu\,,
+  g \;=\; 2\,C_0 w - \rho\,\hat\mu\,,
 \]
 evaluated through the low-rank form
-$T_0^{\mathrm{RMT}}w = \bar\lambda w + U_k(\Delta_k(U_k^\top w))$ at cost
+$C_0w = \bar\mu w + U_k(\Delta_k(U_k^\top w))$ at cost
 $O(nk)$ (Proposition~\ref{prop:rmt_spectrum}); the return matrix $X$ never
 enters the solve. Stationarity of the restricted subproblem reads
 $g_j = (B_\mathcal{A}^\top\lambda)_j$ for every $j \in \mathcal{A}$, with the
@@ -61,29 +70,21 @@ $w_{\mathcal{A},i} \geq -\varepsilon$ for all $i \in \mathcal{A}$ and
 $g_i \geq (B^\top\lambda)_i - \varepsilon$ for all $i \notin \mathcal{A}$. In the
 budget case $(B^\top\lambda)_i = \lambda$ reduces to the scalar threshold
 $\nu = 2\theta$. These toggles are the principal pivots of the
-$P$-matrix linear complementarity problem $(T_0^{\mathrm{RMT}},\,-\rho\hat\mu)$:
+$P$-matrix linear complementarity problem $(C_0,\,-\rho\hat\mu)$:
 because
-$T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top \succ 0$
-for every $\mathcal{A}$ (all $\delta_j > 0$ and $\bar\lambda > 0$), every
+$C_{0,\mathcal{A}} = \bar\mu I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top \succ 0$
+for every $\mathcal{A}$ (all $\delta_j > 0$ and $\bar\mu > 0$), every
 principal submatrix is invertible, each pivot is well defined, and the
 restricted subproblem has a unique optimum.
 
-The outer loop, its finite-termination proof, and the pivot schedule that makes
-it robust are developed in full generality in the companion
-paper~\cite{schmelzer2026nncg} for the equality-augmented non-negative quadratic
-$\min_{x \geq 0,\, Bx = c}\tfrac12 x^\top A x - b^\top x$ with $A \succ 0$, of
-which the RMT problem is the instance $A = T_0^{\mathrm{RMT}}$, $b = \rho\hat\mu$
-(the budget case taking $B = \mathbf{1}^\top$, $c = 1$).
-Theorem~4.1 there gives finite termination at the unique global minimiser
-\emph{with no non-degeneracy assumption}: guarding a batch block-pivot fast path
-with a least-index (Bland) fallback removes the hypothesis that the classical
-parametric-QP pivot argument~\cite{nocedal2006} requires. The fallback is
-dormant on generic data yet provably necessary on an adversarial family of
-anti-correlated designs \cite[Section~6.2]{schmelzer2026nncg}. Crucially for the
-present paper, the same loop and the same proof accept a \emph{direct}
-factorisation of each free-set system in place of an iterative inner solve: the
-Woodbury solve developed below is exactly that direct free-set
-solver, so its termination is inherited without further assumptions.
+The outer loop, its finite-termination proof, and the batch/least-index pivot
+schedule that makes it robust are developed in full generality in the companion
+paper~\cite{schmelzer2026nncg}, of which the RMT problem is the instance
+$A = C_0$, $b = \rho\hat\mu$. Theorem~4.1 there gives finite termination at the
+unique global minimiser with no non-degeneracy assumption, and licenses any
+\emph{direct} factorisation of the free-set system as the inner solve: the
+Woodbury solve developed below is exactly such a solver, so termination is
+inherited.
 
 \begin{remark}[Implementation safeguards]\label{rem:safeguards}
 The reference implementation runs the batch fast path (assets whose weights are
@@ -97,40 +98,39 @@ machine precision, Section~\ref{ssec:solvers}).
 \end{remark}
 
 \begin{remark}[Tolerance scale]\label{rem:tolerance}
-The tolerance $\varepsilon$ applies to two quantities with different units:
-portfolio weights (primal step) and gradient entries (dual step). Weights are
-scale-free; gradient entries scale with $\bar\lambda$, which is of order
-$10^{-4}$ for daily returns. The default $\varepsilon = 10^{-6}$ is appropriate
-for daily return data; for data on other scales the dual tolerance should be
-taken relative to $\bar\lambda$.
+The tolerance $\varepsilon$ applies to the standardised weights (primal step) and
+the reduced gradient (dual step). In the standardised coordinates both live on the
+$O(1)$ correlation scale, with noise floor $\bar\mu \approx 0.5$, so the default
+$\varepsilon = 10^{-6}$ is a standard KKT tolerance; the change of variables removes
+the dependence on the raw return scale that a covariance formulation would carry.
 \end{remark}
 
-What remains is the inner solve $(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}b$
-required at each outer step. When $T_0 = T_0^{\mathrm{RMT}}$ this inverse is
+What remains is the inner solve $(C_{0,\mathcal{A}})^{-1}b$
+required at each outer step. This inverse is
 available in closed form via the Woodbury identity, reducing the dominant
 per-step cost from $O(n_a^2 k + n_a^3)$ to $O(n_a k^2 + k^3)$; we develop it now.
 
 \subsection{Woodbury direct solve}
 
 The system matrix on the active set $\mathcal{A}$ is
-$T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$,
+$C_{0,\mathcal{A}} = \bar\mu I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$,
 where $U_{k,\mathcal{A}} = U_k[\mathcal{A},:] \in \mathbb{R}^{n_a \times k}$ is the restriction
 of the signal eigenvectors to the active assets and $n_a = |\mathcal{A}|$.
 The Woodbury matrix identity~\cite{golub2013}, applied with
-$A = \bar\lambda I_{n_a}$, $U = U_{k,\mathcal{A}}$, $C = \Delta_k$,
+$A = \bar\mu I_{n_a}$, $U = U_{k,\mathcal{A}}$, $C = \Delta_k$,
 $V = U_{k,\mathcal{A}}^\top$, gives
 
 \[
-  \bigl(T_{0,\mathcal{A}}^{\mathrm{RMT}}\bigr)^{-1}\!b
+  \bigl(C_{0,\mathcal{A}}\bigr)^{-1}\!b
   \;=\;
-  \frac{b}{\bar\lambda}
+  \frac{b}{\bar\mu}
   \;-\;
-  \frac{1}{\bar\lambda^2}\,
+  \frac{1}{\bar\mu^2}\,
   U_{k,\mathcal{A}}\,
   W^{-1}
   U_{k,\mathcal{A}}^\top b\,,
   \qquad
-  W = \Delta_k^{-1} + \frac{1}{\bar\lambda}\,U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}
+  W = \Delta_k^{-1} + \frac{1}{\bar\mu}\,U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}
   \;\in \mathbb{R}^{k \times k}\,.
 \]
 
@@ -143,11 +143,11 @@ $\hat\mu_\mathcal{A}$); all share the single factorisation of $W$, so each
 right-hand side beyond the first costs only $O(n_a k)$.
 
 \begin{proposition}[Woodbury solve complexity]\label{prop:woodbury_cost}
-One application of $(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}$ costs:
+One application of $(C_{0,\mathcal{A}})^{-1}$ costs:
 \begin{itemize}
   \item $O(n_a k)$ for the two matrix-vector products $U_{k,\mathcal{A}}^\top b$
         and $U_{k,\mathcal{A}} z$;
-  \item $O(n_a k^2)$ to form $W = \Delta_k^{-1} + \bar\lambda^{-1} U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
+  \item $O(n_a k^2)$ to form $W = \Delta_k^{-1} + \bar\mu^{-1} U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
         (a rank-$k$ outer product sum over $n_a$ columns);
   \item $O(k^3)$ for the Cholesky factorisation of $W$.
 \end{itemize}
@@ -160,7 +160,7 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
 \caption{Woodbury portfolio solver}\label{alg:woodbury}
 \begin{algorithmic}[1]
 \Require Signal eigenpairs $(U_k, \Lambda_k) \in \mathbb{R}^{n \times k} \times \mathbb{R}^k$;
-         bulk mean $\bar\lambda$;
+         bulk mean $\bar\mu$;
          balance system $B \in \mathbb{R}^{p \times n}$, $c \in \mathbb{R}^p$
          \textit{(default $\mathbf{1}^\top,\, 1$)};
          return-tilt $\rho \geq 0$; expected returns $\hat\mu$;
@@ -169,13 +169,13 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
 \Ensure  Portfolio weights $w \in \mathbb{R}^n$ with $w \geq 0$, $Bw = c$
 \State $\mathcal{A} \leftarrow \mathcal{A}_0$ (or $\{1,\ldots,n\}$ for cold start);\;
        $w \leftarrow w_0$ (or $\mathbf{0}$);\;
-       $\Delta_k \leftarrow \Lambda_k - \bar\lambda\mathbf{1}$
+       $\Delta_k \leftarrow \Lambda_k - \bar\mu\mathbf{1}$
 \Loop
   \State $U_a \leftarrow U_k[\mathcal{A}, :]$ \Comment{$n_a \times k$ restriction}
-  \State $W \leftarrow \mathrm{diag}(1/\Delta_k) + U_a^\top U_a / \bar\lambda$
+  \State $W \leftarrow \mathrm{diag}(1/\Delta_k) + U_a^\top U_a / \bar\mu$
     \hfill\textit{($O(n_a k^2)$)}
   \State $L \leftarrow \mathrm{chol}(W)$;\;
-         define $\mathrm{inv}(b) \leftarrow b/\bar\lambda - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\lambda^2$
+         define $\mathrm{inv}(b) \leftarrow b/\bar\mu - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\mu^2$
     \hfill\textit{($O(k^3)$ once)}
   \State $V_1 \leftarrow \mathrm{inv}(B_\mathcal{A}^\top)$;\;
          $v_2 \leftarrow \mathrm{inv}(\hat\mu_\mathcal{A})$ if $\rho > 0$
@@ -188,7 +188,7 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
       \hfill\textit{(primal step; cf.\ Remark~\ref{rem:safeguards})}
   \Else
     \State $w \leftarrow 0$;\; $w[\mathcal{A}] \leftarrow w_\mathcal{A}$
-    \State $g \leftarrow 2\bigl(\bar\lambda w + U_k(\Delta_k(U_k^\top w))\bigr) - \rho\hat\mu$;\;
+    \State $g \leftarrow 2\bigl(\bar\mu w + U_k(\Delta_k(U_k^\top w))\bigr) - \rho\hat\mu$;\;
            $r \leftarrow g - B^\top\lambda$
       \hfill\textit{(reduced gradient, $O(nk)$)}
     \State $j^\star \leftarrow \arg\min_{i \notin \mathcal{A}} r_i$
@@ -213,54 +213,37 @@ Two further features of Algorithm~\ref{alg:woodbury} deserve emphasis.
 
 \emph{The return matrix never enters the solve}. The dual-feasibility check
 evaluates the gradient of the objective,
-$g = 2\,T_0^{\mathrm{RMT}}w - \rho\hat\mu$, through the low-rank form at cost
+$g = 2\,C_0w - \rho\hat\mu$, through the low-rank form at cost
 $O(nk)$. Neither $\hat\Sigma$ nor $X$ is touched after preprocessing: the
-entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\lambda)$.
+entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\mu)$.
 
 \emph{Warm-starting profits from active-set continuity, not initial guesses}.
-For a direct solver there is no initial guess to warm-start; the Woodbury solve
-does not iterate. Warm-starting passes the previous active-set $\mathcal{A}$ and
-weight vector $w$, reducing the number of outer primal-dual steps. On the
-efficient frontier sweep with $\rho \in [0, \rho_{\max}]$ the active set changes
-by at most a few assets between adjacent $\rho$ values, so the warm solver
-typically terminates in one to two outer steps.
-
-This continuity is a structural property of parametric quadratic programming, not
-an artefact of the data-generating process. The Markowitz efficient frontier is a
-continuous piecewise-linear curve in weight space as a function of $\rho$; at each
-breakpoint, generically, exactly one asset enters or leaves the active set~\cite{markowitz1956}.
-Between breakpoints the active set is constant. Choosing a fine enough $\rho$
-grid (e.g.\ $50$ equally spaced points) ensures that adjacent solves share
-all but a few active assets regardless of whether the returns are synthetic or
-real, and regardless of the covariance estimator used.
+A direct solver has no initial guess; warm-starting instead passes the previous
+active set and weights, cutting the number of outer steps. Along the frontier the
+Markowitz solution is piecewise-linear in $\rho$ with generically single-asset
+breakpoint changes~\cite{markowitz1956}, so adjacent solves on a fine grid share
+all but a few active assets and the warm solver typically terminates in one to two
+outer steps; this is a structural property of parametric quadratic programming, not
+an artefact of the data.
 
 \begin{remark}[Relation to the critical line algorithm]\label{rem:cla}
 The same piecewise-linear structure underlies the critical line algorithm
-(CLA)~\cite{markowitz1956,niedermayer2010,cvxcla}, which traces the exact
-frontier by pivoting from breakpoint to breakpoint instead of re-solving on a
-$\rho$ grid. On a fixed active set the restricted solution is affine in
-$\rho$, $w_\mathcal{A}(\rho) = a + \rho b$ with
-$a = V_1 S^{-1} c$ and
-$b = \tfrac12\bigl(v_2 - V_1 S^{-1} B_\mathcal{A} v_2\bigr)$,
-and the multipliers $\lambda(\rho) = S^{-1}(2c - \rho\,B_\mathcal{A} v_2)$ are
-affine as well, so every primal exit ($w_i$ reaching zero) and dual entry
-($g_i - (B^\top\lambda)_i$ reaching zero) is the root of an affine function: the
-exact frontier costs one Woodbury solve per breakpoint. In the budget case these
-reduce to $a = v_1/(\mathbf{1}^\top v_1)$ and
-$b = \tfrac12\bigl(v_2 - \tfrac{\mathbf{1}^\top v_2}{\mathbf{1}^\top v_1}v_1\bigr)$. We implement this sweep with the Woodbury kernel as its
-linear algebra and validate it against the grid sweep in
-Section~\ref{ssec:cla}. The two approaches remain complementary in practice:
-CLA enumerates the exact frontier for a \emph{fixed} covariance, whereas the
-warm-started grid sweep extends unchanged to the practitioner's setting in
-which consecutive solves differ in the data (a refreshed covariance at each
-rebalance) rather than only in $\rho$.
+(CLA)~\cite{markowitz1956,niedermayer2010,cvxcla}. On a fixed active set the
+restricted solution and multipliers are affine in $\rho$
+($w_\mathcal{A}(\rho) = a + \rho b$, with $a = V_1 S^{-1} c$ and $b$ read off the
+same Schur solve), so every primal exit and dual entry is the root of an affine
+function and the exact frontier costs one Woodbury solve per breakpoint
+(Section~\ref{ssec:cla}). CLA enumerates the exact frontier for a \emph{fixed}
+covariance, whereas the warm-started grid sweep extends unchanged to the
+practitioner's setting where consecutive solves differ in the data, not only in
+$\rho$.
 \end{remark}
 
 \begin{remark}[Ridge terms and other structured modifications]\label{rem:ridge}
 The Woodbury structure survives several practically relevant modifications.
 A ridge penalty $\gamma\norm{w}^2$ simply shifts the identity coefficient,
-$\bar\lambda \mapsto \bar\lambda + \gamma$. A diagonal loading
-$D + U_k\Delta_kU_k^\top$ with non-scalar $D \succ 0$ replaces $b/\bar\lambda$
+$\bar\mu \mapsto \bar\mu + \gamma$. A diagonal loading
+$D + U_k\Delta_kU_k^\top$ with non-scalar $D \succ 0$ replaces $b/\bar\mu$
 by $D^{-1}b$ at unchanged cost. Further \emph{linear equality} constraints
 beyond the balance system (e.g.\ sector-neutrality) are absorbed by appending
 rows to $B$; the $p \times p$ Schur complement grows with them and the solve
@@ -272,77 +255,41 @@ produced by nonlinear shrinkage (Remark~\ref{rem:rie}).
 \subsection{Complexity and crossover analysis}
 
 \begin{proposition}[Woodbury vs.\ KKT-Cholesky crossover]\label{prop:crossover}
-Let the KKT-Cholesky inner solve assemble
-$T_{0,\mathcal{A}}^{\mathrm{RMT}}$ explicitly via a rank-$k$ symmetric update
-($n_a^2 k$ flops to leading order) and factor by Cholesky ($n_a^3/3$ flops),
-and let the Woodbury inner solve form $W$ ($n_a k^2$ flops) and factor it
-($k^3/3$ flops). Then, writing $x = k/n_a$, the Woodbury solve requires fewer
-flops per outer step if and only if
-\[
-  n_a k^2 + \tfrac{k^3}{3} \;<\; n_a^2 k + \tfrac{n_a^3}{3}
-  \;\iff\;
-  x^3 + 3x^2 - 3x - 1 < 0
-  \;\iff\;
-  (x - 1)\,(x^2 + 4x + 1) < 0
-  \;\iff\;
-  x < 1\,,
-\]
-i.e.\ exactly when $k < n_a$. The same threshold holds with unit constants:
-$n_a k^2 + k^3 < n_a^2 k + n_a^3 \iff (x+1)^2(x-1) < 0 \iff x < 1$.
+KKT-Cholesky assembles $C_{0,\mathcal{A}}$ by a rank-$k$ update and factors it
+($n_a^2 k + n_a^3/3$ flops); Woodbury forms and factors the $k \times k$
+correction $W$ ($n_a k^2 + k^3/3$ flops). Writing $x = k/n_a$, the Woodbury solve
+is cheaper per outer step iff
+$n_a k^2 + \tfrac{k^3}{3} < n_a^2 k + \tfrac{n_a^3}{3}$, which (dividing by
+$n_a^3$) factors as $(x-1)(x^2 + 4x + 1) < 0$, i.e.\ iff $x < 1$ ($k < n_a$).
 \end{proposition}
 
-\begin{proof}
-Divide both sides by $n_a^3$ and substitute $x = k/n_a$; the cubics factor as
-displayed, and for $x > 0$ the second factor is positive in both cases.
-\end{proof}
-
 \begin{remark}[Crossover in practice]\label{rem:crossover}
-The crossover condition $k < n_a$ is satisfied throughout our experiments:
-on S\&P~500 data $k = 23$ against $n_a = 63$ at the minimum-variance solution
-($x \approx 0.37$), and on the synthetic frontier $x$ ranges from about $0.7$
-at the tightest point ($n_a = 31$) to about $0.2$ at the high-return end
-($n_a = 97$). At $x \approx 0.5$ the flop-count advantage predicted by
-Proposition~\ref{prop:crossover} is about $3\times$; the measured per-step
-advantage is larger ($5\times$ warm, Table~\ref{tab:solvers}), which is
-consistent with the Woodbury working set ($k \times k$) fitting in
-lower cache levels than the assembled $n_a \times n_a$ system, though we have
-not instrumented the memory hierarchy directly. When $n_a \leq k$ (which
-does not occur for long-only equity portfolios in our experiments) the
-solver should fall back to the KKT-Cholesky branch; the Woodbury solve itself
-remains valid for all $n_a \geq 1$, since
-$W = \Delta_k^{-1} + \bar\lambda^{-1}U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
+The crossover condition $k < n_a$ holds across essentially all of the frontier:
+on S\&P~500 data $k = 17$ against $n_a = 46$ at the minimum-variance solution
+($x \approx 0.37$), and on the synthetic frontier $x = k/n_a$ runs from about
+$0.33$ at the high-return end ($n_a = 64$) to about $1$ at the tightest
+(minimum-variance) point, where $n_a$ dips to $\approx k = 21$. Only at that
+extreme are the two solves comparable; elsewhere the flop-count advantage of
+Proposition~\ref{prop:crossover} applies, and the measured per-step gap is larger
+still ($5.7\times$ warm, Table~\ref{tab:solvers}), consistent with the Woodbury
+working set ($k \times k$) fitting in lower cache levels than the assembled
+$n_a \times n_a$ system, though we have not instrumented the memory hierarchy
+directly. When $n_a \leq k$ the solver falls back to the KKT-Cholesky branch; the
+Woodbury solve itself remains valid for all $n_a \geq 1$, since
+$W = \Delta_k^{-1} + \bar\mu^{-1}U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}}$
 is the sum of a positive definite diagonal matrix and a positive semidefinite
 matrix, hence always invertible.
 \end{remark}
 
 \begin{proposition}[Per-solve pipeline complexity]\label{prop:pipeline}
-Let $s$ denote the number of outer active-set steps for one portfolio solve.
-The solve cost is
-\[
-  C_{\mathrm{Woodbury}}(s) \;=\; s \cdot O(n_a k^2 + k^3 + nk)\,,
-\]
-where the $O(nk)$ term is the gradient evaluation of the dual step.
-For a sweep of $S$ solves sharing the same eigenpairs $(U_k, \Lambda_k)$,
-the total pipeline cost including the randomised-SVD preprocessing of
-Section~\ref{sec:preprocessing} is
-\[
-  C_{\mathrm{total}} \;=\; \underbrace{O(nTk)}_{\text{preprocessing}} +
-  \underbrace{S \cdot s \cdot O(n_a k^2 + k^3 + nk)}_{\text{solves}}\,,
-\]
-and the preprocessing cost amortises to $O(nTk/S)$ per solve.
+With $s$ outer active-set steps, one solve costs $s\cdot O(n_a k^2 + k^3 + nk)$
+(the $O(nk)$ term is the dual-step gradient). For a sweep of $S$ solves sharing the
+eigenpairs, the pipeline cost is $O(nTk) + S\,s\,O(n_a k^2 + k^3 + nk)$, so the
+$O(nTk)$ randomised-SVD preprocessing (Proposition~\ref{prop:rsvd}) amortises to
+$O(nTk/S)$ per solve.
 \end{proposition}
 
-\begin{proof}
-Preprocessing via randomised SVD costs $O(nT(k+p))$ for oversampling parameter $p$
-(Proposition~\ref{prop:rsvd}); setting $p = O(k)$ gives $O(nTk)$.
-Each outer step costs one Woodbury application
-(Proposition~\ref{prop:woodbury_cost}) plus one $O(nk)$ gradient evaluation.
-The pipeline cost is the sum; the amortisation claim is division by $S$.
-\end{proof}
-
-At the $n=500$ benchmark the measured preprocessing share of the total
-pipeline for a 50-point frontier sweep is between roughly $30\%$ (cold sweep)
-and $45\%$ (warm sweep); for a single solve the preprocessing dominates
-(Table~\ref{tab:scaling}). In every case the pipeline total remains well below
-the cost of the KKT-Cholesky solve alone at large $n$
+At the $n=500$ benchmark the preprocessing share of a 50-point sweep is
+$30$--$45\%$; for a single solve it dominates. In every case the pipeline total
+stays well below the KKT-Cholesky solve alone at large $n$
 (Section~\ref{ssec:scaling}).

@@ -37,6 +37,7 @@ SCRIPTS = {
     "minvar.experiment_oos": ["tables/oos_defs.tex", "graphs/minvar_oos.pdf"],
     "rmt.experiment_rmt": [
         "tables/rmt_solver_comparison.tex",
+        "tables/rmt_oos.tex",
         "graphs/rmt_frontier.pdf",
     ],
     # companion "Non-Negative Conjugate Gradients" note (nncg package + nncg_note.problems)
