@@ -39,8 +39,8 @@ from sklearn.utils.extmath import randomized_svd
 from common.util.runner import SMOKE, output_dirs, run_timed
 
 from common.simulate import simulate_equity_returns
-from minvar.minvar import (
-    MinVarProblem,
+from cg.cg import (
+    CGProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
     rmt_target_and_alpha,
@@ -100,7 +100,7 @@ def y_problem(R, target, lr, std, rho=0.0, mu=None):
     ``w >= 0``).
     """
     mu_t = None if mu is None else np.asarray(mu) / std
-    return MinVarProblem(
+    return CGProblem(
         R, alpha=1.0, target=target, target_lr=lr, B=(1.0 / std)[None, :], c=np.array([1.0]), rho=rho, mu=mu_t
     )
 
@@ -599,9 +599,9 @@ def oos_backtest(R):
         std = std_of(X)
         w = {"RMT": y_problem(X, tgt, lr, std).solve_kkt()[0] / std}  # change of variables
         _, tgt05 = lw_alpha_and_target_hard(X, alpha=0.5)
-        w["LW05"] = MinVarProblem(X, alpha=0.5, target=tgt05).solve_kkt()[0]
+        w["LW05"] = CGProblem(X, alpha=0.5, target=tgt05).solve_kkt()[0]
         a_or, tgt_or = lw_alpha_and_target(X)
-        w["LWor"] = MinVarProblem(X, alpha=a_or, target=tgt_or).solve_kkt()[0]
+        w["LWor"] = CGProblem(X, alpha=a_or, target=tgt_or).solve_kkt()[0]
         w["EW"] = np.ones(n) / n
         for s in OOS_STRATS:
             daily[s].extend((R_out @ w[s]).tolist())

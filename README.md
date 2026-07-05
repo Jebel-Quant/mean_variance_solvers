@@ -37,7 +37,7 @@ A `Makefile` at the repository root drives everything; run `make` (or
 `make help`) for the list of targets:
 
 ```sh
-make compile   # build every paper (minvar_paper.pdf, rmt_paper.pdf, nncg_paper.pdf)
+make compile   # build every paper (cg_paper.pdf, rmt_paper.pdf, nncg_paper.pdf)
 make figures   # regenerate every paper's figures and tables (finance experiment + nncg study)
 make arxiv     # assemble a self-contained arXiv source tarball per paper
 make clean     # remove both papers' LaTeX build artifacts (keeps the PDFs)
@@ -64,8 +64,8 @@ experiment.
 Makefile                 root entry point: delegates to the per-paper Makefiles
 common.mk                shared build logic (compile / arxiv / clean)
 matrix_free/
-  Makefile               builds minvar_paper.pdf (include ../common.mk)
-  minvar_paper.tex       main file: preamble + \input of the sections
+  Makefile               builds cg_paper.pdf (include ../common.mk)
+  cg_paper.tex       main file: preamble + \input of the sections
   sections/              one .tex per section (s0_abstract … s8_conclusions)
   bib/refs.bib           shared BibTeX database
   siam/                  vendored SIAM class/style (reference copy)
@@ -106,7 +106,7 @@ automatically (the `experiment/` folder is excluded).
 GitHub Actions workflows (`.github/workflows/`):
 
 - `build` — compiles both papers (`make compile`) and publishes
-  `minvar_paper.pdf` and `rmt_paper.pdf` to the `pdf` branch; on tags it also
+  `cg_paper.pdf` and `rmt_paper.pdf` to the `pdf` branch; on tags it also
   attaches the PDFs and the arXiv source tarballs to a GitHub release.
 - `arxiv` — assembles a self-contained arXiv source tarball for each paper
   (`make arxiv`) and publishes both to the `arxiv` branch.

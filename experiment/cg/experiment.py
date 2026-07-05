@@ -4,7 +4,7 @@
      Long-Only Portfolio Optimization"
 
 Usage:
-    uv run python -m minvar.experiment          # from the experiment/ directory
+    uv run python -m cg.experiment          # from the experiment/ directory
 
 Inputs:
     data/sp500_pct_returns.parquet   — S&P 500 daily pct returns
@@ -28,8 +28,8 @@ import numpy as np
 import pandas as pd
 from common.util.runner import SMOKE, _fmt_time, output_dirs, print_table, run_timed, write_table_defs
 
-from minvar.minvar import (
-    MinVarProblem,
+from cg.cg import (
+    CGProblem,
     lw_alpha_and_target,
     oas_alpha_and_target,
 )
@@ -118,10 +118,10 @@ for dataset_name, data_file in DATASETS.items():
     results_oas_oracle = {}
     results_lw = {}
 
-    prob_no_shrink = MinVarProblem(R)
-    prob_lw_ora = MinVarProblem(R, alpha=alpha_lw, target=target)
-    prob_oas_ora = MinVarProblem(R, alpha=alpha_oas, target=target)
-    prob_lw = MinVarProblem(R, alpha=alpha_hard, target=target)
+    prob_no_shrink = CGProblem(R)
+    prob_lw_ora = CGProblem(R, alpha=alpha_lw, target=target)
+    prob_oas_ora = CGProblem(R, alpha=alpha_oas, target=target)
+    prob_lw = CGProblem(R, alpha=alpha_hard, target=target)
 
     for sname, fn, is_kkt in SOLVERS_ALL:
         # KKT (dense Cholesky) requires an SPD system; without shrinkage the
@@ -199,7 +199,7 @@ for dataset_name, data_file in DATASETS.items():
         ):
             for p in (1, 4, 8):
                 b_eq, c_eq = _sleeve(p)
-                prob = MinVarProblem(R, alpha=alpha_hard, target=target, B=b_eq, c=c_eq)
+                prob = CGProblem(R, alpha=alpha_hard, target=target, B=b_eq, c=c_eq)
                 (_ref, _), t_ref = run_timed(lambda pr=prob: pr.solve_cvxpy(project=False))
                 entry = _make_entry(prob, solver_fn, is_kkt)
                 iters = entry["inner"] if entry["inner"] is not None else entry["outer"]

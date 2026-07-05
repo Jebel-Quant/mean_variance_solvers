@@ -16,7 +16,7 @@ NNQP form ``min 1/2 x^T A x - b^T x`` this is ``A = 2*Sigma`` and ``b = rho*mu``
 the factor of two is folded into the operator coefficients so the minimiser is
 identical.
 
-:class:`MinVarProblem` mirrors the method names and return contracts of the
+:class:`CGProblem` mirrors the method names and return contracts of the
 former ``fast_minimum_variance._MinVarProblem`` so the experiment scripts only
 swap their import lines:
 
@@ -63,7 +63,7 @@ Matrix = NDArray[np.float64]
 Warm = tuple[NDArray[np.bool_], Vector]
 
 __all__ = [
-    "MinVarProblem",
+    "CGProblem",
     "lw_alpha_and_target",
     "lw_alpha_and_target_hard",
     "oas_alpha_and_target",
@@ -164,7 +164,7 @@ def _clip_and_renormalize(w: Vector) -> Vector:
 
 
 @dataclass(frozen=True)
-class MinVarProblem:
+class CGProblem:
     """Long-only minimum-variance program, solved by ``nncg`` and ``baselines``.
 
     Fields mirror the former ``fast_minimum_variance`` problem so the scripts

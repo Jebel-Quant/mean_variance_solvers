@@ -283,7 +283,7 @@ Section~\ref{sec:shrinkage}.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.65\linewidth]{graphs/minvar_oos.pdf}
+\includegraphics[width=0.65\linewidth]{graphs/cg_oos.pdf}
 \caption{Realised out-of-sample annualised volatility (left axis, solid; shaded band
 is the $95\%$ moving-block bootstrap confidence interval) and mean CG iteration count
 (right axis, log scale, dashed) versus shrinkage intensity $\alpha$ for the rolling
@@ -355,7 +355,7 @@ moderate $\alpha$ values well below unity.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.65\linewidth]{graphs/minvar_scaling.pdf}
+\includegraphics[width=0.65\linewidth]{graphs/cg_scaling.pdf}
 \caption{Wall-clock time vs number of assets $n$ (log--log scale, $T = 1250$
 fixed) for CG with LW shrinkage ($\alpha = 0.5$), the dense KKT (Cholesky) baseline,
 and the proximal-gradient baseline.
@@ -369,7 +369,7 @@ $O(n^2)$ as its $O(\kappa)$ iteration count grows with the condition number.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.65\linewidth]{graphs/minvar_iters.pdf}
+\includegraphics[width=0.65\linewidth]{graphs/cg_iters.pdf}
 \caption{CG iteration counts vs shrinkage intensity $\alpha$ at fixed $n=500$,
 $T=250$ (rank-deficient, factor-model data). Larger $\alpha$ compresses the
 eigenvalue spectrum and reduces $\kappa(\hat\Sigma_{\mathrm{LW}})$, directly
@@ -458,7 +458,7 @@ impractical for any application requiring repeated frontier computation.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.65\linewidth]{graphs/minvar_frontier.pdf}
+\includegraphics[width=0.65\linewidth]{graphs/cg_frontier.pdf}
 \caption{Efficient frontier for $n = 500$ assets and $T = 1250$ daily
 returns (factor-model synthetic data). Coloured points: LW shrinkage
 $\alpha = 0.5$; colour encodes active-asset count.

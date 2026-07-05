@@ -21,7 +21,7 @@ Goal:
       * a second estimation window (L=252) to check the optimum is stable.
 
 Usage:
-    uv run python -m minvar.experiment_oos          # from the experiment/ directory
+    uv run python -m cg.experiment_oos          # from the experiment/ directory
 
 Inputs:
     data/sp500_pct_returns.parquet    — S&P 500 daily pct returns
@@ -32,7 +32,7 @@ Outputs (stdout):
 
 Outputs (files):
     tables/oos_defs.tex   — \\def\\dataOos macro for the paper table
-    graphs/minvar_oos.pdf — OOS volatility and CG iterations vs alpha
+    graphs/cg_oos.pdf — OOS volatility and CG iterations vs alpha
 
 Hardware used in the paper: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17.
@@ -48,7 +48,7 @@ import numpy as np
 import pandas as pd
 from common.util.runner import SMOKE, output_dirs
 
-from minvar.minvar import MinVarProblem, lw_alpha_and_target
+from cg.cg import CGProblem, lw_alpha_and_target
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
@@ -122,7 +122,7 @@ def backtest(est_window):
             continue
 
         for a in ALPHAS:
-            w, _outer, inner = MinVarProblem(X, alpha=a, target=target).solve_cg()
+            w, _outer, inner = CGProblem(X, alpha=a, target=target).solve_cg()
             cg[a].append(inner)
             daily[a].extend((R_out @ w).tolist())
             if prev_w[a] is not None:
@@ -226,8 +226,8 @@ X_last = R[t_last - EST : t_last]
 X_last = X_last - X_last.mean(axis=0)
 bar_lam = float(np.linalg.norm(X_last, "fro") ** 2) / (n * EST)
 tgt = bar_lam * np.eye(n)
-cg_counts = [MinVarProblem(X_last, alpha=0.5, target=tgt).solve_cg()[2] for _ in range(10)]
-prox_counts = [MinVarProblem(X_last, alpha=0.5, target=tgt).solve_proximal()[1] for _ in range(10)]
+cg_counts = [CGProblem(X_last, alpha=0.5, target=tgt).solve_cg()[2] for _ in range(10)]
+prox_counts = [CGProblem(X_last, alpha=0.5, target=tgt).solve_proximal()[1] for _ in range(10)]
 print(f"CG inner iters over 10 runs:       {set(cg_counts)}  (deterministic, x0=0)")
 print(
     f"Proximal iters over 10 runs: min={min(prox_counts)} max={max(prox_counts)} "
@@ -270,6 +270,6 @@ ax2.set_yscale("log")
 
 ax1.set_title(r"Out-of-sample risk vs.\ conditioning  (S\&P 500)")
 fig.tight_layout(pad=1.0)
-fig.savefig(GRAPHS / "minvar_oos.pdf", bbox_inches="tight")
-fig.savefig(GRAPHS / "minvar_oos.png", bbox_inches="tight", dpi=150)
-print(f"  -> wrote {GRAPHS / 'minvar_oos.pdf'}")
+fig.savefig(GRAPHS / "cg_oos.pdf", bbox_inches="tight")
+fig.savefig(GRAPHS / "cg_oos.png", bbox_inches="tight", dpi=150)
+print(f"  -> wrote {GRAPHS / 'cg_oos.pdf'}")

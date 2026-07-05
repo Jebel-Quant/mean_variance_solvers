@@ -4,6 +4,6 @@
 # lives in ../common.mk; only the per-paper variables differ. Run from this
 # directory, e.g. via the repository-root `make compile`.
 
-DOC := minvar_paper
+DOC := cg_paper
 
 include ../common.mk
