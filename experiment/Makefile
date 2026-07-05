@@ -1,12 +1,11 @@
 # Regenerate the figures (graphs/) and tables (tables/) that all three papers
-# include. Each script is a self-contained PEP 723 program: `uv run` resolves
-# its pinned dependencies into a throwaway environment, so `make data`/`make
-# figures` need no setup. For interactive work (a REPL, an IDE, running a
-# script under a debugger) `make venv` builds one persistent .venv from
-# pyproject.toml instead. The committed data/*.parquet inputs are produced by
-# the fetch_* scripts (`make data`). The experiment_nncg* scripts (companion
-# "Non-Negative Conjugate Gradients" note) build on the vendored nncg_ref.py
-# reference solver rather than the nncg package the finance scripts use.
+# include. The scripts are nested by paper into importable packages — minvar/
+# (Shrinkage-as-Preconditioning), rmt/ (Eigenvalue-Cleaning), nncg_note/
+# (Non-Negative Conjugate Gradients) — over a shared common/ (baselines,
+# simulate, util, data fetchers). They are run as modules from this directory
+# (`uv run python -m <pkg>.<module>`) against the .venv that `make venv` builds
+# from pyproject.toml, so imports resolve across packages. The committed
+# data/*.parquet inputs are produced by the fetch_* scripts (`make data`).
 
 .DEFAULT_GOAL := help
 
@@ -20,25 +19,26 @@ venv:  ## Build a persistent .venv from pyproject.toml (uv sync)
 	uv sync
 	@echo "Activate with: source .venv/bin/activate"
 
-test:  ## Run the full test suite (unit + end-to-end experiment runs; ~2 min)
-	uv run pytest
+test:  ## Run the full test suite with coverage (unit + end-to-end; fails under 100%)
+	uv run pytest --cov --cov-report=term-missing
 
-test-fast:  ## Run only the fast unit tests (skips the slow experiment runs)
-	uv run pytest -m "not slow"
+test-fast:  ## Run only the fast unit tests, with coverage (skips the slow experiment runs)
+	uv run pytest -m "not slow" --cov --cov-report=term-missing
 
 data:  ## Download the raw S&P 500 / FTSE 100 return data into data/
-	uv run fetch_sp500.py
-	uv run fetch_ftse100.py
+	uv run python -m common.fetch_sp500
+	uv run python -m common.fetch_ftse100
 
 figures:  ## Regenerate every graph and table for all three papers
-	uv run experiment.py
-	uv run experiment_synthetic.py
-	uv run experiment_oos.py
-	uv run experiment_rmt.py
-	uv run experiment_nncg.py
-	uv run experiment_nncg_bench.py
-	uv run experiment_nncg_regu.py
-	uv run experiment_nncg_deblur.py
+	uv run python -m minvar.experiment
+	uv run python -m minvar.experiment_synthetic
+	uv run python -m minvar.experiment_oos
+	uv run python -m rmt.experiment_rmt
+	uv run python -m nncg_note.experiment_nncg
+	uv run python -m nncg_note.experiment_nncg_bench
+	uv run python -m nncg_note.experiment_nncg_regu
+	uv run python -m nncg_note.experiment_nncg_deblur
+	uv run python -m nncg_note.experiment_nncg_hyperspectral
 
 clean:  ## Remove the persistent virtual environment
 	rm -rf .venv uv.lock

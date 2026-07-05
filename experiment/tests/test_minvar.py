@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from minvar import (
+from minvar.minvar import (
     MinVarProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
@@ -197,3 +197,64 @@ def test_rmt_target_lifts_lambda_min(returns):
     assert u_k.shape[1] == k
     assert delta_k.shape == (k,)
     assert np.all(delta_k > 0)  # signal eigenvalues exceed the floor
+
+
+# ---------------------------------------------------------------------------
+# Operator-construction branches (exercise every A = 2*Sigma path)
+# ---------------------------------------------------------------------------
+
+
+def test_wrong_shape_balance_matrix_raises(returns):
+    n = returns.shape[1]
+    with pytest.raises(ValueError, match="B must have shape"):
+        MinVarProblem(returns, B=np.ones((1, n + 1)), c=np.array([1.0]))
+
+
+def test_low_rank_target_matrix_free_cg(returns):
+    # target_lr feeds a FactorOperator into the composite (cg/pcg) operator.
+    target, lr, _k, _a = rmt_target_and_alpha(returns)
+    w_cg = MinVarProblem(returns, alpha=1.0, target=target, target_lr=lr).solve_cg()[0]
+    w_dense = MinVarProblem(returns, alpha=1.0, target=target).solve_cg()[0]
+    assert abs(w_cg.sum() - 1.0) < 1e-8
+    assert np.linalg.norm(w_cg - w_dense) < 1e-6
+
+
+def test_low_rank_target_dense_exact_below_alpha_one(returns):
+    # target_lr with alpha < 1 keeps the data term, so the exact path densifies
+    # 2*Sigma (the _dense_matrix low-rank branch) rather than using Woodbury.
+    target, lr, _k, _a = rmt_target_and_alpha(returns)
+    w = MinVarProblem(returns, alpha=0.5, target=target, target_lr=lr).solve_kkt()[0]
+    w_ref = MinVarProblem(returns, alpha=0.5, target=target).solve_kkt()[0]
+    assert np.linalg.norm(w - w_ref) < 1e-8  # low-rank and dense targets coincide
+
+
+def test_no_target_exact_uses_gram_operator(returns):
+    # No shrinkage: the exact operator is a GramOperator on the scaled data.
+    w, outer = MinVarProblem(returns).solve_kkt()
+    assert abs(w.sum() - 1.0) < 1e-8
+    assert w.min() >= -1e-9
+
+
+def test_cvxpy_reconstructs_low_rank_target(returns):
+    # solve_cvxpy with only low-rank factors (no dense target) reconstructs the
+    # dense target from them for the Cholesky split.
+    _target, lr, _k, _a = rmt_target_and_alpha(returns)
+    w, iters = MinVarProblem(returns, alpha=1.0, target=None, target_lr=lr).solve_cvxpy()
+    assert abs(w.sum() - 1.0) < 1e-6
+    assert iters >= 1
+
+
+def test_cvxpy_no_target(returns):
+    # No shrinkage target: the CVXPY objective is the plain least-squares form.
+    w, iters = MinVarProblem(returns).solve_cvxpy()
+    assert abs(w.sum() - 1.0) < 1e-6
+    assert iters >= 1
+
+
+def test_cvxpy_return_tilt(returns):
+    # rho != 0 adds the -rho * mu^T w return term to the CVXPY objective.
+    alpha, target = lw_alpha_and_target(returns)
+    mu = np.random.default_rng(4).uniform(0.0, 1e-3, returns.shape[1])
+    w, _ = MinVarProblem(returns, alpha=alpha, target=target, rho=5.0, mu=mu).solve_cvxpy()
+    assert abs(w.sum() - 1.0) < 1e-6
+    assert np.linalg.norm(w - MinVarProblem(returns, alpha=alpha, target=target).solve_cvxpy()[0]) > 1e-4

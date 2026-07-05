@@ -6,8 +6,8 @@ import doctest
 
 import numpy as np
 
-import simulate
-from simulate import simulate_equity_returns
+from common import simulate
+from common.simulate import simulate_equity_returns
 
 
 def test_shape_and_orientation():

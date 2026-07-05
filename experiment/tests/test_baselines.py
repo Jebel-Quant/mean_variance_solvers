@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 from cvx.linalg import DenseOperator
 
-import baselines
-from baselines import (
+from common import baselines
+from common.baselines import (
     BaselineResult,
     _project_simplex,
     ones_row,
@@ -149,3 +149,33 @@ def test_fista_step_override_still_converges(planted_nnqp):
     lam_max = float(np.linalg.eigvalsh(a)[-1])
     res = solve_fista(_op(a), b, step=1.0 / lam_max)
     assert np.linalg.norm(res.x - x_star) < 1e-3
+
+
+# ---------------------------------------------------------------------------
+# Lawson-Hanson: the max_outer cap and the ratio-test back-off step
+# ---------------------------------------------------------------------------
+
+
+def test_lawson_hanson_hits_max_outer(planted_nnqp):
+    a, b, _ = planted_nnqp
+    res = solve_lawson_hanson(_op(a), b, max_outer=1)  # needs several steps
+    assert res.status == "max_outer"
+
+
+def test_lawson_hanson_ratio_test_backoff():
+    # An ill-conditioned SPD problem whose target lies in range(A) with
+    # mixed-sign coefficients: the greedy dual order over-commits, so
+    # Lawson-Hanson must take ratio-test back-off steps to stay feasible.
+    rng = np.random.default_rng(0)
+    n = 34
+    eig = np.geomspace(1.0, 4000.0, n)
+    q, _ = np.linalg.qr(rng.standard_normal((n, n)))
+    a = (q * eig) @ q.T
+    a = 0.5 * (a + a.T)
+    b = a @ rng.standard_normal(n)
+    res = solve_lawson_hanson(_op(a), b)
+    assert res.status == "solved"
+    assert res.x.min() >= -1e-9
+    # KKT: on the active set the reduced gradient (dual) is non-positive
+    w = b - a @ res.x
+    assert float(np.max(w[res.x <= 1e-9], initial=-np.inf)) <= 1e-6

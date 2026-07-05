@@ -3,7 +3,7 @@
     "Eigenvalue Cleaning and Direct Solvers for Long-Only Portfolio Optimisation"
 
 Usage:
-    uv run experiment_rmt.py      # from the experiment/ directory
+    uv run python -m rmt.experiment_rmt      # from the experiment/ directory
 
 Inputs:
     data/sp500_pct_returns.parquet   — S&P 500 daily pct returns
@@ -26,23 +26,6 @@ Hardware: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17, scikit-learn 1.x.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "matplotlib",
-#     "numpy",
-#     "pandas",
-#     "scikit-learn",
-#     "pyarrow",
-#     "nncg==0.2.2",
-#     "cvx-linalg",
-#     "clarabel",
-#     "osqp",
-#     "scipy",
-#     "cvxpy",
-# ]
-# ///
-
 from __future__ import annotations
 
 import time as _time
@@ -53,15 +36,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.utils.extmath import randomized_svd
-from util.runner import SMOKE, output_dirs, run_timed
+from common.util.runner import SMOKE, output_dirs, run_timed
 
-from simulate import simulate_equity_returns
-from minvar import (
+from common.simulate import simulate_equity_returns
+from minvar.minvar import (
     MinVarProblem,
     rmt_target_and_alpha,
 )
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(

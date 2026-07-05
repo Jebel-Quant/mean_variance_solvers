@@ -68,26 +68,15 @@ redistribute a pre-cropped 250x191x224 cube (commonly named cuprite_ref.mat
 or similar) -- point --data at any such file.
 
 Usage:
-    uv run experiment_nncg_hyperspectral.py                # real data if found, else synthetic
-    uv run experiment_nncg_hyperspectral.py --synthetic     # force the offline proxy scene
-    uv run experiment_nncg_hyperspectral.py --data path.mat # use a specific cube
+    uv run python -m nncg_note.experiment_nncg_hyperspectral                # real data if found, else synthetic
+    uv run python -m nncg_note.experiment_nncg_hyperspectral --synthetic     # force the offline proxy scene
+    uv run python -m nncg_note.experiment_nncg_hyperspectral --data path.mat # use a specific cube
 
 Outputs:
     graphs/nncg_hyperspectral.pdf        abundance map, error map (synthetic only) + outer-iteration histogram
     tables/nncg_hyperspectral_defs.tex   headline numbers as \\newcommand macros
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "clarabel",
-#     "cvx-linalg",
-#     "matplotlib",
-#     "nncg==0.2.2",
-#     "numpy",
-#     "scipy",
-# ]
-# ///
 
 from __future__ import annotations
 
@@ -100,11 +89,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sp
 from cvx.linalg import DenseOperator
-from util.runner import output_dirs
+from common.util.runner import SMOKE, output_dirs
 
 from nncg import solve_nnqp_eq
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
 DATA = HERE / "data"
 
@@ -122,6 +111,8 @@ mpl.rcParams.update(
 )
 
 N_ROWS, N_COLS, N_BANDS = 250, 191, 224
+if SMOKE:  # tiny synthetic scene so the end-to-end smoke test stays fast
+    N_ROWS, N_COLS = 40, 30
 N_ENDMEMBERS = 14
 BAD_BANDS_1INDEXED = [(1, 2), (104, 113), (148, 167), (221, 224)]  # water absorption / low SNR
 ABUNDANCE_TEMP = 40.0  # softmax sharpness: mean dominant-endmember fraction ~0.74 (real-mineral-map-like)
@@ -401,6 +392,8 @@ def main():
                      help="fixed-point-residual tolerance for the FISTA baseline")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
+    if SMOKE:  # cap the per-pixel baseline sample to keep the smoke run quick
+        args.clarabel_sample = min(args.clarabel_sample, 80)
 
     cube, true_abundances, true_spectra = load_scene(args)
     rows, cols, m = cube.shape

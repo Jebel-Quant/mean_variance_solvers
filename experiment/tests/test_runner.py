@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from util.runner import (
+from common.util.runner import (
     _fmt_time,
     _format_benchmark_rows,
     _format_frontier_rows,
@@ -83,3 +83,48 @@ def test_write_frontier_def(tmp_path):
     write_frontier_def(path, "dataFrontier", [{"label": "x", "cold": 1.0, "warm": 0.5}], n_pts=5)
     text = path.read_text()
     assert "\\def\\dataFrontier{%" in text
+
+
+def test_output_dirs_creates_graphs_and_tables(tmp_path):
+    from common.util.runner import output_dirs
+
+    graphs, tables = output_dirs(tmp_path)
+    assert graphs == tmp_path / "graphs" and tables == tmp_path / "tables"
+    assert graphs.is_dir() and tables.is_dir()
+
+
+def test_output_dirs_honors_experiment_out(tmp_path, monkeypatch):
+    from common.util import runner
+
+    monkeypatch.setenv("EXPERIMENT_OUT", str(tmp_path))
+    graphs, tables = runner.output_dirs(tmp_path / "ignored-base")
+    assert graphs == tmp_path / "graphs" and tables == tmp_path / "tables"
+
+
+def test_run_timed_smoke_caps_repeats(monkeypatch):
+    from common.util import runner
+
+    monkeypatch.setattr(runner, "SMOKE", True)
+    calls = []
+    runner.run_timed(lambda: calls.append(1), repeats=5)
+    assert len(calls) == 1  # smoke mode forces a single call
+
+
+def test_print_table(capsys):
+    from common.util.runner import print_table
+
+    results = {
+        "cvxpy": {"time_s": 1.0, "outer": None, "inner": 10},  # inner-only row
+        "cg": {"time_s": 0.25, "outer": 3, "inner": None},     # outer-only row
+    }
+    print_table("Benchmark", results, ref_key="cvxpy")
+    out = capsys.readouterr().out
+    assert "Benchmark" in out
+    assert "cvxpy" in out and "cg" in out
+    assert "4.0x" in out  # 1.0 / 0.25 speedup
+
+
+def test_format_benchmark_rows_skips_unknown_method():
+    results = {"m": {"time_s": 1.0, "outer": 1, "inner": None}}
+    rows = _format_benchmark_rows(results, ref_key="m", method_order=["m", "absent"])
+    assert "m" in rows and "absent" not in rows  # unknown method is skipped

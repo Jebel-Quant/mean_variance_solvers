@@ -25,33 +25,38 @@ import pytest
 
 EXPERIMENT_DIR = Path(__file__).resolve().parent.parent
 
-# script -> a few output files it must (re)write on a successful run
+# module (run as `python -m <module>` from experiment/) -> output files it must
+# (re)write on a successful run
 SCRIPTS = {
-    "experiment.py": ["tables/sp500_defs.tex", "tables/ftse_defs.tex"],
-    "experiment_synthetic.py": [
+    "minvar.experiment": ["tables/sp500_defs.tex", "tables/ftse_defs.tex"],
+    "minvar.experiment_synthetic": [
         "graphs/minvar_scaling.pdf",
         "graphs/minvar_iters.pdf",
         "tables/frontier_def.tex",
     ],
-    "experiment_oos.py": ["tables/oos_defs.tex", "graphs/minvar_oos.pdf"],
-    "experiment_rmt.py": [
+    "minvar.experiment_oos": ["tables/oos_defs.tex", "graphs/minvar_oos.pdf"],
+    "rmt.experiment_rmt": [
         "tables/rmt_solver_comparison.tex",
         "graphs/rmt_frontier.pdf",
     ],
-    # companion "Non-Negative Conjugate Gradients" note (nncg package + problems.py)
-    "experiment_nncg.py": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
-    "experiment_nncg_bench.py": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
-    "experiment_nncg_regu.py": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],
-    "experiment_nncg_deblur.py": ["graphs/nncg_deblur.pdf", "tables/nncg_deblur_defs.tex"],
+    # companion "Non-Negative Conjugate Gradients" note (nncg package + nncg_note.problems)
+    "nncg_note.experiment_nncg": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
+    "nncg_note.experiment_nncg_bench": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
+    "nncg_note.experiment_nncg_regu": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],
+    "nncg_note.experiment_nncg_deblur": ["graphs/nncg_deblur.pdf", "tables/nncg_deblur_defs.tex"],
+    "nncg_note.experiment_nncg_hyperspectral": [
+        "graphs/nncg_hyperspectral.pdf",
+        "tables/nncg_hyperspectral_defs.tex",
+    ],
 }
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("script", sorted(SCRIPTS), ids=lambda s: s)
-def test_experiment_runs_and_writes_outputs(script, tmp_path):
+@pytest.mark.parametrize("module", sorted(SCRIPTS), ids=lambda s: s)
+def test_experiment_runs_and_writes_outputs(module, tmp_path):
     env = {**os.environ, "EXPERIMENT_SMOKE": "1", "EXPERIMENT_OUT": str(tmp_path)}
     proc = subprocess.run(
-        [sys.executable, script],
+        [sys.executable, "-m", module],
         cwd=EXPERIMENT_DIR,
         capture_output=True,
         text=True,
@@ -59,7 +64,7 @@ def test_experiment_runs_and_writes_outputs(script, tmp_path):
         env=env,
         check=False,
     )
-    assert proc.returncode == 0, f"{script} failed:\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}"
-    for rel in SCRIPTS[script]:
+    assert proc.returncode == 0, f"{module} failed:\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}"
+    for rel in SCRIPTS[module]:
         out = tmp_path / rel
-        assert out.exists() and out.stat().st_size > 0, f"{script} did not write {out}"
+        assert out.exists() and out.stat().st_size > 0, f"{module} did not write {out}"

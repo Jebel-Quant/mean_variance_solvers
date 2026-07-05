@@ -55,8 +55,8 @@ from cvx.linalg import DenseOperator, FactorOperator, GramOperator, SumOperator
 from numpy.typing import NDArray
 from sklearn.covariance import ledoit_wolf, oas
 
-import baselines
 import nncg
+from common import baselines
 
 Vector = NDArray[np.float64]
 Matrix = NDArray[np.float64]
@@ -367,7 +367,7 @@ class MinVarProblem:
         constraints = [self.B @ w == self.c, w >= 0] if self.B is not None else [cp.sum(w) == 1, w >= 0]
         problem = cp.Problem(cp.Minimize(objective), constraints)
         problem.solve(solver=cp.OSQP if backend == "osqp" else cp.CLARABEL)
-        if w.value is None:
+        if w.value is None:  # pragma: no cover - defensive: CVXPY backend failure
             raise RuntimeError("CVXPY solver failed to find a solution")
         return self._project(np.asarray(w.value, dtype=float), project), int(problem.solver_stats.num_iters or 0)
 

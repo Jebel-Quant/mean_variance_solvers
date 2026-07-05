@@ -15,7 +15,7 @@ in closed form. This turns the three qualitative predictions of Section 7.2 into
 measured curves.
 
 Usage:
-    uv run experiment_nncg.py    # from non_negative_cg/experiment/
+    uv run python -m nncg_note.experiment_nncg    # from the experiment/ directory
 
 Outputs (files):
     graphs/nncg_kappa.pdf      CG inner iterations vs kappa, with a sqrt(kappa) guide
@@ -33,13 +33,6 @@ No finance data or external package is used; the whole study is reproducible
 from a fixed seed.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "matplotlib",
-#     "numpy",
-# ]
-# ///
 
 from __future__ import annotations
 
@@ -49,12 +42,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from cvx.linalg import DenseOperator
-from util.runner import output_dirs
+from common.util.runner import output_dirs
 
 from nncg import kkt_violation, solve_nnqp, solve_nnqp_eq
-from problems import make_problem
+from nncg_note.problems import make_problem
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(

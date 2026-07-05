@@ -60,7 +60,7 @@ print(f"Return matrix shape: {pct_returns.shape}  (T={pct_returns.shape[0]}, N={
 
 # ── 5. Save ───────────────────────────────────────────────────────────────────
 
-out_dir = Path(__file__).parent / "data"
+out_dir = Path(__file__).resolve().parents[1] / "data"
 
 pct_returns.to_parquet(out_dir / "sp500_pct_returns.parquet")
 print("\nSaved data/sp500_pct_returns.parquet")

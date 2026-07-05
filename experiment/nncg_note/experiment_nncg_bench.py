@@ -13,7 +13,7 @@ Every solver is checked against the known planted optimum x*, so accuracy is
 compared on equal footing rather than by tuning tolerances.
 
 Usage:
-    uv run experiment_nncg_bench.py   # from non_negative_cg/experiment/
+    uv run python -m nncg_note.experiment_nncg_bench   # from the experiment/ directory
 
 Outputs (files):
     graphs/nncg_bench.pdf     wall-clock time vs n (log-log, kappa=1e4)
@@ -27,15 +27,6 @@ Hardware/software recorded when the paper's numbers were generated:
 Apple M4 Pro, Python 3.13, NumPy 2.x, SciPy 1.x, Clarabel 0.x (see uv lock).
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "clarabel",
-#     "matplotlib",
-#     "numpy",
-#     "scipy",
-# ]
-# ///
 
 from __future__ import annotations
 
@@ -50,12 +41,12 @@ import scipy.sparse as sp
 from scipy.linalg import solve_triangular
 from scipy.optimize import nnls as scipy_nnls
 from cvx.linalg import DenseOperator
-from util.runner import SMOKE, output_dirs
+from common.util.runner import SMOKE, output_dirs
 
 from nncg import solve_nnqp
-from problems import make_problem, shaw
+from nncg_note.problems import make_problem, shaw
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(

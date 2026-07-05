@@ -21,7 +21,7 @@ Goal:
       * a second estimation window (L=252) to check the optimum is stable.
 
 Usage:
-    uv run experiment_oos.py          # from the experiment/ directory
+    uv run python -m minvar.experiment_oos          # from the experiment/ directory
 
 Inputs:
     data/sp500_pct_returns.parquet    — S&P 500 daily pct returns
@@ -38,19 +38,6 @@ Hardware used in the paper: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "matplotlib",
-#     "numpy",
-#     "pandas",
-#     "pyarrow",
-#     "scikit-learn",
-#     "nncg==0.2.2",
-#     "cvx-linalg",
-# ]
-# ///
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -59,11 +46,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from util.runner import SMOKE, output_dirs
+from common.util.runner import SMOKE, output_dirs
 
-from minvar import MinVarProblem, lw_alpha_and_target
+from minvar.minvar import MinVarProblem, lw_alpha_and_target
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(

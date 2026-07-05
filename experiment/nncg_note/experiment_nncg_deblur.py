@@ -13,7 +13,7 @@ yet the matrix-free loop runs in O(n) working memory. This is the regime the
 companion papers target and the reason to keep a Krylov inner solve.
 
 Usage:
-    uv run experiment_nncg_deblur.py   # from non_negative_cg/experiment/
+    uv run python -m nncg_note.experiment_nncg_deblur   # from the experiment/ directory
 
 Outputs:
     graphs/nncg_deblur.pdf        true / blurred+noise / reconstructed panels
@@ -22,10 +22,6 @@ Outputs:
 The solve is NumPy only; matplotlib is used solely to render the figure.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["matplotlib", "numpy"]
-# ///
 
 from __future__ import annotations
 
@@ -37,11 +33,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cvx.linalg import SymmetricOperator
 
-from util.runner import output_dirs
+from common.util.runner import output_dirs
 
 from nncg import solve_nnqp
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update({"font.family": "serif", "font.size": 9,
