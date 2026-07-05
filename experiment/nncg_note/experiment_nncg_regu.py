@@ -20,20 +20,13 @@ restores the P-matrix property and the loop terminates with a KKT certificate,
 agreeing with Lawson-Hanson on the regularised operator.
 
 Usage:
-    uv run experiment_nncg_regu.py   # from non_negative_cg/experiment/
+    uv run python -m nncg_note.experiment_nncg_regu   # from the experiment/ directory
 
 Outputs:
     tables/nncg_regu.tex        the ridge-split sweep (booktabs)
     tables/nncg_regu_defs.tex   headline numbers as \\newcommand macros
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "numpy",
-#     "scipy",
-# ]
-# ///
 
 from __future__ import annotations
 
@@ -43,12 +36,12 @@ import numpy as np
 from scipy.linalg import solve_triangular
 from cvx.linalg import DenseOperator
 from scipy.optimize import nnls as scipy_nnls
-from util.runner import output_dirs
+from common.util.runner import output_dirs
 
 from nncg import kkt_violation, solve_nnqp
-from problems import phillips, shaw
+from nncg_note.problems import phillips, shaw
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root
 _, TABLES = output_dirs(HERE)
 
 

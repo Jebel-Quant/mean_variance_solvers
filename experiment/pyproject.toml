@@ -40,10 +40,32 @@ dependencies = [
 package = false
 
 [dependency-groups]
-dev = ["pytest"]
+dev = ["pytest", "pytest-cov"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
     "slow: end-to-end experiment runs (deselect with '-m \"not slow\"')",
+]
+
+# Coverage is measured on the reusable solver LIBRARY — the pieces the unit
+# tests exercise directly and where correctness lives. The experiment_*.py
+# figure/table scripts are integration-tested instead (the smoke suite runs
+# every one end-to-end and asserts it exits 0 and writes its outputs), and the
+# fetch_*.py network downloaders are out of scope; both are omitted here.
+[tool.coverage.run]
+source = ["common", "minvar", "nncg_note"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "common/fetch_*.py",
+    "*/experiment*.py",
+]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
 ]

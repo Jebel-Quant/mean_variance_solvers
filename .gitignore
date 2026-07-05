@@ -23,3 +23,8 @@ out/
 *.fls
 *.fdb_latexmk
 *.thm
+
+# coverage artifacts
+.coverage
+.coverage.*
+htmlcov/

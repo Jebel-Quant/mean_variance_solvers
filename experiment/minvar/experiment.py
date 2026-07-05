@@ -4,7 +4,7 @@
      Long-Only Portfolio Optimization"
 
 Usage:
-    uv run experiment.py          # from the experiment/ directory
+    uv run python -m minvar.experiment          # from the experiment/ directory
 
 Inputs:
     data/sp500_pct_returns.parquet   — S&P 500 daily pct returns
@@ -20,37 +20,21 @@ Hardware used in the paper: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "pandas",
-#     "scikit-learn",
-#     "pyarrow",
-#     "numpy",
-#     "nncg==0.2.2",
-#     "cvx-linalg",
-#     "clarabel",
-#     "osqp",
-#     "scipy",
-#     "cvxpy",
-# ]
-# ///
-
 from __future__ import annotations
 
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from util.runner import SMOKE, _fmt_time, output_dirs, print_table, run_timed, write_table_defs
+from common.util.runner import SMOKE, _fmt_time, output_dirs, print_table, run_timed, write_table_defs
 
-from minvar import (
+from minvar.minvar import (
     MinVarProblem,
     lw_alpha_and_target,
     oas_alpha_and_target,
 )
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 _GRAPHS_BASE, TABLES = output_dirs(HERE)
 
 # Solver rows written to the paper tables (first-order methods are treated in the

@@ -48,6 +48,6 @@ def planted_nnqp():
 @pytest.fixture
 def returns():
     """A small demeaned synthetic return matrix (T=200, n=40)."""
-    from simulate import simulate_equity_returns
+    from common.simulate import simulate_equity_returns
 
     return simulate_equity_returns(40, 200, rng=0)

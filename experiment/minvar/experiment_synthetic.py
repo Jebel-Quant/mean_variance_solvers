@@ -4,7 +4,7 @@
      Long-Only Portfolio Optimization"
 
 Usage:
-    uv run experiment_synthetic.py   # from the experiment/ directory
+    uv run python -m minvar.experiment_synthetic   # from the experiment/ directory
 
 Outputs (stdout):
     Scaling table — runtime vs n for KKT / CG / proximal (T=1250 fixed).
@@ -20,21 +20,6 @@ Hardware used in the paper: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
 """
 
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "matplotlib",
-#     "numpy",
-#     "scikit-learn",
-#     "nncg==0.2.2",
-#     "cvx-linalg",
-#     "clarabel",
-#     "osqp",
-#     "scipy",
-#     "cvxpy",
-# ]
-# ///
-
 from __future__ import annotations
 
 import time as _time
@@ -43,16 +28,16 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from util.runner import SMOKE, output_dirs, run_timed, write_frontier_def
+from common.util.runner import SMOKE, output_dirs, run_timed, write_frontier_def
 
-from simulate import simulate_equity_returns
-from minvar import (
+from common.simulate import simulate_equity_returns
+from minvar.minvar import (
     MinVarProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
 )
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parents[1]  # experiment/ root (graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
 
 mpl.rcParams.update(
