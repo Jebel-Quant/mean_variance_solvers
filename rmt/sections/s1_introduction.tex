@@ -23,7 +23,7 @@ roughly $300$ times better conditioned than $\hat\Sigma$.
 
 Implementations of CRE cleaning in the public domain typically form
 $T_0^{\mathrm{RMT}}$ as a dense $n \times n$ matrix and pass it to a
-general-purpose solver (CVXPY, interior-point, etc.); see e.g.\ the reference
+general-purpose quadratic-program solver; see e.g.\ the reference
 implementations accompanying~\cite{lopezdeprado2018}. This paper exploits the
 low-rank-plus-identity structure
 $T_0^{\mathrm{RMT}} = \bar\lambda I + U_k \Delta_k U_k^\top$, which renders
