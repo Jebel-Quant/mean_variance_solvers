@@ -1,4 +1,4 @@
-\section{The Woodbury Portfolio Algorithm}\label{sec:algorithm}
+\section{The Woodbury Portfolio Solver}\label{sec:algorithm}
 
 \subsection{Primal-dual active-set reduction}
 
@@ -298,7 +298,8 @@ The solve cost is
 \]
 where the $O(nk)$ term is the gradient evaluation of the dual step.
 For a sweep of $S$ solves sharing the same eigenpairs $(U_k, \Lambda_k)$,
-the total pipeline cost including preprocessing is
+the total pipeline cost including the randomised-SVD preprocessing of
+Section~\ref{sec:preprocessing} is
 \[
   C_{\mathrm{total}} \;=\; \underbrace{O(nTk)}_{\text{preprocessing}} +
   \underbrace{S \cdot s \cdot O(n_a k^2 + k^3 + nk)}_{\text{solves}}\,,

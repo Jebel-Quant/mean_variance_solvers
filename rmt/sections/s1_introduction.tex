@@ -55,10 +55,9 @@ and $0.7$ in our experiments), and we account for the total pipeline cost over
 a sweep of $S$ related solves (Proposition~\ref{prop:pipeline}), under which the
 $O(nTk)$ preprocessing amortises to $O(nTk/S)$ per solve.
 
-\emph{Second, randomised-SVD preprocessing.} The companion paper uses a dense
-eigendecomposition of $\hat\Sigma$ for simplicity; at large $n$ this costs
-$O(n^2 T + n^3)$ and re-introduces the $n^2$ storage the matrix-free approach
-aims to avoid. A randomised truncated SVD applied directly to $X$ computes the
+\emph{Second, randomised-SVD preprocessing.} The naive path forms $\hat\Sigma$
+and takes a dense eigendecomposition, at $O(n^2 T + n^3)$ cost and $O(n^2)$
+storage. A randomised truncated SVD applied directly to $X$ computes the
 top-$k$ eigenpairs of $\hat\Sigma$ in $O(nTk)$ time and $O(nk)$ storage
 (Section~\ref{sec:preprocessing}); the measured portfolio impact of the
 approximation is below three basis points in any weight. For daily rolling
@@ -122,6 +121,6 @@ Section~\ref{sec:rmt} constructs the cleaned estimator.
 Section~\ref{sec:problem} states the long-only problem.
 Section~\ref{sec:algorithm} develops the active-set reduction, the Woodbury
 portfolio algorithm, and the crossover analysis. Section~\ref{sec:preprocessing} covers
-randomised SVD preprocessing. Section~\ref{sec:ksensitivity} analyses sensitivity
-to the threshold $k$. Section~\ref{sec:results} reports timing, scaling, and
-out-of-sample results. Section~\ref{sec:conclusions} concludes.
+randomised SVD preprocessing. Section~\ref{sec:results} reports timing, scaling,
+threshold sensitivity (Section~\ref{sec:ksensitivity}), and out-of-sample
+results. Section~\ref{sec:conclusions} concludes.

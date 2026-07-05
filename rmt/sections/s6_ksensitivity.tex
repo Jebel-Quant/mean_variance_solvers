@@ -1,11 +1,11 @@
-\section{Threshold Robustness and \texorpdfstring{$k$}{k}-Sensitivity}\label{sec:ksensitivity}
+\subsection{Threshold Robustness and \texorpdfstring{$k$}{k}-Sensitivity}\label{sec:ksensitivity}
 
 The Marchenko--Pastur threshold determines $k$ from data. A practical concern is
 whether the portfolio is sensitive to this choice: a threshold that incorrectly
 includes one extra noise factor (or excludes one signal factor) by a small amount
 would be problematic if the resulting portfolio changes substantially.
 
-\subsection{Cost of auditing}
+\subsubsection{Cost of auditing}
 
 Auditing the sensitivity at $k \pm 1$ requires two additional Woodbury solves.
 Since the eigenpairs $(U_k, \Lambda_k)$ are already computed, these are pure solve
@@ -13,7 +13,7 @@ costs at $O(n_a k^2 + k^3)$ each, negligible relative to the preprocessing.
 On the benchmark dataset, the three-point audit ($k = 22, 23, 24$) adds less than
 $3$\,ms to the total pipeline. This makes the audit a costless safety check.
 
-\subsection{Analytical sensitivity}
+\subsubsection{Analytical sensitivity}
 
 Let $w^*(k)$ denote the RMT minimum-variance portfolio with $k$ signal factors.
 To leading order (ignoring the accompanying $O(1/(n-k))$ adjustment of the
@@ -36,7 +36,7 @@ is small relative to the signal excesses $\delta_1, \ldots, \delta_k$, and the
 portfolio perturbation is correspondingly small. The empirical audit below
 includes the exact bulk-mean adjustment.
 
-\subsection{Empirical sensitivity on S\&P~500 data}
+\subsubsection{Empirical sensitivity on S\&P~500 data}
 
 Table~\ref{tab:k_sensitivity} quantifies the change for $k \in \{22, 23, 24\}$
 on the full S\&P~500 sample ($n = 494$, $T = 1213$). The maximum absolute weight
