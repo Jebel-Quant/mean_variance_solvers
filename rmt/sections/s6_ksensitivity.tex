@@ -15,26 +15,14 @@ $3$\,ms to the total pipeline. This makes the audit a costless safety check.
 
 \subsubsection{Analytical sensitivity}
 
-Let $w^*(k)$ denote the RMT minimum-variance portfolio with $k$ signal factors.
-To leading order (ignoring the accompanying $O(1/(n-k))$ adjustment of the
-bulk mean $\bar\mu$, which is at the percent level on the benchmark data),
-adding the $(k+1)$-th factor changes the system matrix by a rank-one update:
-$C_0(k+1) \approx C_0(k) + \delta_{k+1}\,u_{k+1}u_{k+1}^\top$,
-where $\delta_{k+1} = \lambda_{k+1} - \bar\mu > 0$.
-By the Sherman--Morrison identity,
-\[
-  (C_0(k+1))^{-1}
-  \approx (C_0(k))^{-1}
-  - \frac{\delta_{k+1}}{1 + \delta_{k+1} u_{k+1}^\top (C_0(k))^{-1} u_{k+1}}
-    \cdot
-    (C_0(k))^{-1} u_{k+1} u_{k+1}^\top (C_0(k))^{-1}.
-\]
-The portfolio perturbation $w^*(k+1) - w^*(k)$ is therefore controlled by
-$\delta_{k+1}$, the eigenvalue excess of the marginal factor. Since
-$\lambda_{k+1}$ lies just above $\hat\lambda_+$ by construction, $\delta_{k+1}$
-is small relative to the signal excesses $\delta_1, \ldots, \delta_k$, and the
-portfolio perturbation is correspondingly small. The empirical audit below
-includes the exact bulk-mean adjustment.
+Adding the $(k+1)$-th factor is a rank-one update
+$C_0(k+1) \approx C_0(k) + \delta_{k+1} u_{k+1}u_{k+1}^\top$ with
+$\delta_{k+1} = \lambda_{k+1} - \bar\mu > 0$, so by Sherman--Morrison the portfolio
+perturbation is controlled by $\delta_{k+1}$, the eigenvalue excess of the marginal
+factor. Since $\lambda_{k+1}$ sits just above the edge $\hat\lambda_+$,
+$\delta_{k+1}$ is small relative to the signal excesses and the perturbation is
+correspondingly small; the empirical audit below includes the exact bulk-mean
+adjustment.
 
 \subsubsection{Empirical sensitivity on S\&P~500 data}
 

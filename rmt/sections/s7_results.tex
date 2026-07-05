@@ -99,37 +99,14 @@ Woodbury with dense preprocessing, and Woodbury with randomised SVD preprocessin
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.68\linewidth]{graphs/rmt_scaling_full.pdf}
-\caption{Wall-clock time vs.\ $n$ (log-log, $T=1250$).
-KKT-Cholesky grows faster than Woodbury as $n$ increases because $n_a$ grows with $n$
-and the $O(n_a^3)$ Cholesky term dominates. Dashed reference lines $O(n)$ and
-$O(n^2)$ anchored at $n=500$.}
+\caption{Wall-clock time vs.\ $n$ (log-log, $T=1250$; $k$ grows as $\approx n/24$).
+KKT-Cholesky grows faster than Woodbury as $n_a$ grows with $n$ and the $O(n_a^3)$
+term dominates; dashed reference lines $O(n)$, $O(n^2)$ anchored at $n=500$. At
+$n=3000$ ($k=125$) the Woodbury solve is $53\times$ faster than KKT-Cholesky, and
+the full rSVD-plus-Woodbury pipeline ($0.084$\,s) is $18\times$ faster than
+KKT-Cholesky ($1.52$\,s), which is charged no preprocessing.}
 \label{fig:scaling_full}
 \end{figure}
-
-\begin{table}[ht]
-\centering
-\small
-\begin{tabular}{rrrrrr}
-\toprule
-$n$ & $k$ & Cholesky (s) & WB solve (s) & WB+dense (s) & WB+rSVD (s) \\
-\midrule
- 300 &   8 & 0.0064 & 0.0007 & 0.0049 & 0.0042 \\
- 500 &  21 & 0.0178 & 0.0012 & 0.0138 & 0.0076 \\
- 750 &  34 & 0.0459 & 0.0020 & 0.0309 & 0.0120 \\
-1000 &  50 & 0.0829 & 0.0040 & 0.0587 & 0.0178 \\
-1500 &  74 & 0.2304 & 0.0090 & 0.1478 & 0.0368 \\
-2000 &  93 & 0.4493 & 0.0150 & 0.3183 & 0.0617 \\
-3000 & 125 & 1.5163 & 0.0284 & 1.1473 & 0.0839 \\
-\bottomrule
-\end{tabular}
-\caption{Scaling data ($T=1250$ fixed). $k$ is the MP-detected signal factor count.
-At $n=3000$ Woodbury is $53\times$ faster than KKT-Cholesky (solve only) and
-the total pipeline including rSVD preprocessing ($0.084$\,s) is $18\times$
-faster than KKT-Cholesky ($1.52$\,s). The comparison is conservative:
-KKT-Cholesky also requires the correlation eigenpairs to assemble its active-set
-system, but is charged no preprocessing here.}
-\label{tab:scaling}
-\end{table}
 
 Two caveats frame this experiment. First, the growth law $k \approx n/24$ is
 observed on the real data at a single size ($k = 17$ at $n = 494$) and is

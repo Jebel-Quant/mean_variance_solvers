@@ -6,8 +6,8 @@ $X_s = X D^{-1/2}$. Two paths are available.
 
 \paragraph{Dense path}
 Assemble $C$ explicitly ($O(n^2 T)$ FLOPs, $O(n^2)$ storage), then compute a full
-eigendecomposition ($O(n^3)$). Total cost $O(n^2 T + n^3)$; $0.011$\,s at
-$n = 494$, $T = 1213$ on the benchmark hardware (Table~\ref{tab:preprocessing}).
+eigendecomposition ($O(n^3)$). Total cost $O(n^2 T + n^3)$; $0.011$\,s at $n = 494$, $T = 1213$ on the benchmark
+hardware.
 
 \paragraph{Randomised SVD path}
 The right singular vectors of $X_s/\sqrt{T}$ are the eigenvectors of $C$. A
@@ -84,33 +84,15 @@ for details. At benchmark size ($n=494$, $T=1213$, approximately $4.6$\,MB
 for double-precision $X$) both stages fit comfortably in L3 cache.
 
 \paragraph{Benchmark}
-
-\input{tables/rmt_preprocessing}
-\begin{table}[ht]
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Method & Time (s) & Storage & Subspace error \\
-\midrule
-\dataPreprocessing
-\bottomrule
-\end{tabular}
-\caption{Preprocessing paths for S\&P~500 ($n=494$, $T=1213$, $k=17$, $p=10$).
-Subspace error: $\norm{UU^\top - \hat{U}\hat{U}^\top}_F$, measuring alignment of the
-top-$k$ signal subspaces.  The randomised SVD is $1.9\times$ faster and requires
-$29\times$ less storage.}
-\label{tab:preprocessing}
-\end{table}
-
-The randomised SVD is $1.9\times$ faster than the dense path at $n=494$, and the
-advantage grows with $n$: at $n=3000$ (Table~\ref{tab:scaling}) the dense
-eigendecomposition takes $1.12$\,s against $0.056$\,s for the randomised path, a
-$20\times$ saving. The subspace error
-$\norm{UU^\top - \hat{U}\hat{U}^\top}_F \approx 2.5 \times 10^{-2}$ is about
-$0.6\%$ alignment per eigenvector column (relative to the subspace scale
-$\sqrt{k} \approx 4.1$), an order of magnitude below the $k \pm 1$ threshold
+On S\&P~500 ($n=494$, $T=1213$, $k=17$, $p=10$) the randomised SVD is $1.9\times$
+faster than the dense path ($0.006$\,s vs $0.011$\,s), needs $29\times$ less
+storage, and aligns the top-$k$ signal subspace to within a Frobenius error
+$\norm{UU^\top - \hat{U}\hat{U}^\top}_F \approx 2.5 \times 10^{-2}$ (about $0.6\%$
+per eigenvector column), an order of magnitude below the $k \pm 1$ threshold
 uncertainty (Section~\ref{sec:ksensitivity}) that any user of the MP rule already
-accepts.
+accepts. The advantage grows with $n$: at $n=3000$ the dense eigendecomposition
+takes $1.12$\,s against $0.056$\,s for rSVD, a $20\times$ saving
+(Figure~\ref{fig:scaling_full}).
 
 \paragraph{Large-\texorpdfstring{$n$}{n} recommendation}
 For $n \leq 500$ either path is practical; the dense path is simpler to implement

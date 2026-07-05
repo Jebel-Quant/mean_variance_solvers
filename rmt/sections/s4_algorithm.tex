@@ -77,22 +77,14 @@ for every $\mathcal{A}$ (all $\delta_j > 0$ and $\bar\mu > 0$), every
 principal submatrix is invertible, each pivot is well defined, and the
 restricted subproblem has a unique optimum.
 
-The outer loop, its finite-termination proof, and the pivot schedule that makes
-it robust are developed in full generality in the companion
-paper~\cite{schmelzer2026nncg} for the equality-augmented non-negative quadratic
-$\min_{x \geq 0,\, Bx = c}\tfrac12 x^\top A x - b^\top x$ with $A \succ 0$, of
-which the RMT problem is the instance $A = C_0$, $b = \rho\hat\mu$
-(the budget case taking $B = \mathbf{1}^\top$, $c = 1$).
-Theorem~4.1 there gives finite termination at the unique global minimiser
-\emph{with no non-degeneracy assumption}: guarding a batch block-pivot fast path
-with a least-index (Bland) fallback removes the hypothesis that the classical
-parametric-QP pivot argument~\cite{nocedal2006} requires. The fallback is
-dormant on generic data yet provably necessary on an adversarial family of
-anti-correlated designs \cite[Section~6.2]{schmelzer2026nncg}. Crucially for the
-present paper, the same loop and the same proof accept a \emph{direct}
-factorisation of each free-set system in place of an iterative inner solve: the
-Woodbury solve developed below is exactly that direct free-set
-solver, so its termination is inherited without further assumptions.
+The outer loop, its finite-termination proof, and the batch/least-index pivot
+schedule that makes it robust are developed in full generality in the companion
+paper~\cite{schmelzer2026nncg}, of which the RMT problem is the instance
+$A = C_0$, $b = \rho\hat\mu$. Theorem~4.1 there gives finite termination at the
+unique global minimiser with no non-degeneracy assumption, and licenses any
+\emph{direct} factorisation of the free-set system as the inner solve: the
+Woodbury solve developed below is exactly such a solver, so termination is
+inherited.
 
 \begin{remark}[Implementation safeguards]\label{rem:safeguards}
 The reference implementation runs the batch fast path (assets whose weights are
@@ -226,42 +218,25 @@ $O(nk)$. Neither $\hat\Sigma$ nor $X$ is touched after preprocessing: the
 entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\mu)$.
 
 \emph{Warm-starting profits from active-set continuity, not initial guesses}.
-For a direct solver there is no initial guess to warm-start; the Woodbury solve
-does not iterate. Warm-starting passes the previous active-set $\mathcal{A}$ and
-weight vector $w$, reducing the number of outer primal-dual steps. On the
-efficient frontier sweep with $\rho \in [0, \rho_{\max}]$ the active set changes
-by at most a few assets between adjacent $\rho$ values, so the warm solver
-typically terminates in one to two outer steps.
-
-This continuity is a structural property of parametric quadratic programming, not
-an artefact of the data-generating process. The Markowitz efficient frontier is a
-continuous piecewise-linear curve in weight space as a function of $\rho$; at each
-breakpoint, generically, exactly one asset enters or leaves the active set~\cite{markowitz1956}.
-Between breakpoints the active set is constant. Choosing a fine enough $\rho$
-grid (e.g.\ $50$ equally spaced points) ensures that adjacent solves share
-all but a few active assets regardless of whether the returns are synthetic or
-real, and regardless of the covariance estimator used.
+A direct solver has no initial guess; warm-starting instead passes the previous
+active set and weights, cutting the number of outer steps. Along the frontier the
+Markowitz solution is piecewise-linear in $\rho$ with generically single-asset
+breakpoint changes~\cite{markowitz1956}, so adjacent solves on a fine grid share
+all but a few active assets and the warm solver typically terminates in one to two
+outer steps; this is a structural property of parametric quadratic programming, not
+an artefact of the data.
 
 \begin{remark}[Relation to the critical line algorithm]\label{rem:cla}
 The same piecewise-linear structure underlies the critical line algorithm
-(CLA)~\cite{markowitz1956,niedermayer2010,cvxcla}, which traces the exact
-frontier by pivoting from breakpoint to breakpoint instead of re-solving on a
-$\rho$ grid. On a fixed active set the restricted solution is affine in
-$\rho$, $w_\mathcal{A}(\rho) = a + \rho b$ with
-$a = V_1 S^{-1} c$ and
-$b = \tfrac12\bigl(v_2 - V_1 S^{-1} B_\mathcal{A} v_2\bigr)$,
-and the multipliers $\lambda(\rho) = S^{-1}(2c - \rho\,B_\mathcal{A} v_2)$ are
-affine as well, so every primal exit ($w_i$ reaching zero) and dual entry
-($g_i - (B^\top\lambda)_i$ reaching zero) is the root of an affine function: the
-exact frontier costs one Woodbury solve per breakpoint. In the budget case these
-reduce to $a = v_1/(\mathbf{1}^\top v_1)$ and
-$b = \tfrac12\bigl(v_2 - \tfrac{\mathbf{1}^\top v_2}{\mathbf{1}^\top v_1}v_1\bigr)$. We implement this sweep with the Woodbury kernel as its
-linear algebra and validate it against the grid sweep in
-Section~\ref{ssec:cla}. The two approaches remain complementary in practice:
-CLA enumerates the exact frontier for a \emph{fixed} covariance, whereas the
-warm-started grid sweep extends unchanged to the practitioner's setting in
-which consecutive solves differ in the data (a refreshed covariance at each
-rebalance) rather than only in $\rho$.
+(CLA)~\cite{markowitz1956,niedermayer2010,cvxcla}. On a fixed active set the
+restricted solution and multipliers are affine in $\rho$
+($w_\mathcal{A}(\rho) = a + \rho b$, with $a = V_1 S^{-1} c$ and $b$ read off the
+same Schur solve), so every primal exit and dual entry is the root of an affine
+function and the exact frontier costs one Woodbury solve per breakpoint
+(Section~\ref{ssec:cla}). CLA enumerates the exact frontier for a \emph{fixed}
+covariance, whereas the warm-started grid sweep extends unchanged to the
+practitioner's setting where consecutive solves differ in the data, not only in
+$\rho$.
 \end{remark}
 
 \begin{remark}[Ridge terms and other structured modifications]\label{rem:ridge}
@@ -280,29 +255,13 @@ produced by nonlinear shrinkage (Remark~\ref{rem:rie}).
 \subsection{Complexity and crossover analysis}
 
 \begin{proposition}[Woodbury vs.\ KKT-Cholesky crossover]\label{prop:crossover}
-Let the KKT-Cholesky inner solve assemble
-$C_{0,\mathcal{A}}$ explicitly via a rank-$k$ symmetric update
-($n_a^2 k$ flops to leading order) and factor by Cholesky ($n_a^3/3$ flops),
-and let the Woodbury inner solve form $W$ ($n_a k^2$ flops) and factor it
-($k^3/3$ flops). Then, writing $x = k/n_a$, the Woodbury solve requires fewer
-flops per outer step if and only if
-\[
-  n_a k^2 + \tfrac{k^3}{3} \;<\; n_a^2 k + \tfrac{n_a^3}{3}
-  \;\iff\;
-  x^3 + 3x^2 - 3x - 1 < 0
-  \;\iff\;
-  (x - 1)\,(x^2 + 4x + 1) < 0
-  \;\iff\;
-  x < 1\,,
-\]
-i.e.\ exactly when $k < n_a$. The same threshold holds with unit constants:
-$n_a k^2 + k^3 < n_a^2 k + n_a^3 \iff (x+1)^2(x-1) < 0 \iff x < 1$.
+KKT-Cholesky assembles $C_{0,\mathcal{A}}$ by a rank-$k$ update and factors it
+($n_a^2 k + n_a^3/3$ flops); Woodbury forms and factors the $k \times k$
+correction $W$ ($n_a k^2 + k^3/3$ flops). Writing $x = k/n_a$, the Woodbury solve
+is cheaper per outer step iff
+$n_a k^2 + \tfrac{k^3}{3} < n_a^2 k + \tfrac{n_a^3}{3}$, which (dividing by
+$n_a^3$) factors as $(x-1)(x^2 + 4x + 1) < 0$, i.e.\ iff $x < 1$ ($k < n_a$).
 \end{proposition}
-
-\begin{proof}
-Divide both sides by $n_a^3$ and substitute $x = k/n_a$; the cubics factor as
-displayed, and for $x > 0$ the second factor is positive in both cases.
-\end{proof}
 
 \begin{remark}[Crossover in practice]\label{rem:crossover}
 The crossover condition $k < n_a$ holds across essentially all of the frontier:
@@ -323,33 +282,14 @@ matrix, hence always invertible.
 \end{remark}
 
 \begin{proposition}[Per-solve pipeline complexity]\label{prop:pipeline}
-Let $s$ denote the number of outer active-set steps for one portfolio solve.
-The solve cost is
-\[
-  C_{\mathrm{Woodbury}}(s) \;=\; s \cdot O(n_a k^2 + k^3 + nk)\,,
-\]
-where the $O(nk)$ term is the gradient evaluation of the dual step.
-For a sweep of $S$ solves sharing the same eigenpairs $(U_k, \Lambda_k)$,
-the total pipeline cost including the randomised-SVD preprocessing of
-Section~\ref{sec:preprocessing} is
-\[
-  C_{\mathrm{total}} \;=\; \underbrace{O(nTk)}_{\text{preprocessing}} +
-  \underbrace{S \cdot s \cdot O(n_a k^2 + k^3 + nk)}_{\text{solves}}\,,
-\]
-and the preprocessing cost amortises to $O(nTk/S)$ per solve.
+With $s$ outer active-set steps, one solve costs $s\cdot O(n_a k^2 + k^3 + nk)$
+(the $O(nk)$ term is the dual-step gradient). For a sweep of $S$ solves sharing the
+eigenpairs, the pipeline cost is $O(nTk) + S\,s\,O(n_a k^2 + k^3 + nk)$, so the
+$O(nTk)$ randomised-SVD preprocessing (Proposition~\ref{prop:rsvd}) amortises to
+$O(nTk/S)$ per solve.
 \end{proposition}
 
-\begin{proof}
-Preprocessing via randomised SVD costs $O(nT(k+p))$ for oversampling parameter $p$
-(Proposition~\ref{prop:rsvd}); setting $p = O(k)$ gives $O(nTk)$.
-Each outer step costs one Woodbury application
-(Proposition~\ref{prop:woodbury_cost}) plus one $O(nk)$ gradient evaluation.
-The pipeline cost is the sum; the amortisation claim is division by $S$.
-\end{proof}
-
-At the $n=500$ benchmark the measured preprocessing share of the total
-pipeline for a 50-point frontier sweep is between roughly $30\%$ (cold sweep)
-and $45\%$ (warm sweep); for a single solve the preprocessing dominates
-(Table~\ref{tab:scaling}). In every case the pipeline total remains well below
-the cost of the KKT-Cholesky solve alone at large $n$
+At the $n=500$ benchmark the preprocessing share of a 50-point sweep is
+$30$--$45\%$; for a single solve it dominates. In every case the pipeline total
+stays well below the KKT-Cholesky solve alone at large $n$
 (Section~\ref{ssec:scaling}).

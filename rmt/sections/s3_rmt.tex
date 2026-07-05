@@ -114,37 +114,24 @@ of $n$.
 \end{remark}
 
 \begin{remark}[Relation to optimal RMT cleaning]\label{rem:rie}
-CRE clipping is the simplest member of the family of rotationally invariant
-estimators (RIE). It is not loss-optimal: the oracle RIE replaces \emph{every}
-eigenvalue (bulk and signal alike) by a value determined by the eigenvector
-overlaps of Ledoit and P\'ech\'e~\cite{ledoitpeche2011}, and these oracle values
-are not constant across the bulk; nonlinear shrinkage~\cite{ledoit2012,ledoit2020}
-and the RIE of Bun et al.~\cite{bun2017} dominate clipping in Frobenius loss. In
-particular, CRE retains the signal eigenvalues unshrunk although eigenvalues just
-above the edge are biased upward and their eigenvectors imperfectly aligned with
-the population factors (the BBP transition~\cite{baik2005,johnstone2001}). The
-reason this paper nevertheless works with CRE is structural: clipping is the member
-of the family whose cleaned correlation is \emph{scalar-identity-plus-low-rank}
-(a spiked structure in the sense of Johnstone~\cite{johnstone2001}), and only that
-structure admits the closed-form Woodbury solve of Section~\ref{sec:algorithm}.
-Nonlinear shrinkage and general RIE produce full-rank spectral modifications to
-which the Woodbury identity does not apply; portfolios built on them require a
-general factorisation. Whether the statistical gap matters for long-only
-minimum-variance portfolios is an empirical question; on our data it is small
-(Section~\ref{ssec:oos}).
+CRE clipping is the simplest rotationally invariant estimator (RIE) and is not
+loss-optimal: nonlinear shrinkage~\cite{ledoit2012,ledoit2020} and the oracle RIE
+of Ledoit--P\'ech\'e and Bun et al.~\cite{ledoitpeche2011,bun2017}, which reshape
+\emph{every} eigenvalue, dominate it in Frobenius loss. We nevertheless use CRE
+for a structural reason: clipping is the only member of the family whose cleaned
+correlation is \emph{scalar-identity-plus-low-rank}, the spiked
+form~\cite{johnstone2001} that admits the closed-form Woodbury solve of
+Section~\ref{sec:algorithm}; full-rank RIE modifications would require a general
+factorisation. Whether the statistical gap matters for long-only minimum variance
+is an empirical question, and on our data it is small (Section~\ref{ssec:oos}).
 \end{remark}
 
 \begin{remark}[Externally specified factor models]\label{rem:external_factors}
-The MP threshold provides a data-driven rule for selecting $k$, but the Woodbury
-solver applies for any choice of $k$. Practitioners with an external factor model
-(a commercial risk model with pre-specified style and industry factors, or a PCA
-with $k$ fixed by cross-validation) can set $k = k_{\mathrm{ext}}$ and supply the
-corresponding correlation eigenpairs directly, bypassing the MP threshold. The key
-structural assumption for the Woodbury solve is not the source of $k$ but the
-replacement of the remaining $n - k$ correlation eigenvalues by a single scalar
-$\bar\mu$. The rSVD preprocessing of Section~\ref{sec:preprocessing} and the
-complexity bound of Proposition~\ref{prop:pipeline} hold with $k$ replaced by
-$k_{\mathrm{ext}}$.
+The Woodbury solver applies for any choice of $k$: a practitioner with an external
+factor model (a commercial risk model, or a PCA with $k$ fixed by
+cross-validation) can supply $k_{\mathrm{ext}}$ eigenpairs directly, bypassing the
+MP threshold. What the solve requires is not the source of $k$ but the replacement
+of the remaining $n - k$ correlation eigenvalues by a single scalar $\bar\mu$.
 \end{remark}
 
 \subsection{Choice of \texorpdfstring{$k$}{k}}\label{ssec:k_selection}
@@ -155,19 +142,8 @@ $k$, and $k + 1$ adds negligible cost (one extra Woodbury solve per audit point)
 and reveals the portfolio's sensitivity to the threshold, which is small in the
 bulk of the frontier (Section~\ref{sec:ksensitivity}).
 
-Two systematic biases in $k$ deserve mention.
-
-\emph{Finite-sample edge fluctuations}. At finite $T$ the largest noise eigenvalue
-fluctuates around the bulk edge at the Tracy--Widom scale
-$O(T^{-2/3})$~\cite{johnstone2001}, so a small number of noise eigenvalues may be
-classified as signal (or vice versa); refined spectrum estimators such as
-El~Karoui's~\cite{elkaroui2008} reduce this effect. For the sample sizes used here
-($T \geq 250$) the impact on $k$ is at most one or two eigenvalues, precisely the
-perturbation covered by the $k \pm 1$ audit of Section~\ref{sec:ksensitivity}.
-
-\emph{Sparse structure below the detection threshold}. Sector correlations below
-the MP edge contribute a diffuse signal that the threshold does not detect. If
-these directions are material for the portfolio, the audit at $k \pm 1$ will show
-sensitivity; in practice, the minimum-variance portfolio is insensitive to
-directions with small eigenvalues because those directions contribute little
-variance.
+Two biases are worth noting: finite-$T$ Tracy--Widom fluctuations of the largest
+noise eigenvalue at scale $O(T^{-2/3})$~\cite{johnstone2001,elkaroui2008}, and
+diffuse sector structure just below the edge. Both perturb $k$ by at most an
+eigenvalue or two, exactly what the $k \pm 1$ audit of
+Section~\ref{sec:ksensitivity} covers.
