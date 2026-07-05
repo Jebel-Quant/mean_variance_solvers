@@ -4,12 +4,19 @@ The long-only mean-variance portfolio solves
 \[
   \min_{w}\; w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w
   \quad\text{subject to}\quad
-  \mathbf{1}^\top w = 1,\quad w \geq 0\,,
+  Bw = c,\quad w \geq 0\,,
 \]
 where $\rho \geq 0$ is a return-tilt weight, $\hat\mu$ is a vector of expected
-returns, and $T_0^{\mathrm{RMT}}$ is the RMT-cleaned covariance estimator
-constructed in the previous section (Section~\ref{sec:rmt}).\footnote{The symbol $T_0$ for the cleaned estimator
+returns, $B \in \mathbb{R}^{p \times n}$ of full row rank and $c \in \mathbb{R}^p$
+carry $p \ll n$ linear balance constraints, and $T_0^{\mathrm{RMT}}$ is the
+RMT-cleaned covariance estimator constructed in the previous section
+(Section~\ref{sec:rmt}).\footnote{The symbol $T_0$ for the cleaned estimator
 follows standard shrinkage-target notation; it is unrelated to the sample size $T$.}
+The fully-invested budget constraint $\mathbf{1}^\top w = 1$ is the case $p = 1$,
+$B = \mathbf{1}^\top$, $c = 1$; it is the leading case throughout, and the reader
+may substitute it wherever a balance system is not written out. General $B$
+additionally accommodates group budgets (sector sleeves summing to prescribed
+weights) and factor neutralities $\beta^\top w = 0$ at the same cost structure.
 
 \begin{remark}[Why not blend with the sample covariance?]\label{rem:blend}
 A general shrinkage estimator
@@ -28,8 +35,9 @@ evidence that the cleaned estimator is competitive with standard shrinkage on
 the data used in this paper.
 \end{remark}
 
-The budget constraint $\mathbf{1}^\top w = 1$ is eliminated analytically and the
-non-negativity constraint $w \geq 0$ is enforced by a primal-dual active-set
-outer loop, each step of which re-solves a balance-constrained subproblem on the
-current active set. Section~\ref{sec:algorithm} develops this reduction together
-with the Woodbury inner solve that is this paper's contribution.
+The balance constraints $Bw = c$ are eliminated analytically through a
+$p \times p$ Schur complement and the non-negativity constraint $w \geq 0$ is
+enforced by a primal-dual active-set outer loop, each step of which re-solves the
+balance-constrained subproblem on the current active set. Section~\ref{sec:algorithm}
+develops this reduction together with the Woodbury inner solve that is this
+paper's contribution.

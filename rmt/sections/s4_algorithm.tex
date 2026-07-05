@@ -2,26 +2,40 @@
 
 \subsection{Primal-dual active-set reduction}
 
-The budget constraint $\mathbf{1}^\top w = 1$ and non-negativity $w \geq 0$
+The balance constraints $Bw = c$ and non-negativity $w \geq 0$
 are handled separately. Fix a set $\mathcal{A} \subseteq \{1,\ldots,n\}$ of
-active assets. The budget-constrained subproblem on $\mathcal{A}$,
+active assets and write $B_\mathcal{A}$ for the columns of $B$ indexed by
+$\mathcal{A}$. The balance-constrained subproblem on $\mathcal{A}$,
 \[
-  \min_{w_\mathcal{A}:\,\mathbf{1}^\top w_\mathcal{A}=1}\;
+  \min_{w_\mathcal{A}:\,B_\mathcal{A} w_\mathcal{A}=c}\;
   w_\mathcal{A}^\top T_{0,\mathcal{A}}^{\mathrm{RMT}}\, w_\mathcal{A}
   - \rho\,\hat\mu_\mathcal{A}^\top w_\mathcal{A}\,,
 \]
 has, by the KKT conditions, the closed-form solution
 \[
   w^\star_\mathcal{A}
-  \;=\; \theta\, v_1 + \tfrac{\rho}{2} v_2\,,
+  \;=\; \tfrac12 V_1\,\lambda + \tfrac{\rho}{2} v_2\,,
   \qquad
-  v_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\mathbf{1}\,,
+  V_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}B_\mathcal{A}^\top \in \mathbb{R}^{n_a \times p}\,,
   \quad
   v_2 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\hat\mu_\mathcal{A}\,,
 \]
-where the budget multiplier
-$\theta = (1 - \tfrac{\rho}{2}\,\mathbf{1}^\top v_2) / (\mathbf{1}^\top v_1)$
-is recovered analytically from $\mathbf{1}^\top w^\star_\mathcal{A} = 1$.
+where the $p$ balance multipliers $\lambda \in \mathbb{R}^p$ are recovered
+analytically from feasibility $B_\mathcal{A} w^\star_\mathcal{A} = c$ through the
+$p \times p$ Schur complement
+\[
+  S\,\lambda = 2c - \rho\,B_\mathcal{A} v_2\,,
+  \qquad
+  S = B_\mathcal{A} V_1 = B_\mathcal{A}(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}B_\mathcal{A}^\top \succ 0\,,
+\]
+which is SPD because $T_{0,\mathcal{A}}^{\mathrm{RMT}} \succ 0$ and $B_\mathcal{A}$
+has full row rank; the dense $p \times p$ solve is negligible for the small $p$
+typical of balance conditions. In the budget case ($p = 1$,
+$B_\mathcal{A} = \mathbf{1}^\top$, $c = 1$) this collapses to a single vector
+$v_1 = (T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}\mathbf{1}$, a scalar Schur
+complement $S = \mathbf{1}^\top v_1$, and
+$w^\star_\mathcal{A} = \theta v_1 + \tfrac{\rho}{2} v_2$ with
+$\theta = \tfrac{\lambda}{2} = (1 - \tfrac{\rho}{2}\mathbf{1}^\top v_2)/(\mathbf{1}^\top v_1)$.
 
 Non-negativity is enforced by the primal-dual active-set outer loop of the
 companion paper~\cite{schmelzer2026nncg}. Throughout,
@@ -32,18 +46,21 @@ the objective gradient is
 evaluated through the low-rank form
 $T_0^{\mathrm{RMT}}w = \bar\lambda w + U_k(\Delta_k(U_k^\top w))$ at cost
 $O(nk)$ (Proposition~\ref{prop:rmt_spectrum}); the return matrix $X$ never
-enters the solve. Stationarity of the restricted subproblem implies
-$g_j = 2\theta$ for every $j \in \mathcal{A}$, so the common active-set
-gradient value recovers the multiplier exactly; the implementation uses the
-median over $\mathcal{A}$, which is exact up to roundoff.
+enters the solve. Stationarity of the restricted subproblem reads
+$g_j = (B_\mathcal{A}^\top\lambda)_j$ for every $j \in \mathcal{A}$, with the
+multipliers $\lambda$ delivered for free by the Schur solve above. In the budget
+case $B = \mathbf{1}^\top$ all active gradients coincide with the single
+multiplier $\lambda = 2\theta$, which the implementation then reads off as the
+median of $g_j$ over $\mathcal{A}$ (used for robustness, exact up to roundoff).
 
 The loop drops any active asset whose weight turns negative (the \emph{primal
-step}) and re-admits any excluded asset whose reduced gradient satisfies
-$g_i < \nu - \varepsilon$, with $\nu = \mathrm{median}_{j \in \mathcal{A}}(g_j)$
-(the \emph{dual step}), re-solving the restricted subproblem after each exchange
-and stopping once $w_{\mathcal{A},i} \geq -\varepsilon$ for all
-$i \in \mathcal{A}$ and $g_i \geq \nu - \varepsilon$ for all
-$i \notin \mathcal{A}$. These toggles are the principal pivots of the
+step}) and re-admits any excluded asset whose reduced gradient
+$g_i - (B^\top\lambda)_i$ is negative (the \emph{dual step}), re-solving the
+restricted subproblem after each exchange and stopping once
+$w_{\mathcal{A},i} \geq -\varepsilon$ for all $i \in \mathcal{A}$ and
+$g_i \geq (B^\top\lambda)_i - \varepsilon$ for all $i \notin \mathcal{A}$. In the
+budget case $(B^\top\lambda)_i = \lambda$ reduces to the scalar threshold
+$\nu = 2\theta$. These toggles are the principal pivots of the
 $P$-matrix linear complementarity problem $(T_0^{\mathrm{RMT}},\,-\rho\hat\mu)$:
 because
 $T_{0,\mathcal{A}}^{\mathrm{RMT}} = \bar\lambda I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top \succ 0$
@@ -55,8 +72,8 @@ The outer loop, its finite-termination proof, and the pivot schedule that makes
 it robust are developed in full generality in the companion
 paper~\cite{schmelzer2026nncg} for the equality-augmented non-negative quadratic
 $\min_{x \geq 0,\, Bx = c}\tfrac12 x^\top A x - b^\top x$ with $A \succ 0$, of
-which the budget-constrained RMT problem is the instance
-$A = T_0^{\mathrm{RMT}}$, $b = \rho\hat\mu$, $B = \mathbf{1}^\top$, $c = 1$.
+which the RMT problem is the instance $A = T_0^{\mathrm{RMT}}$, $b = \rho\hat\mu$
+(the budget case taking $B = \mathbf{1}^\top$, $c = 1$).
 Theorem~4.1 there gives finite termination at the unique global minimiser
 \emph{with no non-degeneracy assumption}: guarding a batch block-pivot fast path
 with a least-index (Bland) fallback removes the hypothesis that the classical
@@ -120,7 +137,10 @@ $V = U_{k,\mathcal{A}}^\top$, gives
 Note that after restricting to $\mathcal{A}$ the columns of $U_{k,\mathcal{A}}$
 are generally no longer orthonormal: $U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}} \neq I_k$.
 The correction matrix $W$ accounts for this; its Cholesky factorisation is used
-to evaluate $W^{-1}U_{k,\mathcal{A}}^\top b$.
+to evaluate $W^{-1}U_{k,\mathcal{A}}^\top b$. The active-set reduction requires
+$p+1$ such solves per outer step (the $p$ columns of $B_\mathcal{A}^\top$ and
+$\hat\mu_\mathcal{A}$); all share the single factorisation of $W$, so each
+right-hand side beyond the first costs only $O(n_a k)$.
 
 \begin{proposition}[Woodbury solve complexity]\label{prop:woodbury_cost}
 One application of $(T_{0,\mathcal{A}}^{\mathrm{RMT}})^{-1}$ costs:
@@ -141,10 +161,12 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
 \begin{algorithmic}[1]
 \Require Signal eigenpairs $(U_k, \Lambda_k) \in \mathbb{R}^{n \times k} \times \mathbb{R}^k$;
          bulk mean $\bar\lambda$;
+         balance system $B \in \mathbb{R}^{p \times n}$, $c \in \mathbb{R}^p$
+         \textit{(default $\mathbf{1}^\top,\, 1$)};
          return-tilt $\rho \geq 0$; expected returns $\hat\mu$;
          tolerance $\varepsilon = 10^{-6}$;
          optional warm start $(\mathcal{A}_0, w_0)$
-\Ensure  Portfolio weights $w \in \mathbb{R}^n$ with $w \geq 0$, $\mathbf{1}^\top w = 1$
+\Ensure  Portfolio weights $w \in \mathbb{R}^n$ with $w \geq 0$, $Bw = c$
 \State $\mathcal{A} \leftarrow \mathcal{A}_0$ (or $\{1,\ldots,n\}$ for cold start);\;
        $w \leftarrow w_0$ (or $\mathbf{0}$);\;
        $\Delta_k \leftarrow \Lambda_k - \bar\lambda\mathbf{1}$
@@ -155,21 +177,22 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
   \State $L \leftarrow \mathrm{chol}(W)$;\;
          define $\mathrm{inv}(b) \leftarrow b/\bar\lambda - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\lambda^2$
     \hfill\textit{($O(k^3)$ once)}
-  \State $v_1 \leftarrow \mathrm{inv}(\mathbf{1}_{n_a})$;\;
+  \State $V_1 \leftarrow \mathrm{inv}(B_\mathcal{A}^\top)$;\;
          $v_2 \leftarrow \mathrm{inv}(\hat\mu_\mathcal{A})$ if $\rho > 0$
-    \hfill\textit{($O(n_a k)$ each)}
-  \State Recover $\theta = (1 - \tfrac{\rho}{2}\mathbf{1}^\top v_2) / (\mathbf{1}^\top v_1)$;\;
-         $w_\mathcal{A} = \theta v_1 + \tfrac{\rho}{2} v_2$
+    \hfill\textit{($p{+}1$ solves, $O(n_a k)$ each)}
+  \State $S \leftarrow B_\mathcal{A} V_1$;\; solve $S\lambda = 2c - \rho\,B_\mathcal{A} v_2$
+    \hfill\textit{($p \times p$ Schur, $O(p^3)$)}
+  \State $w_\mathcal{A} = \tfrac12 V_1\lambda + \tfrac{\rho}{2} v_2$
   \If{$\exists\, i \in \mathcal{A}$ with $w_{\mathcal{A},i} < -\varepsilon$}
     \State $\mathcal{A} \leftarrow \mathcal{A} \setminus \{\arg\min_i w_{\mathcal{A},i}\}$
       \hfill\textit{(primal step; cf.\ Remark~\ref{rem:safeguards})}
   \Else
     \State $w \leftarrow 0$;\; $w[\mathcal{A}] \leftarrow w_\mathcal{A}$
     \State $g \leftarrow 2\bigl(\bar\lambda w + U_k(\Delta_k(U_k^\top w))\bigr) - \rho\hat\mu$;\;
-           $\nu \leftarrow \mathrm{median}_{j \in \mathcal{A}}(g_j)$
-      \hfill\textit{($O(nk)$)}
-    \State $j^\star \leftarrow \arg\min_{i \notin \mathcal{A}} g_i$
-    \If{$g_{j^\star} \geq \nu - \varepsilon$} \textbf{break}
+           $r \leftarrow g - B^\top\lambda$
+      \hfill\textit{(reduced gradient, $O(nk)$)}
+    \State $j^\star \leftarrow \arg\min_{i \notin \mathcal{A}} r_i$
+    \If{$r_{j^\star} \geq -\varepsilon$} \textbf{break}
       \hfill\textit{(KKT satisfied)}
     \EndIf
     \State $\mathcal{A} \leftarrow \mathcal{A} \cup \{j^\star\}$
@@ -181,15 +204,15 @@ The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 
 \end{algorithm}
 
 The tolerance $\varepsilon = 10^{-6}$ governs both the primal feasibility check
-(line~7: drop assets with $w < -\varepsilon$) and the dual violation threshold
-(line~12: admit assets with $g_i < \nu - \varepsilon$); see
+(drop assets with $w_{\mathcal{A},i} < -\varepsilon$) and the dual violation
+threshold (admit assets with reduced gradient $r_i < -\varepsilon$); see
 Remark~\ref{rem:tolerance} for its scale. This is a standard KKT tolerance for
 active-set methods~\cite{nocedal2006}.
 
 Two further features of Algorithm~\ref{alg:woodbury} deserve emphasis.
 
-\emph{The return matrix never enters the solve}. The dual-feasibility check at
-line~10 evaluates the gradient of the objective,
+\emph{The return matrix never enters the solve}. The dual-feasibility check
+evaluates the gradient of the objective,
 $g = 2\,T_0^{\mathrm{RMT}}w - \rho\hat\mu$, through the low-rank form at cost
 $O(nk)$. Neither $\hat\Sigma$ nor $X$ is touched after preprocessing: the
 entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\lambda)$.
@@ -217,12 +240,14 @@ The same piecewise-linear structure underlies the critical line algorithm
 frontier by pivoting from breakpoint to breakpoint instead of re-solving on a
 $\rho$ grid. On a fixed active set the restricted solution is affine in
 $\rho$, $w_\mathcal{A}(\rho) = a + \rho b$ with
-$a = v_1/(\mathbf{1}^\top v_1)$ and
-$b = \tfrac12\bigl(v_2 - \tfrac{\mathbf{1}^\top v_2}{\mathbf{1}^\top v_1}v_1\bigr)$,
-and the multiplier $\nu(\rho) = 2\theta(\rho)$ is affine as well, so every
-primal exit ($w_i$ reaching zero) and dual entry ($g_i - \nu$ reaching zero)
-is the root of an affine function: the exact frontier costs one Woodbury
-solve per breakpoint. We implement this sweep with the Woodbury kernel as its
+$a = V_1 S^{-1} c$ and
+$b = \tfrac12\bigl(v_2 - V_1 S^{-1} B_\mathcal{A} v_2\bigr)$,
+and the multipliers $\lambda(\rho) = S^{-1}(2c - \rho\,B_\mathcal{A} v_2)$ are
+affine as well, so every primal exit ($w_i$ reaching zero) and dual entry
+($g_i - (B^\top\lambda)_i$ reaching zero) is the root of an affine function: the
+exact frontier costs one Woodbury solve per breakpoint. In the budget case these
+reduce to $a = v_1/(\mathbf{1}^\top v_1)$ and
+$b = \tfrac12\bigl(v_2 - \tfrac{\mathbf{1}^\top v_2}{\mathbf{1}^\top v_1}v_1\bigr)$. We implement this sweep with the Woodbury kernel as its
 linear algebra and validate it against the grid sweep in
 Section~\ref{ssec:cla}. The two approaches remain complementary in practice:
 CLA enumerates the exact frontier for a \emph{fixed} covariance, whereas the
@@ -236,10 +261,10 @@ The Woodbury structure survives several practically relevant modifications.
 A ridge penalty $\gamma\norm{w}^2$ simply shifts the identity coefficient,
 $\bar\lambda \mapsto \bar\lambda + \gamma$. A diagonal loading
 $D + U_k\Delta_kU_k^\top$ with non-scalar $D \succ 0$ replaces $b/\bar\lambda$
-by $D^{-1}b$ at unchanged cost. Additional \emph{linear equality} constraints
-(e.g.\ sector-neutrality) enlarge the KKT system by one row per constraint;
-the inverse of the leading block is still available through Woodbury, so the
-solve cost grows only linearly in the number of constraints. What is
+by $D^{-1}b$ at unchanged cost. Further \emph{linear equality} constraints
+beyond the balance system (e.g.\ sector-neutrality) are absorbed by appending
+rows to $B$; the $p \times p$ Schur complement grows with them and the solve
+cost stays linear in $p$. What is
 \emph{not} supported is a full-rank perturbation of the bulk spectrum, as
 produced by nonlinear shrinkage (Remark~\ref{rem:rie}).
 \end{remark}

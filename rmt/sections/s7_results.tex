@@ -18,7 +18,7 @@ actual S\&P~500 return series ($n=494$, $T=1213$); the out-of-sample backtests
 
 Two solvers are applied to the same problem: minimise
 $w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w$
-subject to $w \geq 0$, $\mathbf{1}^\top w = 1$ over a $50$-point efficient frontier.
+subject to $w \geq 0$, $\mathbf{1}^\top w = 1$ (the budget case) over a $50$-point efficient frontier.
 Synthetic equity data: $n = 500$ assets, $T = 1250$ days, $k = 22$ signal factors.
 Active-set sizes averaged $n_a = 42$ across the frontier (warm start).
 

@@ -11,7 +11,9 @@ an exact direct solve via the Woodbury identity.
 This paper makes three algorithmic contributions and one empirical contribution.
 
 \emph{Direct Woodbury portfolio solver}. The primal-dual active-set loop requires
-an inner solve of $T_{0,\mathcal{A}}^{\mathrm{RMT}} w = b$ at each outer step.
+an inner solve of $T_{0,\mathcal{A}}^{\mathrm{RMT}} w = b$ at each outer step,
+the $p$ balance constraints $Bw=c$ being eliminated by a $p \times p$ Schur
+complement.
 The naive approach assembles the $n_a \times n_a$ active-set system matrix and
 solves by Cholesky at cost $O(n_a^2 k + n_a^3)$ per step. The Woodbury
 identity reduces this to $O(n_a k^2 + k^3)$ by working with the $k \times k$

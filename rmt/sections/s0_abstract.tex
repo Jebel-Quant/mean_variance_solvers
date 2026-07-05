@@ -12,7 +12,10 @@ roughly~$300$.
 We exploit the low-rank-plus-identity structure of this estimator: the Woodbury
 identity gives the exact inverse of the active-set system at
 $O(n_a k^2 + k^3)$ per outer step of a primal-dual active-set method,
-replacing the $O(n_a^2 k + n_a^3)$ assemble-and-factor approach. The Woodbury
+replacing the $O(n_a^2 k + n_a^3)$ assemble-and-factor approach. The $p$ linear
+balance constraints $Bw=c$ (the fully-invested budget $\mathbf{1}^\top w = 1$ as
+the leading case) are eliminated analytically through a $p \times p$ Schur
+complement. The Woodbury
 solve requires fewer flops precisely when $k < n_a$, a condition that holds
 throughout the long-only equity regime. The requisite eigenpairs are computed
 once by a randomised SVD applied directly to the return matrix at $O(nTk)$,
