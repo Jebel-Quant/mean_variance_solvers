@@ -1,6 +1,6 @@
 """Shared pytest fixtures and path setup for the experiment test suite.
 
-The modules under test (``baselines``, ``minvar``, ``simulate``, ``util``) live
+The modules under test (``baselines``, ``cg``, ``simulate``, ``util``) live
 in the ``experiment/`` directory one level up, exactly as the scripts import
 them; putting that directory on ``sys.path`` lets the tests import them the same
 way.

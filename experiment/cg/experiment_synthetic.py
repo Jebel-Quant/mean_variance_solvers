@@ -4,7 +4,7 @@
      Long-Only Portfolio Optimization"
 
 Usage:
-    uv run python -m minvar.experiment_synthetic   # from the experiment/ directory
+    uv run python -m cg.experiment_synthetic   # from the experiment/ directory
 
 Outputs (stdout):
     Scaling table — runtime vs n for KKT / CG / proximal (T=1250 fixed).
@@ -12,9 +12,9 @@ Outputs (stdout):
     Frontier table — warm- vs cold-start sweep timings (n=500, T=1250).
 
 Outputs (files):
-    graphs/minvar_scaling.pdf   — Figure 1: runtime vs n (log-log)
-    graphs/minvar_iters.pdf     — Figure 2: CG iterations vs alpha
-    graphs/minvar_frontier.pdf  — Figure 3: efficient frontier coloured by active assets
+    graphs/cg_scaling.pdf   — Figure 1: runtime vs n (log-log)
+    graphs/cg_iters.pdf     — Figure 2: CG iterations vs alpha
+    graphs/cg_frontier.pdf  — Figure 3: efficient frontier coloured by active assets
 
 Hardware used in the paper: Apple M4 Pro, 14-core CPU, 48 GB RAM.
 Software: Python 3.12, NumPy 2.4, SciPy 1.17, CVXPY 1.8.2, Clarabel 0.11.1.
@@ -31,8 +31,8 @@ import numpy as np
 from common.util.runner import SMOKE, output_dirs, run_timed, write_frontier_def
 
 from common.simulate import simulate_equity_returns
-from minvar.minvar import (
-    MinVarProblem,
+from cg.cg import (
+    CGProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
 )
@@ -75,7 +75,7 @@ print("-" * 90)
 for n in ns:
     R = simulate_equity_returns(n, T_FIXED, rng=n)
     alpha, tgt = lw_alpha_and_target_hard(R, alpha=0.5)
-    prob = MinVarProblem(R, alpha=alpha, target=tgt)
+    prob = CGProblem(R, alpha=alpha, target=tgt)
 
     (w_kkt, kkt_outer), t_kkt = run_timed(lambda p=prob: p.solve_kkt())
     k_active = int((w_kkt > 1e-6).sum())
@@ -123,7 +123,7 @@ cg_iters = []
 
 print(f"{'alpha':>8}  {'outer':>7}  {'inner':>8}")
 for a in alphas:
-    _, outer, inner = MinVarProblem(R_iter, alpha=a, target=tgt_iter).solve_cg()
+    _, outer, inner = CGProblem(R_iter, alpha=a, target=tgt_iter).solve_cg()
     cg_iters.append(inner)
     print(f"{a:>8.3f}  {outer:>7}  {inner:>8}")
 
@@ -155,9 +155,9 @@ ax1.set_title(r"Runtime vs. $n$  ($T=1250$ fixed)")
 ax1.legend(framealpha=0.9)
 ax1.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.7)
 fig1.tight_layout(pad=1.0)
-fig1.savefig(GRAPHS / "minvar_scaling.pdf", bbox_inches="tight")
-fig1.savefig(GRAPHS / "minvar_scaling.png", bbox_inches="tight", dpi=150)
-print(f"\nSaved {GRAPHS / 'minvar_scaling.pdf'}")
+fig1.savefig(GRAPHS / "cg_scaling.pdf", bbox_inches="tight")
+fig1.savefig(GRAPHS / "cg_scaling.png", bbox_inches="tight", dpi=150)
+print(f"\nSaved {GRAPHS / 'cg_scaling.pdf'}")
 
 # Figure 2: CG iterations vs alpha
 fig2, ax2 = plt.subplots(figsize=(4.5, 3.2))
@@ -168,9 +168,9 @@ ax2.set_title(r"CG iterations vs. $\alpha$  ($n=500,\,T=250$)")
 ax2.legend(framealpha=0.9)
 ax2.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.7)
 fig2.tight_layout(pad=1.0)
-fig2.savefig(GRAPHS / "minvar_iters.pdf", bbox_inches="tight")
-fig2.savefig(GRAPHS / "minvar_iters.png", bbox_inches="tight", dpi=150)
-print(f"Saved {GRAPHS / 'minvar_iters.pdf'}")
+fig2.savefig(GRAPHS / "cg_iters.pdf", bbox_inches="tight")
+fig2.savefig(GRAPHS / "cg_iters.png", bbox_inches="tight", dpi=150)
+print(f"Saved {GRAPHS / 'cg_iters.pdf'}")
 
 # ---------------------------------------------------------------------------
 # Section 9: Efficient frontier  (n=500, T=1250)
@@ -205,7 +205,7 @@ def _sweep_cold(solve_fn, repeats=3, ef_alpha=None, ef_target=None):
     for _ in range(repeats):
         sweep_times = []
         for rho in rhos_ef:
-            prob = MinVarProblem(R_ef, alpha=_alpha, target=_target, rho=rho, mu=mu_ef)
+            prob = CGProblem(R_ef, alpha=_alpha, target=_target, rho=rho, mu=mu_ef)
             t0 = _time.perf_counter()
             solve_fn(prob)
             sweep_times.append(_time.perf_counter() - t0)
@@ -226,7 +226,7 @@ for rep in range(1 if SMOKE else 3):
     warm = None
     vols_r, rets_r, act_r = [], [], []
     for rho in rhos_ef:
-        prob = MinVarProblem(R_ef, alpha=alpha_ef, target=tgt_ef, rho=rho, mu=mu_ef)
+        prob = CGProblem(R_ef, alpha=alpha_ef, target=tgt_ef, rho=rho, mu=mu_ef)
         t0 = _time.perf_counter()
         w, _, _, warm = prob.solve_cg_warm(warm_start=warm)
         sweep_times.append(_time.perf_counter() - t0)
@@ -291,9 +291,9 @@ ax3.set_title(f"Efficient frontier  ($n={n_ef}$, $T={T_ef}$)")
 ax3.legend(framealpha=0.9, loc="lower right", fontsize=7)
 ax3.grid(True, linestyle=":", linewidth=0.5, alpha=0.7)
 fig3.tight_layout(pad=1.0)
-fig3.savefig(GRAPHS / "minvar_frontier.pdf", bbox_inches="tight")
-fig3.savefig(GRAPHS / "minvar_frontier.png", bbox_inches="tight", dpi=150)
-print(f"Saved {GRAPHS / 'minvar_frontier.pdf'}")
+fig3.savefig(GRAPHS / "cg_frontier.pdf", bbox_inches="tight")
+fig3.savefig(GRAPHS / "cg_frontier.png", bbox_inches="tight", dpi=150)
+print(f"Saved {GRAPHS / 'cg_frontier.pdf'}")
 
 write_frontier_def(
     TABLES / "frontier_def.tex",

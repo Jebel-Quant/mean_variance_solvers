@@ -1,7 +1,7 @@
 name: Test
 
 # Runs the experiment/ test suite on every push and pull request: the unit
-# tests for the solver library (baselines, minvar, nncg problems, shrinkage,
+# tests for the solver library (baselines, cg, nncg problems, shrinkage,
 # timing helpers) plus end-to-end smoke runs of every figure/table script,
 # driven by `make test`. The scripts run in smoke mode against the committed
 # data/*.parquet, so no network, LaTeX toolchain, or external data is needed --

@@ -1,5 +1,5 @@
 # Repository-root Makefile. Each paper has its own self-contained Makefile
-# (paper/Makefile builds minvar_paper.pdf, paper_rmt/Makefile builds
+# (paper/Makefile builds cg_paper.pdf, paper_rmt/Makefile builds
 # rmt_paper.pdf); the compile, clean, and arxiv targets here run every paper.
 # The two finance papers' figures and tables come from the experiment/ Python
 # package; a paper that owns a self-contained study instead (non_negative_cg)
@@ -37,7 +37,7 @@ figures:  ## Regenerate every paper's figures and tables (runs the experiment)
 		fi; \
 	done
 
-test:  ## Run the experiment test suite (baselines, minvar, and end-to-end runs)
+test:  ## Run the experiment test suite (baselines, cg, and end-to-end runs)
 	$(MAKE) -C experiment test
 
 check:  ## Run the CI quality gate (undefined refs, dash asides, bib placeholders, stale solver rows)

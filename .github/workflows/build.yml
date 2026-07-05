@@ -64,10 +64,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            matrix_free/minvar_paper.pdf
+            matrix_free/cg_paper.pdf
             rmt/rmt_paper.pdf
             non_negative_cg/nncg_paper.pdf
-            out/arxiv/minvar_paper.tar.gz
+            out/arxiv/cg_paper.tar.gz
             out/arxiv/rmt_paper.tar.gz
             out/arxiv/nncg_paper.tar.gz
 
@@ -75,7 +75,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p out
-          cp matrix_free/minvar_paper.pdf out/
+          cp matrix_free/cg_paper.pdf out/
           cp rmt/rmt_paper.pdf out/
           cp non_negative_cg/nncg_paper.pdf out/
 
@@ -87,4 +87,4 @@ jobs:
           publish_branch: pdf
           publish_dir: ./out
           keep_files: true
-          commit_message: "Publish compiled PDFs (minvar, rmt, nncg) from ${{ github.sha }}"
+          commit_message: "Publish compiled PDFs (cg, rmt, nncg) from ${{ github.sha }}"

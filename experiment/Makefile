@@ -1,5 +1,5 @@
 # Regenerate the figures (graphs/) and tables (tables/) that all three papers
-# include. The scripts are nested by paper into importable packages — minvar/
+# include. The scripts are nested by paper into importable packages — cg/
 # (Shrinkage-as-Preconditioning), rmt/ (Eigenvalue-Cleaning), nncg_note/
 # (Non-Negative Conjugate Gradients) — over a shared common/ (baselines,
 # simulate, util, data fetchers). They are run as modules from this directory
@@ -30,9 +30,9 @@ data:  ## Download the raw S&P 500 / FTSE 100 return data into data/
 	uv run python -m common.fetch_ftse100
 
 figures:  ## Regenerate every graph and table for all three papers
-	uv run python -m minvar.experiment
-	uv run python -m minvar.experiment_synthetic
-	uv run python -m minvar.experiment_oos
+	uv run python -m cg.experiment
+	uv run python -m cg.experiment_synthetic
+	uv run python -m cg.experiment_oos
 	uv run python -m rmt.experiment_rmt
 	uv run python -m nncg_note.experiment_nncg
 	uv run python -m nncg_note.experiment_nncg_bench

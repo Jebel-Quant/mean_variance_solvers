@@ -54,7 +54,7 @@ markers = [
 # every one end-to-end and asserts it exits 0 and writes its outputs), and the
 # fetch_*.py network downloaders are out of scope; both are omitted here.
 [tool.coverage.run]
-source = ["common", "minvar", "nncg_note"]
+source = ["common", "cg", "nncg_note"]
 omit = [
     "*/tests/*",
     "*/__init__.py",

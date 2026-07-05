@@ -28,13 +28,13 @@ EXPERIMENT_DIR = Path(__file__).resolve().parent.parent
 # module (run as `python -m <module>` from experiment/) -> output files it must
 # (re)write on a successful run
 SCRIPTS = {
-    "minvar.experiment": ["tables/sp500_defs.tex", "tables/ftse_defs.tex"],
-    "minvar.experiment_synthetic": [
-        "graphs/minvar_scaling.pdf",
-        "graphs/minvar_iters.pdf",
+    "cg.experiment": ["tables/sp500_defs.tex", "tables/ftse_defs.tex"],
+    "cg.experiment_synthetic": [
+        "graphs/cg_scaling.pdf",
+        "graphs/cg_iters.pdf",
         "tables/frontier_def.tex",
     ],
-    "minvar.experiment_oos": ["tables/oos_defs.tex", "graphs/minvar_oos.pdf"],
+    "cg.experiment_oos": ["tables/oos_defs.tex", "graphs/cg_oos.pdf"],
     "rmt.experiment_rmt": [
         "tables/rmt_solver_comparison.tex",
         "tables/rmt_oos.tex",

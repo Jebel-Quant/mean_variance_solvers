@@ -3,7 +3,7 @@
 # paper-specific — edit a target once and every paper picks it up.
 #
 # Required / optional variables (set before the include):
-#   DOC     basename of the main .tex / .pdf (e.g. minvar_paper, rmt_paper).
+#   DOC     basename of the main .tex / .pdf (e.g. cg_paper, rmt_paper).
 #   BIB     path to the BibTeX database the paper cites, relative to the paper
 #           folder (default bib/refs.bib). Only used to assemble the arXiv
 #           tarball; the .tex's own \bibliography path drives compilation.

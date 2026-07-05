@@ -1,4 +1,4 @@
-"""Tests for the ``minvar`` drop-in: problem construction, the nncg and
+"""Tests for the ``cg`` drop-in: problem construction, the nncg and
 baselines solve hooks, shrinkage utilities, warm starts, and balance systems.
 
 The invariant everywhere is that all solvers minimise the same program, so they
@@ -12,8 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from minvar.minvar import (
-    MinVarProblem,
+from cg.cg import (
+    CGProblem,
     lw_alpha_and_target,
     lw_alpha_and_target_hard,
     oas_alpha_and_target,
@@ -24,7 +24,7 @@ from minvar.minvar import (
 @pytest.fixture
 def problem(returns):
     alpha, target = lw_alpha_and_target(returns)
-    return MinVarProblem(returns, alpha=alpha, target=target)
+    return CGProblem(returns, alpha=alpha, target=target)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +114,7 @@ def test_balance_system_satisfied(returns):
     b_eq[0, : n // 2] = 1.0
     b_eq[1, n // 2 :] = 1.0
     c_eq = np.array([0.6, 0.4])
-    prob = MinVarProblem(returns, alpha=alpha, target=target, B=b_eq, c=c_eq)
+    prob = CGProblem(returns, alpha=alpha, target=target, B=b_eq, c=c_eq)
     w_cg = prob.solve_cg()[0]
     w_cla = prob.solve_clarabel()[0]
     assert np.abs(b_eq @ w_cg - c_eq).max() < 1e-8
@@ -125,7 +125,7 @@ def test_balance_system_satisfied(returns):
 def test_first_order_baseline_rejects_balance_system(returns):
     n = returns.shape[1]
     b_eq = np.ones((1, n))
-    prob = MinVarProblem(returns, B=b_eq, c=np.array([1.0]))
+    prob = CGProblem(returns, B=b_eq, c=np.array([1.0]))
     with pytest.raises(NotImplementedError):
         prob.solve_proximal()
 
@@ -133,8 +133,8 @@ def test_first_order_baseline_rejects_balance_system(returns):
 def test_return_tilt_changes_solution(returns):
     alpha, target = lw_alpha_and_target(returns)
     mu = np.random.default_rng(3).uniform(0.0, 1e-3, returns.shape[1])
-    base = MinVarProblem(returns, alpha=alpha, target=target)
-    tilted = MinVarProblem(returns, alpha=alpha, target=target, rho=5.0, mu=mu)
+    base = CGProblem(returns, alpha=alpha, target=target)
+    tilted = CGProblem(returns, alpha=alpha, target=target, rho=5.0, mu=mu)
     w0 = base.solve_cg()[0]
     w1, _, _ = tilted.solve_cg()
     assert abs(w1.sum() - 1.0) < 1e-8
@@ -145,7 +145,7 @@ def test_return_tilt_changes_solution(returns):
 
 def test_b_without_c_raises(returns):
     with pytest.raises(ValueError, match="together"):
-        MinVarProblem(returns, B=np.ones((1, returns.shape[1])))
+        CGProblem(returns, B=np.ones((1, returns.shape[1])))
 
 
 # ---------------------------------------------------------------------------
@@ -157,8 +157,8 @@ def test_rmt_woodbury_matches_cholesky(returns):
     target, lr_factors, k, alpha = rmt_target_and_alpha(returns)
     assert alpha == 1.0
     assert k >= 1
-    woodbury = MinVarProblem(returns, alpha=1.0, target=target, target_lr=lr_factors).solve_kkt()[0]
-    cholesky = MinVarProblem(returns, alpha=1.0, target=target).solve_kkt()[0]
+    woodbury = CGProblem(returns, alpha=1.0, target=target, target_lr=lr_factors).solve_kkt()[0]
+    cholesky = CGProblem(returns, alpha=1.0, target=target).solve_kkt()[0]
     assert np.linalg.norm(woodbury - cholesky) < 1e-8
     assert abs(woodbury.sum() - 1.0) < 1e-8
 
@@ -213,14 +213,14 @@ def test_rmt_correlation_cleaning(returns):
 def test_wrong_shape_balance_matrix_raises(returns):
     n = returns.shape[1]
     with pytest.raises(ValueError, match="B must have shape"):
-        MinVarProblem(returns, B=np.ones((1, n + 1)), c=np.array([1.0]))
+        CGProblem(returns, B=np.ones((1, n + 1)), c=np.array([1.0]))
 
 
 def test_low_rank_target_matrix_free_cg(returns):
     # target_lr feeds a FactorOperator into the composite (cg/pcg) operator.
     target, lr, _k, _a = rmt_target_and_alpha(returns)
-    w_cg = MinVarProblem(returns, alpha=1.0, target=target, target_lr=lr).solve_cg()[0]
-    w_dense = MinVarProblem(returns, alpha=1.0, target=target).solve_cg()[0]
+    w_cg = CGProblem(returns, alpha=1.0, target=target, target_lr=lr).solve_cg()[0]
+    w_dense = CGProblem(returns, alpha=1.0, target=target).solve_cg()[0]
     assert abs(w_cg.sum() - 1.0) < 1e-8
     assert np.linalg.norm(w_cg - w_dense) < 1e-6
 
@@ -229,14 +229,14 @@ def test_low_rank_target_dense_exact_below_alpha_one(returns):
     # target_lr with alpha < 1 keeps the data term, so the exact path densifies
     # 2*Sigma (the _dense_matrix low-rank branch) rather than using Woodbury.
     target, lr, _k, _a = rmt_target_and_alpha(returns)
-    w = MinVarProblem(returns, alpha=0.5, target=target, target_lr=lr).solve_kkt()[0]
-    w_ref = MinVarProblem(returns, alpha=0.5, target=target).solve_kkt()[0]
+    w = CGProblem(returns, alpha=0.5, target=target, target_lr=lr).solve_kkt()[0]
+    w_ref = CGProblem(returns, alpha=0.5, target=target).solve_kkt()[0]
     assert np.linalg.norm(w - w_ref) < 1e-8  # low-rank and dense targets coincide
 
 
 def test_no_target_exact_uses_gram_operator(returns):
     # No shrinkage: the exact operator is a GramOperator on the scaled data.
-    w, outer = MinVarProblem(returns).solve_kkt()
+    w, outer = CGProblem(returns).solve_kkt()
     assert abs(w.sum() - 1.0) < 1e-8
     assert w.min() >= -1e-9
 
@@ -245,14 +245,14 @@ def test_cvxpy_reconstructs_low_rank_target(returns):
     # solve_cvxpy with only low-rank factors (no dense target) reconstructs the
     # dense target from them for the Cholesky split.
     _target, lr, _k, _a = rmt_target_and_alpha(returns)
-    w, iters = MinVarProblem(returns, alpha=1.0, target=None, target_lr=lr).solve_cvxpy()
+    w, iters = CGProblem(returns, alpha=1.0, target=None, target_lr=lr).solve_cvxpy()
     assert abs(w.sum() - 1.0) < 1e-6
     assert iters >= 1
 
 
 def test_cvxpy_no_target(returns):
     # No shrinkage target: the CVXPY objective is the plain least-squares form.
-    w, iters = MinVarProblem(returns).solve_cvxpy()
+    w, iters = CGProblem(returns).solve_cvxpy()
     assert abs(w.sum() - 1.0) < 1e-6
     assert iters >= 1
 
@@ -261,6 +261,6 @@ def test_cvxpy_return_tilt(returns):
     # rho != 0 adds the -rho * mu^T w return term to the CVXPY objective.
     alpha, target = lw_alpha_and_target(returns)
     mu = np.random.default_rng(4).uniform(0.0, 1e-3, returns.shape[1])
-    w, _ = MinVarProblem(returns, alpha=alpha, target=target, rho=5.0, mu=mu).solve_cvxpy()
+    w, _ = CGProblem(returns, alpha=alpha, target=target, rho=5.0, mu=mu).solve_cvxpy()
     assert abs(w.sum() - 1.0) < 1e-6
-    assert np.linalg.norm(w - MinVarProblem(returns, alpha=alpha, target=target).solve_cvxpy()[0]) > 1e-4
+    assert np.linalg.norm(w - CGProblem(returns, alpha=alpha, target=target).solve_cvxpy()[0]) > 1e-4
