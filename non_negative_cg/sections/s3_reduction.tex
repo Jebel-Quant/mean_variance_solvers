@@ -52,7 +52,7 @@ The rate of convergence is thus $O(\sqrt\kappa)$ so that reaching a fixed relati
 argument that states that the $k$-th CG error is majorised by the best degree-$k$ polynomial on
 $[\lambda_{\min}, \lambda_{\max}]$ normalised at the origin, which is a scaled Chebyshev
 polynomial~\cite[Lecture~38]{trefethenbau1997}. Clustered spectra beat this bound: CG converges superlinearly once the extremal eigenvalues are resolved, which is exactly the behaviour the synthetic study of Section~\ref{sec:results} measures. Because $A \succ 0$ forces every
-$A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather than a plain gradient iteration: the projected-gradient comparator of Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
+$A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather than a plain gradient iteration: the projected-gradient reference method of Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
 
 \paragraph{Eliminating the equality multipliers.}
 For the equality-augmented problem~\eqref{eq:eqp}, stationarity and feasibility on the free

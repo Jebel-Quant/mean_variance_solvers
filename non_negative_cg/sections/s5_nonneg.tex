@@ -175,23 +175,22 @@ iterate satisfies $\lVert \tilde x - x^\star \rVert_\infty \le \rho/\lambda_{\mi
 \end{lemma}
 
 \begin{proof}
-Write $r = b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}}$, so
-$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. Cauchy interlacing
-gives $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence
+We write $r = b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}}$, so
+$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. From the Cauchy interlacing theorem we know that $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence
 \[
   \delta_x \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_\infty
   \;\le\; \lVert A_{\mathcal{F}}^{-1} r \rVert_2
   \;\le\; \rho/\lambda_{\min}(A).
 \]
 For a bound index $i \notin \mathcal{F}$ the reduced gradients differ by
-$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$,
+$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$, where $ A_{i,\mathcal{F}}$ is the $i$th row of $A$ restricted to the free set. By Cauchy--Schwarz
 and $\lVert A_{i,\mathcal{F}} \rVert_2 \le \lVert A \rVert_2 = \lambda_{\max}(A)$, so
 $\delta_s := \max_i |\tilde s_i - \hat s_i| \le \lambda_{\max}(A)\,\rho/\lambda_{\min}(A)$.
 Both perturbations are bounded by
 $\delta := \rho\,(1+\lambda_{\max}(A))/\lambda_{\min}(A) < \min(\varepsilon, \mu-\varepsilon)$
 by~\eqref{eq:inexactcond}.
 
-Fix $i \in \mathcal{F}$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$; either
+We now fix $i \in \mathcal{F}$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$; either
 way $\tilde x_i \ge -\delta > -\varepsilon$, so the inexact test does not flag $i$, matching
 the exact test. If $\hat x_i < 0$ then $\hat x_i \le -\mu$ by the definition of $\mu$, so
 $\tilde x_i \le -\mu + \delta < -\varepsilon$: both tests flag $i$. The identical case split
@@ -222,7 +221,7 @@ a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffice
 $\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$).
 \end{remark}
 
-\subsection{Projected-gradient comparator}\label{ssec:proj}
+\subsection{Projected-gradient reference method}\label{ssec:proj}
 
 The second strategy enforces the constraint at every step. Projected gradient iterates
 \[
@@ -265,7 +264,7 @@ ill-conditioned problems. Nesterov acceleration would lift the projected-gradien
 $O(\sqrt\kappa)$, but CG attains that rate \emph{optimally} within the Krylov subspace: each
 iterate minimises $f$ over $\mathcal{K}_k(A_{\mathcal{F}}, b_{\mathcal{F}})$, a strictly richer
 search space than two-point momentum, and typically with a smaller constant. Plain projected
-gradient is therefore the honest first-order comparator, isolating the Krylov advantage; a
+gradient is therefore the honest first-order reference method, isolating the Krylov advantage; a
 FISTA variant~\cite{beck2009} narrows the constant but not the asymptotic gap. The trade-off
 is otherwise in the other direction: projected gradient is loop-free and needs no
 complementarity certificate, so it is the simpler method when $\kappa$ is small or moderate

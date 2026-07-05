@@ -39,7 +39,7 @@ splitting $A \mapsto A_\alpha = (1-\alpha)A + \alpha R^\top R$ with $R^\top R \s
 both: it lowers $\kappa$ (Proposition~\ref{prop:regcond}) and, by keeping every principal
 submatrix strictly positive definite, secures the $P$-matrix property the finite-termination proof relies on (Section~\ref{sec:conditioning}).
 
-For contrast we analyse a loop-free comparator that enforces the constraint at every step: a \emph{projected-gradient} method that takes a gradient step and projects onto the feasible set, i.e. the non-negative orthant for~\eqref{eq:bqp}, or the simplex slice
+For contrast we analyse a loop-free reference method that enforces the constraint at every step: a \emph{projected-gradient} method that takes a gradient step and projects onto the feasible set, i.e. the non-negative orthant for~\eqref{eq:bqp}, or the simplex slice
 $\Delta_\beta = \{x : \mathbf{1}^\top x = \beta,\, x \geq 0\}$ for the single-normalisation
 case, computed in $O(n\log n)$ by a sort-and-threshold pass (cf. \cite{duchi2008,condat2016}). It is single-stage and simple, but it is not a Krylov subspace method as it does not orthogonalise residuals against prior search directions and converges at
 the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop as we discuss in Section~\ref{sec:nonneg}.
@@ -58,4 +58,4 @@ factorisation; the present method forms neither, reaching $A$ only through the t
 applications of Section~\ref{sec:reduction}.
 
 Section~\ref{sec:problem} states the problem and its KKT/complementarity structure;
-Section~\ref{sec:reduction} reduces it to a sequence of unconstrained SPD solves, records the matrix-free CG operator and its convergence rate, and eliminates the equality multipliers analytically; Section~\ref{sec:nonneg} develops the active-set loop and the projected-gradient comparator and proves finite termination; Section~\ref{sec:conditioning} treats regularisation and preconditioning; and Section~\ref{sec:results} records the complexity of each method and discusses its behaviour on synthetic SPD test problems.
+Section~\ref{sec:reduction} reduces it to a sequence of unconstrained SPD solves, records the matrix-free CG operator and its convergence rate, and eliminates the equality multipliers analytically; Section~\ref{sec:nonneg} develops the active-set loop and the projected-gradient reference method and proves finite termination; Section~\ref{sec:conditioning} treats regularisation and preconditioning; and Section~\ref{sec:results} records the complexity of each method and discusses its behaviour on synthetic SPD test problems.

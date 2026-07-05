@@ -5,8 +5,7 @@ Both the inner CG rate (Proposition~\ref{prop:cg}) and the projected-gradient ra
 compresses the spectrum of $A$ shortens the solve. Two mechanisms are available, and they
 coincide in a convenient way.
 
-\paragraph{Regularising split.}
-Replace $A$ by the convex combination
+We now replace $A$ by the convex combination
 \begin{equation}\label{eq:regsplit}
   A_\alpha = (1-\alpha)\,A + \alpha\,R^\top R, \qquad \alpha \in (0,1),\; R^\top R \succ 0,
 \end{equation}
@@ -35,7 +34,7 @@ regularisation~\cite{golub2013,lawson1974}.
   = O\!\big((1-\alpha)/\alpha\big)$.
 \end{proposition}
 
-The split does double duty. It lowers $\kappa$ and hence the iteration count of both solvers
+The split works twofold. It lowers $\kappa$ and hence the iteration count of both solvers
 (Propositions~\ref{prop:cg} and~\ref{prop:proj}), and, because $A_\alpha \succ 0$ strictly
 whenever $\alpha > 0$, even when $A$ is only positive semidefinite (a rank-deficient
 least-squares operator with $m < n$), it restores the $P$-matrix property on which
@@ -43,11 +42,7 @@ Theorem~\ref{thm:termination} depends. A strictly positive $\alpha$ is therefore
 setting for the active-set loop: it simultaneously conditions the inner solve and guarantees
 that every principal submatrix is invertible.
 
-\paragraph{Preconditioning.}
-When the operator must be solved at its given $A$, a symmetric positive definite
-preconditioner $P \approx A$ replaces the CG rate's $\kappa(A)$ by $\kappa(P^{-1}A)$; standard
-choices (Jacobi, incomplete Cholesky, or a low-rank-plus-diagonal approximation built from a
-few dominant eigenpairs) apply unchanged inside the active-set loop, since preconditioned CG
+We now discuss its impact on preconditioning. When the operator must be solved at its given $A$, a symmetric positive definite preconditioner $P \approx A$ replaces the CG rate's $\kappa(A)$ by $\kappa(P^{-1}A)$; standard choices (Jacobi, incomplete Cholesky, or a low-rank-plus-diagonal approximation built from a few dominant eigenpairs see \cite{saad2003iterative}) apply unchanged inside the active-set loop, since preconditioned CG
 still accesses $A_{\mathcal{F}}$ only through its mat-vec~\cite{golub2013,benzi2005}. The
 regularising split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner: it
 changes the problem, but toward a target the application deems statistically or structurally
