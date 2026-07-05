@@ -41,6 +41,8 @@ from common.util.runner import SMOKE, output_dirs, run_timed
 from common.simulate import simulate_equity_returns
 from minvar.minvar import (
     MinVarProblem,
+    lw_alpha_and_target,
+    lw_alpha_and_target_hard,
     rmt_target_and_alpha,
 )
 
@@ -69,27 +71,50 @@ SP500_DATA = HERE / "data/sp500_pct_returns.parquet"
 
 
 def rmt_target_at_k(X, k):
-    """Return (target, lr_factors, k) using exactly k signal factors."""
+    """Return (C0, lr_factors, k) using exactly k correlation signal factors."""
     T, n = X.shape
     cov = (X.T @ X) / T
-    bar_lam = float(np.trace(cov) / n)
-    eigs, vecs = np.linalg.eigh(cov)  # ascending
+    std = np.sqrt(np.diag(cov))
+    corr = cov / np.outer(std, std)
+    eigs, vecs = np.linalg.eigh(corr)  # ascending
     eigs_k = eigs[-k:]
     vecs_k = vecs[:, -k:]
-    delta_k = eigs_k - bar_lam
-    target = bar_lam * np.eye(n) + vecs_k @ np.diag(delta_k) @ vecs_k.T
-    lr_factors = (bar_lam, vecs_k, delta_k)
+    mu_bar = float((n - eigs_k.sum()) / (n - k))
+    delta_k = eigs_k - mu_bar
+    target = mu_bar * np.eye(n) + vecs_k @ np.diag(delta_k) @ vecs_k.T
+    lr_factors = (mu_bar, vecs_k, delta_k)
     return target, lr_factors, k
 
 
+def std_of(R):
+    """Per-asset volatilities of the demeaned returns ``R`` (T, n)."""
+    return np.sqrt((R * R).sum(axis=0) / R.shape[0])
+
+
+def y_problem(R, target, lr, std, rho=0.0, mu=None):
+    """Min-variance problem in standardised coordinates ``y = D^{1/2} w``.
+
+    Correlation cleaning solves against the cleaned correlation ``target = C0``
+    under the transformed budget ``sum(y_i / std_i) = 1``. Solving returns ``y``;
+    the caller maps back with ``w = y / std`` (which then satisfies ``1^T w = 1``,
+    ``w >= 0``).
+    """
+    mu_t = None if mu is None else np.asarray(mu) / std
+    return MinVarProblem(
+        R, alpha=1.0, target=target, target_lr=lr, B=(1.0 / std)[None, :], c=np.array([1.0]), rho=rho, mu=mu_t
+    )
+
+
 def rsvd_eigenpairs(X, k, p=10):
-    """Compute top-k eigenpairs of X^T X / T via randomised SVD."""
-    T = X.shape[0]
-    _, s, Vt = randomized_svd(X, n_components=k + p, random_state=0)
+    """Compute top-k eigenpairs of the sample correlation via randomised SVD."""
+    T, n = X.shape
+    std = np.sqrt((X**2).sum(axis=0) / T)
+    xs = X / std  # standardised (unit-variance) returns
+    _, s, Vt = randomized_svd(xs, n_components=k + p, random_state=0)
     eigs_k = (s[:k] ** 2) / T
     vecs_k = Vt[:k].T  # (n, k)
-    bar_lam = float(np.linalg.norm(X, "fro") ** 2) / (X.shape[1] * T)
-    return vecs_k, eigs_k, bar_lam
+    mu_bar = float((n - eigs_k.sum()) / (n - k))
+    return vecs_k, eigs_k, mu_bar
 
 
 # ===========================================================================
@@ -108,12 +133,23 @@ T_sp, N_sp = R_sp.shape
 _, _, k_sp, _ = rmt_target_and_alpha(R_sp)
 print(f"S&P 500: n={N_sp}, T={T_sp}, k={k_sp} signal factors, p=10 oversampling")
 
-# Dense path
+# Dense path: eigendecomposition of the sample correlation
 cov_sp = (R_sp.T @ R_sp) / T_sp
-bar_lam_sp = float(np.trace(cov_sp) / N_sp)
+d_sp = np.diag(cov_sp)
+corr_sp = cov_sp / np.sqrt(np.outer(d_sp, d_sp))
 
-(eigs_dense, vecs_dense), t_dense = run_timed(lambda: np.linalg.eigh((R_sp.T @ R_sp) / T_sp))
+(eigs_dense, vecs_dense), t_dense = run_timed(lambda: np.linalg.eigh(corr_sp))
 U_dense = vecs_dense[:, -k_sp:]
+
+# Condition numbers reported in the estimator section (Section 2)
+tgt_sp_kappa, _, _, _ = rmt_target_and_alpha(R_sp)
+kappa_cov = float(np.linalg.cond(cov_sp))
+kappa_corr = float(eigs_dense[-1] / eigs_dense[0])
+kappa_clean = float(np.linalg.cond(tgt_sp_kappa))
+print(
+    f"  kappa: sample cov {kappa_cov:.0f}, sample corr {kappa_corr:.0f}, "
+    f"cleaned corr C0 {kappa_clean:.1f}  (change-of-variables solves against C0)"
+)
 
 # Randomised SVD path
 (U_rsvd, eigs_rsvd, _), t_rsvd = run_timed(lambda: rsvd_eigenpairs(R_sp, k_sp, p=10))
@@ -158,7 +194,8 @@ betas_ef = rng_ef.uniform(0.4, 0.8, n_ef)
 mu_ef = betas_ef * (0.10 / 250)
 
 tgt_rmt_ef, lr_rmt_ef, k_rmt_ef, alpha_rmt_ef = rmt_target_and_alpha(R_ef)
-Sigma_rmt_ef = tgt_rmt_ef
+STD_ef = std_of(R_ef)
+Sigma0_ef = STD_ef[:, None] * tgt_rmt_ef * STD_ef[None, :]  # cleaned covariance D^{1/2} C0 D^{1/2}
 
 rhos_ef = np.linspace(0, 2, 6 if SMOKE else 50)
 N_PTS = len(rhos_ef)
@@ -205,20 +242,13 @@ def _warm_sweep_kkt(prob_fn, repeats=3):
 
 print("  Running sweeps...")
 
-# KKT-Cholesky: solve_kkt WITHOUT target_lr (assembles n_a x n_a, then Cholesky)
-t_kkt_cold = _cold_sweep(
-    "solve_kkt", lambda rho: MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, rho=rho, mu=mu_ef)
-)
-t_kkt_warm = _warm_sweep_kkt(lambda rho: MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, rho=rho, mu=mu_ef))
+# KKT-Cholesky: no target_lr (assembles n_a x n_a on C0, then Cholesky)
+t_kkt_cold = _cold_sweep("solve_kkt", lambda rho: y_problem(R_ef, tgt_rmt_ef, None, STD_ef, rho, mu_ef))
+t_kkt_warm = _warm_sweep_kkt(lambda rho: y_problem(R_ef, tgt_rmt_ef, None, STD_ef, rho, mu_ef))
 
-# Woodbury: solve_kkt WITH target_lr (never assembles n_a x n_a matrix)
-t_wb_cold = _cold_sweep(
-    "solve_kkt",
-    lambda rho: MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, target_lr=lr_rmt_ef, rho=rho, mu=mu_ef),
-)
-t_wb_warm = _warm_sweep_kkt(
-    lambda rho: MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, target_lr=lr_rmt_ef, rho=rho, mu=mu_ef)
-)
+# Woodbury: with target_lr (never assembles n_a x n_a; scalar-identity C0)
+t_wb_cold = _cold_sweep("solve_kkt", lambda rho: y_problem(R_ef, tgt_rmt_ef, lr_rmt_ef, STD_ef, rho, mu_ef))
+t_wb_warm = _warm_sweep_kkt(lambda rho: y_problem(R_ef, tgt_rmt_ef, lr_rmt_ef, STD_ef, rho, mu_ef))
 
 print(f"\n  {'Solver':<42} {'Cold (s)':>9} {'ms/pt':>7} {'Warm (s)':>9} {'ms/pt':>7} {'WB speedup':>11}")
 print(f"  {'-' * 95}")
@@ -241,9 +271,10 @@ print(f"  Woodbury vs KKT-Cholesky (warm): {kkt_w / wb_w:.1f}x")
 ef_vols_rmt, ef_rets_rmt, active_sizes = [], [], []
 warm_rmt = None
 for rho in rhos_ef:
-    p = MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, target_lr=lr_rmt_ef, rho=rho, mu=mu_ef)
-    w, _, warm_rmt = p.solve_kkt_warm(warm_start=warm_rmt)
-    ef_vols_rmt.append(float(np.sqrt(w @ Sigma_rmt_ef @ w)) * np.sqrt(250) * 100)
+    p = y_problem(R_ef, tgt_rmt_ef, lr_rmt_ef, STD_ef, rho, mu_ef)
+    y, _, warm_rmt = p.solve_kkt_warm(warm_start=warm_rmt)
+    w = y / STD_ef
+    ef_vols_rmt.append(float(np.sqrt(w @ Sigma0_ef @ w)) * np.sqrt(250) * 100)
     ef_rets_rmt.append(float(w @ mu_ef) * 250 * 100)
     active_sizes.append(int((w > 1e-6).sum()))
 
@@ -251,9 +282,10 @@ for rho in rhos_ef:
 ef_vols_kkt, ef_rets_kkt = [], []
 warm_kkt = None
 for rho in rhos_ef:
-    p = MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, rho=rho, mu=mu_ef)
-    w, _, warm_kkt = p.solve_kkt_warm(warm_start=warm_kkt)
-    ef_vols_kkt.append(float(np.sqrt(w @ Sigma_rmt_ef @ w)) * np.sqrt(250) * 100)
+    p = y_problem(R_ef, tgt_rmt_ef, None, STD_ef, rho, mu_ef)
+    y, _, warm_kkt = p.solve_kkt_warm(warm_start=warm_kkt)
+    w = y / STD_ef
+    ef_vols_kkt.append(float(np.sqrt(w @ Sigma0_ef @ w)) * np.sqrt(250) * 100)
     ef_rets_kkt.append(float(w @ mu_ef) * 250 * 100)
 
 print(
@@ -279,8 +311,9 @@ def _sp_cold(solve_fn_name, prob, repeats=3):
     return best
 
 
-p_kkt_sp = MinVarProblem(R_sp, alpha=alpha_sp_b, target=tgt_sp_b)
-p_wb_sp = MinVarProblem(R_sp, alpha=alpha_sp_b, target=tgt_sp_b, target_lr=lr_sp_b)
+STD_sp = std_of(R_sp)
+p_kkt_sp = y_problem(R_sp, tgt_sp_b, None, STD_sp)
+p_wb_sp = y_problem(R_sp, tgt_sp_b, lr_sp_b, STD_sp)
 
 kkt_sp_c = _sp_cold("solve_kkt", p_kkt_sp)
 wb_sp_c = _sp_cold("solve_kkt", p_wb_sp)
@@ -332,12 +365,12 @@ sp_rows = (
 )
 
 panel_a = (
-    "\\multicolumn{5}{l}{\\textit{Synthetic, $n=500$, $T=1250$, $k=22$,"
+    "\\multicolumn{5}{l}{\\textit{Synthetic, $n=500$, $T=1250$, $k=" + str(k_rmt_ef) + "$,"
     " 50-point sweep (total / ms per point)}} \\\\\n"
     "\\addlinespace[2pt]\n"
 )
 panel_b = (
-    "\\multicolumn{5}{l}{\\textit{S\\&P~500, $n=494$, $T=1213$, $k=23$,"
+    "\\multicolumn{5}{l}{\\textit{S\\&P~500, $n=" + str(N_sp) + "$, $T=" + str(T_sp) + "$, $k=" + str(k_sp_b) + "$,"
     " single min-var solve (seconds / ms)}} \\\\\n"
     "\\addlinespace[2pt]\n"
 )
@@ -394,9 +427,8 @@ w_at_k = {}
 
 for k_try in k_vals:
     tgt_k, lr_k, _ = rmt_target_at_k(R_sp, k_try)
-    prob_k = MinVarProblem(R_sp, alpha=1.0, target=tgt_k, target_lr=lr_k)
-    w_k, _ = prob_k.solve_kkt()
-    w_at_k[k_try] = w_k
+    y_k, _ = y_problem(R_sp, tgt_k, lr_k, STD_sp).solve_kkt()
+    w_at_k[k_try] = y_k / STD_sp
 
 w_ref = w_at_k[k_ref]
 cov_sp_full = (R_sp.T @ R_sp) / T_sp
@@ -458,16 +490,17 @@ for n in ns:
     R_s = simulate_equity_returns(n, T_FIXED, rng=n)
 
     tgt_s_rmt, lr_s_rmt, k_s, _ = rmt_target_and_alpha(R_s)
+    std_s = std_of(R_s)
 
     # KKT-Cholesky (no target_lr): assembles n_a x n_a matrix, then Cholesky
-    prob_kkt = MinVarProblem(R_s, alpha=1.0, target=tgt_s_rmt)
+    prob_kkt = y_problem(R_s, tgt_s_rmt, None, std_s)
     (_, _), t_kkt = run_timed(lambda p=prob_kkt: p.solve_kkt())
 
     # Dense preprocessing
     _, t_dense_s = run_timed(lambda R=R_s: np.linalg.eigh((R.T @ R) / T_FIXED))
 
     # Woodbury solve only (using dense eigenpairs, preprocessing already done)
-    prob_wb = MinVarProblem(R_s, alpha=1.0, target=tgt_s_rmt, target_lr=lr_s_rmt)
+    prob_wb = y_problem(R_s, tgt_s_rmt, lr_s_rmt, std_s)
     (_, _), t_wb = run_timed(lambda p=prob_wb: p.solve_kkt())
 
     # Randomised SVD preprocessing
@@ -520,6 +553,99 @@ plt.close(fig_sc)
 
 
 # ===========================================================================
+# Section E: Out-of-sample backtest
+#            RMT-CRE (correlation) vs LW-0.5 vs LW-oracle vs equal-weight
+# ===========================================================================
+
+print()
+print("=" * 70)
+print("E: Out-of-sample rolling backtest  (RMT correlation vs LW vs equal-weight)")
+print("=" * 70)
+
+OOS_EST = 252 if SMOKE else 504  # estimation window (days)
+OOS_STEP = 250 if SMOKE else 21  # rebalance stride (monthly out of smoke)
+OOS_ANN = 252
+OOS_STRATS = ["RMT", "LW05", "LWor", "EW"]
+OOS_LABELS = {
+    "RMT": "RMT ($\\alpha=1$)",
+    "LW05": "LW-0.5 ($\\alpha=0.5$)",
+    "LWor": "LW-oracle",
+    "EW": "Equal-weight",
+}
+
+
+def _oos_drift(w_prev, r_block):
+    """Buy-and-hold drifted weights over a holding block."""
+    wd = w_prev * np.prod(1.0 + r_block, axis=0)
+    s = wd.sum()
+    return wd / s if s > 0 else w_prev
+
+
+def oos_backtest(R):
+    """Rolling long-only min-variance backtest; return per-strategy metrics + median k."""
+    T, n = R.shape
+    daily = {s: [] for s in OOS_STRATS}
+    turn = {s: [] for s in OOS_STRATS}
+    prev, prev_blk = dict.fromkeys(OOS_STRATS), dict.fromkeys(OOS_STRATS)
+    ks = []
+    for t in range(OOS_EST, T - 1, OOS_STEP):
+        X = R[t - OOS_EST : t]
+        X = X - X.mean(axis=0)
+        R_out = R[t : t + OOS_STEP]
+        if R_out.shape[0] == 0:
+            continue
+        tgt, lr, k, _ = rmt_target_and_alpha(X)  # RMT-CRE on the correlation
+        ks.append(k)
+        std = std_of(X)
+        w = {"RMT": y_problem(X, tgt, lr, std).solve_kkt()[0] / std}  # change of variables
+        _, tgt05 = lw_alpha_and_target_hard(X, alpha=0.5)
+        w["LW05"] = MinVarProblem(X, alpha=0.5, target=tgt05).solve_kkt()[0]
+        a_or, tgt_or = lw_alpha_and_target(X)
+        w["LWor"] = MinVarProblem(X, alpha=a_or, target=tgt_or).solve_kkt()[0]
+        w["EW"] = np.ones(n) / n
+        for s in OOS_STRATS:
+            daily[s].extend((R_out @ w[s]).tolist())
+            if prev[s] is not None:
+                turn[s].append(0.5 * float(np.abs(w[s] - _oos_drift(prev[s], prev_blk[s])).sum()))
+            prev[s], prev_blk[s] = w[s], R_out
+    metrics = {}
+    for s in OOS_STRATS:
+        d = np.asarray(daily[s])
+        vol = float(d.std(ddof=1) * np.sqrt(OOS_ANN) * 100)
+        ret = float(d.mean() * OOS_ANN * 100)
+        metrics[s] = (vol, ret / vol if vol > 0 else float("nan"), float(np.mean(turn[s]) * 100))
+    return metrics, int(np.median(ks))
+
+
+df_ftse = pd.read_parquet(HERE / "data/ftse100_pct_returns.parquet")
+R_ftse = df_ftse.to_numpy()
+R_ftse = R_ftse - R_ftse.mean(axis=0)
+
+oos_rows = ""
+for uni_name, R_uni in [("S\\&P~500", R_sp), ("FTSE~100", R_ftse)]:
+    # Exclude zero-variance names (delisted / zero-padded), as a min-variance
+    # portfolio would otherwise load entirely onto a spurious riskless asset.
+    R_uni = R_uni[:, R_uni.var(axis=0) > 1e-14]
+    metrics, k_med = oos_backtest(R_uni)
+    n_uni = R_uni.shape[1]
+    print(f"\n  {uni_name}: n={n_uni}, median k={k_med}")
+    print(f"    {'Strategy':<12} {'OOSvol%':>8} {'Sharpe':>8} {'Turn%':>7}")
+    oos_rows += (
+        f"\\multicolumn{{4}}{{l}}{{\\textit{{{uni_name} "
+        f"($n={n_uni}$, median $k={k_med}$)}}}} \\\\\n\\addlinespace[2pt]\n"
+    )
+    for s in OOS_STRATS:
+        vol, sh, tn = metrics[s]
+        print(f"    {s:<12} {vol:>8.2f} {sh:>8.3f} {tn:>7.1f}")
+        oos_rows += f"{OOS_LABELS[s]} & {vol:.2f} & {sh:.3f} & {tn:.1f} \\\\\n"
+    if uni_name.startswith("S"):
+        oos_rows += "\\midrule\n"
+
+(TABLES / "rmt_oos.tex").write_text(f"\\def\\dataOos{{%\n{oos_rows}}}\n")
+print("\n  → wrote tables/rmt_oos.tex")
+
+
+# ===========================================================================
 # Summary
 # ===========================================================================
 
@@ -531,6 +657,7 @@ print("  Tables:")
 print("    tables/rmt_preprocessing.tex      (Section A)")
 print("    tables/rmt_solver_comparison.tex  (Section B)")
 print("    tables/rmt_k_sensitivity.tex      (Section C)")
+print("    tables/rmt_oos.tex                (Section E)")
 print("  Figures:")
 print("    graphs/rmt_frontier.pdf           (Section B)")
 print("    graphs/rmt_scaling_full.pdf       (Section D)")

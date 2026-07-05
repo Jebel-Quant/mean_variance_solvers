@@ -7,31 +7,33 @@ window), the sample covariance $\hat\Sigma = X^\top X/T$ is nearly singular,
 with condition number $\kappa(\hat\Sigma) \approx 106{,}000$ on S\&P~500 data.
 This ill-conditioning makes the portfolio optimisation problem numerically fragile.
 
-Random matrix theory (RMT) attributes most of this ill-conditioning to noise:
-the Marchenko--Pastur (MP) law identifies eigenvalues below the bulk edge
-$\hat\lambda_+$ as uninformative, consistent with noise, while eigenvalues above
-$\hat\lambda_+$ carry genuine factor structure. The ``constant residual eigenvalue''
-(CRE) cleaning method~\cite{laloux1999,bun2017,bouchaud2003} replaces the noise
-eigenvalues with their average $\bar\lambda$ (preserving the trace of
-$\hat\Sigma$) and produces the estimator
+Random matrix theory (RMT) attributes most of this ill-conditioning to noise in
+the \emph{correlation} structure: applied to the sample correlation
+$C = D^{-1/2}\hat\Sigma\,D^{-1/2}$ ($D = \mathrm{diag}(\hat\Sigma)$), the
+Marchenko--Pastur (MP) law identifies correlation eigenvalues below the bulk edge
+$\hat\lambda_+ = (1+\sqrt{n/T})^2$ as noise and those above as genuine factor
+structure. The ``constant residual eigenvalue'' (CRE) cleaning
+method~\cite{laloux1999,bun2017,bouchaud2003} replaces the noise eigenvalues with
+their average $\bar\mu$ (preserving $\mathrm{tr}(C) = n$) and produces the cleaned
+correlation
 \[
-  T_0^{\mathrm{RMT}} = \bar\lambda I + U_k(\Lambda_k - \bar\lambda I)U_k^\top,
+  C_0 = \bar\mu\, I + U_k(\Lambda_k - \bar\mu I)U_k^\top,
 \]
-where $(U_k, \Lambda_k)$ are the $k$ eigenpairs above $\hat\lambda_+$.
-On S\&P~500 data, $k = 23$ and $\kappa(T_0^{\mathrm{RMT}}) \approx 343$,
-roughly $300$ times better conditioned than $\hat\Sigma$.
+where $(U_k, \Lambda_k)$ are the $k$ correlation eigenpairs above $\hat\lambda_+$.
+On S\&P~500 data, $k = 17$ and $\kappa(C_0) \approx 313$, roughly $290$ times
+better conditioned than the sample correlation ($\kappa(C) \approx 91{,}000$).
 
-Implementations of CRE cleaning in the public domain typically form
-$T_0^{\mathrm{RMT}}$ as a dense $n \times n$ matrix and pass it to a
-general-purpose quadratic-program solver; see e.g.\ the reference
-implementations accompanying~\cite{lopezdeprado2018}. This paper exploits the
-low-rank-plus-identity structure
-$T_0^{\mathrm{RMT}} = \bar\lambda I + U_k \Delta_k U_k^\top$, which renders
-the matrix inverse available in closed form via the Woodbury identity, without
-assembling either the $n \times n$ covariance or the $n_a \times n_a$ active-set
-restriction. The result is a direct active-set portfolio solver that is
-substantially faster than the KKT-Cholesky approach of assembling the restricted
-system and factoring.
+Implementations of CRE cleaning in the public domain typically form the cleaned
+\emph{covariance} as a dense $n \times n$ matrix and pass it to a general-purpose
+quadratic-program solver. This paper exploits the
+scalar-identity-plus-low-rank structure of $C_0$, which renders the matrix inverse
+available in closed form via the Woodbury identity, without assembling either the
+$n \times n$ covariance or the $n_a \times n_a$ active-set restriction. Solving in
+the standardised coordinates $y = D^{1/2}w$ (exact, since
+$w \geq 0 \Leftrightarrow y \geq 0$) poses the minimum-variance problem against
+$C_0$ directly, so the solver inherits the cleaned correlation's conditioning. The
+result is a direct active-set portfolio solver substantially faster than the
+KKT-Cholesky approach of assembling the restricted system and factoring.
 Exploiting factor structure in portfolio quadratic programmes via the
 Sherman--Morrison--Woodbury identity goes back at least to
 Perold~\cite{perold1984}; the contribution here is the combination with
@@ -42,8 +44,8 @@ complexity and accuracy account.
 This paper makes three algorithmic contributions and one empirical
 contribution.
 
-\emph{First, a direct Woodbury portfolio solver.} The low-rank-plus-identity
-form of $T_0^{\mathrm{RMT}}$ renders the active-set inner solve available in
+\emph{First, a direct Woodbury portfolio solver.} The scalar-identity-plus-low-rank
+form of $C_0$ renders the active-set inner solve available in
 closed form via the Woodbury identity, at $O(n_a k^2 + k^3)$ per outer step in
 place of the $O(n_a^2 k + n_a^3)$ assemble-and-factor cost, without forming
 either the $n \times n$ covariance or its $n_a \times n_a$ active-set

@@ -1,11 +1,11 @@
 \def\dataRmtSolverComp{%
-\multicolumn{5}{l}{\textit{Synthetic, $n=500$, $T=1250$, $k=22$, 50-point sweep (total / ms per point)}} \\
+\multicolumn{5}{l}{\textit{Synthetic, $n=500$, $T=1250$, $k=21$, 50-point sweep (total / ms per point)}} \\
 \addlinespace[2pt]
-KKT-Cholesky ($k=22$)                  &   1.015 &   20.3 &  0.0790 &    1.6 \\
-Woodbury ($k=22$)                      &  0.0529 &    1.1 &  0.0116 &    0.2 \\
+KKT-Cholesky ($k=21$)                  &  0.8830 &   17.7 &  0.0668 &    1.3 \\
+Woodbury ($k=21$)                      &  0.0586 &    1.2 &  0.0117 &    0.2 \\
 \midrule
-\multicolumn{5}{l}{\textit{S\&P~500, $n=494$, $T=1213$, $k=23$, single min-var solve (seconds / ms)}} \\
+\multicolumn{5}{l}{\textit{S\&P~500, $n=494$, $T=1213$, $k=17$, single min-var solve (seconds / ms)}} \\
 \addlinespace[2pt]
-KKT-Cholesky ($k=23$)                  &  0.0292 &   29.2 &  0.0041 &    4.1 \\
-Woodbury ($k=23$)                      &  0.0012 &    1.2 &  0.0002 &    0.2 \\
+KKT-Cholesky ($k=17$)                  &  0.0183 &   18.3 &  0.0016 &    1.6 \\
+Woodbury ($k=17$)                      &  0.0011 &    1.1 &  0.0001 &    0.1 \\
 }

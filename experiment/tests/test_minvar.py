@@ -190,13 +190,19 @@ def test_lw_hard_passes_alpha_through(returns):
     assert np.allclose(target, lw_target)  # same scaled-identity target
 
 
-def test_rmt_target_lifts_lambda_min(returns):
-    target, (bar_lam, u_k, delta_k), k, _ = rmt_target_and_alpha(returns)
-    eigs = np.linalg.eigvalsh(target)
-    assert eigs.min() == pytest.approx(bar_lam, rel=1e-6)  # noise floor preserved
-    assert u_k.shape[1] == k
+def test_rmt_correlation_cleaning(returns):
+    target, (mu_bar, u_k, delta_k), k, alpha = rmt_target_and_alpha(returns)
+    n = returns.shape[1]
+    assert alpha == 1.0
+    assert u_k.shape == (n, k)
     assert delta_k.shape == (k,)
-    assert np.all(delta_k > 0)  # signal eigenvalues exceed the floor
+    assert np.all(delta_k > 0)  # signal eigenvalues exceed the noise floor
+    # C0 is scalar-identity-plus-low-rank on the correlation: min eigenvalue is mu_bar
+    assert np.linalg.eigvalsh(target).min() == pytest.approx(mu_bar, rel=1e-6)
+    assert np.allclose(target, mu_bar * np.eye(n) + u_k @ np.diag(delta_k) @ u_k.T)
+    # cleaning is on the correlation, not the covariance (unit-scale vs variance-scale diagonal)
+    cov = returns.T @ returns / returns.shape[0]
+    assert not np.allclose(np.diag(target), np.diag(cov))
 
 
 # ---------------------------------------------------------------------------

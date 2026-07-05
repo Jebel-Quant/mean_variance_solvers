@@ -1,37 +1,36 @@
 \section{Randomised SVD Preprocessing}\label{sec:preprocessing}
 
-The Woodbury solver requires the top-$k$ eigenpairs of $\hat\Sigma = X^\top X/T$.
-Two paths are available.
+The Woodbury solver requires the top-$k$ eigenpairs of the sample correlation
+$C = D^{-1/2}\hat\Sigma\,D^{-1/2}$, equivalently of the standardised returns
+$X_s = X D^{-1/2}$. Two paths are available.
 
 \paragraph{Dense path}
-Assemble $\hat\Sigma = X^\top X/T$ explicitly ($O(n^2 T)$ FLOPs, $O(n^2)$ storage),
-then compute a full eigendecomposition ($O(n^3)$). Total cost: $O(n^2 T + n^3)$.
-At $n = 494$, $T = 1213$ this is approximately $3 \times 10^8$ FLOPs and
-$1.9 \times 10^6$ doubles (about $15$\,MB). Practical: $0.013$\,s on the benchmark
-hardware (Table~\ref{tab:preprocessing}).
+Assemble $C$ explicitly ($O(n^2 T)$ FLOPs, $O(n^2)$ storage), then compute a full
+eigendecomposition ($O(n^3)$). Total cost $O(n^2 T + n^3)$; $0.011$\,s at
+$n = 494$, $T = 1213$ on the benchmark hardware (Table~\ref{tab:preprocessing}).
 
 \paragraph{Randomised SVD path}
-The right singular vectors of $X/\sqrt{T}$ are the eigenvectors of $\hat\Sigma$.
-A randomised truncated SVD~\cite{halko2011} computes the top-$k$ eigenpairs
-without forming $X^\top X$. The trace-preserving bulk mean is recovered without
-any dense decomposition from
-$\bar\lambda = \bigl(\mathrm{tr}(\hat\Sigma) - \sum_{j\le k}\hat\lambda_j\bigr)/(n-k)$
-with $\mathrm{tr}(\hat\Sigma) = \norm{X}_F^2/T$.
+The right singular vectors of $X_s/\sqrt{T}$ are the eigenvectors of $C$. A
+randomised truncated SVD~\cite{halko2011} computes the top-$k$ eigenpairs without
+forming $X_s^\top X_s$. The trace-preserving bulk mean is recovered without any
+dense decomposition from
+$\bar\mu = \bigl(n - \sum_{j\le k}\hat\lambda_j\bigr)/(n-k)$, using
+$\mathrm{tr}(C) = n$.
 
 \begin{algorithm}[ht]
-\caption{Randomised truncated SVD for eigenpairs of $\hat\Sigma$}\label{alg:rsvd}
+\caption{Randomised truncated SVD for eigenpairs of the correlation $C$}\label{alg:rsvd}
 \begin{algorithmic}[1]
-\Require Returns $X \in \mathbb{R}^{T \times n}$; target rank $k$; oversampling $p \geq 5$
+\Require Standardised returns $X_s = X D^{-1/2} \in \mathbb{R}^{T \times n}$; target rank $k$; oversampling $p \geq 5$
 \Ensure  Signal eigenvectors $U_k \in \mathbb{R}^{n \times k}$,
-         eigenvalues $\Lambda_k \in \mathbb{R}^k$, bulk mean $\bar\lambda$
+         eigenvalues $\Lambda_k \in \mathbb{R}^k$, bulk mean $\bar\mu$
 \State $\Omega \leftarrow \mathcal{N}(0, I_{n \times (k+p)})$ \Comment{random test matrix}
-\State $Y \leftarrow X^\top(X \Omega)$ \Comment{$n \times (k+p)$; two matrix-vector products with $X$, $O(nT(k+p))$}
+\State $Y \leftarrow X_s^\top(X_s \Omega)$ \Comment{$n \times (k+p)$; two matrix-vector products with $X_s$, $O(nT(k+p))$}
 \State $Q \leftarrow \mathrm{orth}(Y)$ \Comment{orthonormal basis, $O(n(k+p)^2)$}
-\State $B \leftarrow (XQ)^\top(XQ) / T$ \Comment{$(k+p) \times (k+p)$ projected covariance; no $X^\top X$ formed}
+\State $B \leftarrow (X_s Q)^\top(X_s Q) / T$ \Comment{$(k+p) \times (k+p)$ projected correlation; no $X_s^\top X_s$ formed}
 \State $[\hat U, \hat\Lambda, \sim] \leftarrow \mathrm{eigh}(B)$; sort descending
 \State $U_k \leftarrow Q \hat U[:, 1{:}k]$; $\Lambda_k \leftarrow \hat\Lambda[1{:}k]$
-\State $\bar\lambda \leftarrow \bigl(\norm{X}_F^2/T - \textstyle\sum_{j\le k}\hat\Lambda_j\bigr)/(n-k)$; identify $k$ via MP threshold
-\State \Return $(U_k, \Lambda_k, \bar\lambda)$
+\State $\bar\mu \leftarrow \bigl(n - \textstyle\sum_{j\le k}\hat\Lambda_j\bigr)/(n-k)$; identify $k$ via MP threshold
+\State \Return $(U_k, \Lambda_k, \bar\mu)$
 \end{algorithmic}
 \end{algorithm}
 
@@ -67,13 +66,11 @@ symmetry; Weyl's inequality~\cite{hornjohnson2013} then bounds each eigenvalue
 perturbation by the norm of the difference.
 \end{proof}
 
-The bound $\epsilon_{k,p}$ is governed by the eigenvalues at and below the MP
-edge: $\lambda_{k+1} \approx \hat\lambda_+ \approx 1.2 \times 10^{-3}$ on
-S\&P~500 data, while the leading signal eigenvalue
-$\lambda_1 \approx 343\,\bar\lambda \approx 0.066$ is roughly $50\times$ larger.
-The bound is conservative (the tail-sum term accumulates all $n - k$ bulk
-eigenvalues) and the measured accuracy is far better, as the direct
-portfolio comparison below shows.
+The bound $\epsilon_{k,p}$ is governed by the correlation eigenvalues at and below
+the MP edge $\lambda_{k+1} \approx \hat\lambda_+ \approx 2.28$ on S\&P~500 data,
+against a leading signal eigenvalue $\lambda_1 \approx 313\,\bar\mu$ that is two
+orders of magnitude larger. The bound is conservative (the tail-sum term
+accumulates all $n - k$ bulk eigenvalues) and the measured accuracy is far better.
 
 \paragraph{Memory passes}
 Algorithm~\ref{alg:rsvd} involves four matrix-vector products with $X$ in total:
@@ -98,52 +95,27 @@ Method & Time (s) & Storage & Subspace error \\
 \dataPreprocessing
 \bottomrule
 \end{tabular}
-\caption{Preprocessing paths for S\&P~500 ($n=494$, $T=1213$, $k=23$, $p=10$).
+\caption{Preprocessing paths for S\&P~500 ($n=494$, $T=1213$, $k=17$, $p=10$).
 Subspace error: $\norm{UU^\top - \hat{U}\hat{U}^\top}_F$, measuring alignment of the
-top-$k$ signal subspaces.  The randomised SVD is $1.8\times$ faster and requires
-$21\times$ less storage.}
+top-$k$ signal subspaces.  The randomised SVD is $1.9\times$ faster and requires
+$29\times$ less storage.}
 \label{tab:preprocessing}
 \end{table}
 
-The randomised SVD is $1.8\times$ faster on the benchmark hardware at $n=494$.
-The advantage grows with $n$: at $n=3000$ (Table~\ref{tab:scaling}) the dense path
-takes $1.25$\,s versus $0.05$\,s for the randomised path, a $25\times$ wall-clock
-advantage. The subspace error of $5.7 \times 10^{-2}$ is the Frobenius norm
-$\norm{UU^\top - \hat{U}\hat{U}^\top}_F$; relative to the subspace scale
-$\sqrt{k} \approx 4.8$ this is approximately $1.2\%$ alignment error per
-eigenvector column. The portfolio impact is measured directly: solving the
-minimum-variance problem with the rSVD eigenpairs versus the dense-path
-eigenpairs (same $k = 23$, $\alpha = 1$) changes no portfolio weight by more
-than $2.3$ basis points. For comparison, adding or removing a \emph{complete}
-eigenvector from the signal subspace (the $k \pm 1$ audit of
-Section~\ref{sec:ksensitivity}) moves weights by up to $33$ basis points; the
-preprocessing approximation is an order of magnitude below the threshold
-uncertainty that any user of the MP rule already accepts.
+The randomised SVD is $1.9\times$ faster than the dense path at $n=494$, and the
+advantage grows with $n$: at $n=3000$ (Table~\ref{tab:scaling}) the dense
+eigendecomposition takes $1.12$\,s against $0.056$\,s for the randomised path, a
+$20\times$ saving. The subspace error
+$\norm{UU^\top - \hat{U}\hat{U}^\top}_F \approx 2.5 \times 10^{-2}$ is about
+$0.6\%$ alignment per eigenvector column (relative to the subspace scale
+$\sqrt{k} \approx 4.1$), an order of magnitude below the $k \pm 1$ threshold
+uncertainty (Section~\ref{sec:ksensitivity}) that any user of the MP rule already
+accepts.
 
 \paragraph{Large-\texorpdfstring{$n$}{n} recommendation}
 For $n \leq 500$ either path is practical; the dense path is simpler to implement
 and both finish in milliseconds. For $n > 1000$ the randomised SVD is strongly
 preferred: the dense path's $O(n^2)$ storage requirement alone (8\,MB at $n=1000$,
 72\,MB at $n=3000$) begins to stress L3 cache, while the randomised path's
-$O(n(k+p))$ requirement (about $3$\,MB at $n=3000$, $k=123$) stays within
+$O(n(k+p))$ requirement (about $3$\,MB at $n=3000$, $k=125$) stays within
 typical L3.
-
-\paragraph{Incremental updates}
-For daily rebalancing, $X$ changes by one row (adding the new day, dropping the
-oldest), so $\hat\Sigma$ changes by a rank-two update. We implement an
-incremental variant that maintains the tracked basis $Q \in \mathbb{R}^{n
-\times m}$ ($m = k + p$) and the compressed eigenvalues across days: the basis
-is expanded by the orthogonal residuals of the entering and leaving
-observations, the $(m{+}2) \times (m{+}2)$ projected matrix is
-re-diagonalised, and the top $m$ directions are retained, at cost
-$O(nm^2 + m^3)$ per day with no re-sketch of $X$ (the mean update, a further
-rank-one correction, is omitted; daily means are negligible relative to
-volatilities). On the S\&P~500 benchmark ($m = 33$) one update costs
-$0.21$\,ms against $4.8$\,ms for a fresh randomised SVD of the window, a
-$23\times$ speedup. Tracking accuracy degrades slowly: over $100$ consecutive
-daily updates with no re-sketch, the minimum-variance portfolio built from the
-tracked eigenpairs differs from the freshly-sketched one by $6.7$\,bp in the
-median day and $38$\,bp in the worst, i.e.\ the worst-case drift after five
-months reaches the same order as the $k \pm 1$ threshold uncertainty. A
-monthly re-sketch (amortised cost $0.2$\,ms/day) keeps the drift an order of
-magnitude below it.

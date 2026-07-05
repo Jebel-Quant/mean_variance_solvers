@@ -17,7 +17,7 @@ actual S\&P~500 return series ($n=494$, $T=1213$); the out-of-sample backtests
 \subsection{Solver comparison}\label{ssec:solvers}
 
 Two solvers are applied to the same problem: minimise
-$w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w$
+$w^\top \Sigma_0\, w - \rho\,\hat\mu^\top w$
 subject to $w \geq 0$, $\mathbf{1}^\top w = 1$ (the budget case) over a $50$-point efficient frontier.
 Synthetic equity data: $n = 500$ assets, $T = 1250$ days, $k = 22$ signal factors.
 Active-set sizes averaged $n_a = 42$ across the frontier (warm start).
@@ -66,22 +66,22 @@ sweep is $9 \times 10^{-15}$ percentage points, confirming that the Woodbury
 inverse reproduces the dense Cholesky solve to machine precision.
 
 \paragraph{Timings}
-On synthetic data (top panel), Woodbury is $19\times$ faster than KKT-Cholesky
-on a cold start and $5\times$ faster warm. Both methods execute the same outer
+On synthetic data (top panel), Woodbury is $15\times$ faster than KKT-Cholesky
+on a cold start and $5.7\times$ faster warm. Both methods execute the same outer
 active-set loop; the difference is entirely in the inner solve. KKT-Cholesky
-assembles a $42 \times 42$ matrix at each outer step via a rank-$k$ symmetric
-update and factors by Cholesky. Woodbury instead operates on a
-$k \times k = 22 \times 22$ correction matrix $W$
+assembles the $n_a \times n_a$ active-set matrix at each outer step via a rank-$k$
+symmetric update and factors by Cholesky (mean $n_a = 31$ over the frontier).
+Woodbury instead operates on the $k \times k = 21 \times 21$ correction matrix $W$
 (Remark~\ref{rem:crossover}). The cold-start ratio exceeds the warm-start
 ratio because the cold solver takes more outer active-set steps before
-converging ($\sim 12$ cold vs $\sim 2$ warm) at systematically larger
+converging at systematically larger
 active-set sizes, where the per-step gap between $O(n_a^2 k + n_a^3)$ and
 $O(n_a k^2)$ is widest.
 
 The bottom panel confirms the result on real S\&P~500 data ($n=494$, $T=1213$,
-$k=23$, $n_a=63$ active assets at the minimum-variance solution): Woodbury is
-more than $20\times$ faster than KKT-Cholesky on a single cold minimum-variance
-solve ($28\times$ on unrounded timings) and $5\times$ faster warm. For the single-solve setting the warm start uses the
+$k=17$, $n_a=46$ active assets at the minimum-variance solution): Woodbury is
+about $17\times$ faster than KKT-Cholesky on a single cold minimum-variance
+solve. For the single-solve setting the warm start uses the
 converged active set from an immediately preceding cold solve at the same
 $\rho=0$, measuring the incremental re-solve cost when the covariance is
 refreshed but the optimal active set has not changed, the scenario for daily
@@ -113,54 +113,49 @@ $O(n^2)$ anchored at $n=500$.}
 \toprule
 $n$ & $k$ & Cholesky (s) & WB solve (s) & WB+dense (s) & WB+rSVD (s) \\
 \midrule
- 300 & 11 & 0.0033 & 0.0002 & 0.0049 & 0.0046 \\
- 500 & 22 & 0.0079 & 0.0003 & 0.0134 & 0.0070 \\
- 750 & 34 & 0.0155 & 0.0004 & 0.0315 & 0.0105 \\
-1000 & 47 & 0.0243 & 0.0005 & 0.0571 & 0.0158 \\
-1500 & 72 & 0.0572 & 0.0010 & 0.1463 & 0.0276 \\
-2000 & 90 & 0.0964 & 0.0014 & 0.3242 & 0.0443 \\
-3000 &123 & 0.2240 & 0.0026 & 1.2490 & 0.0532 \\
+ 300 &   8 & 0.0064 & 0.0007 & 0.0049 & 0.0042 \\
+ 500 &  21 & 0.0178 & 0.0012 & 0.0138 & 0.0076 \\
+ 750 &  34 & 0.0459 & 0.0020 & 0.0309 & 0.0120 \\
+1000 &  50 & 0.0829 & 0.0040 & 0.0587 & 0.0178 \\
+1500 &  74 & 0.2304 & 0.0090 & 0.1478 & 0.0368 \\
+2000 &  93 & 0.4493 & 0.0150 & 0.3183 & 0.0617 \\
+3000 & 125 & 1.5163 & 0.0284 & 1.1473 & 0.0839 \\
 \bottomrule
 \end{tabular}
 \caption{Scaling data ($T=1250$ fixed). $k$ is the MP-detected signal factor count.
-At $n=3000$ Woodbury is $86\times$ faster than KKT-Cholesky (solve only) and
-the total pipeline including rSVD preprocessing ($0.053$\,s) is $4.2\times$
-faster than KKT-Cholesky ($0.224$\,s). The comparison is conservative:
-KKT-Cholesky also requires the eigenpairs to assemble $T_0^{\mathrm{RMT}}$,
-but is charged no preprocessing here.}
+At $n=3000$ Woodbury is $53\times$ faster than KKT-Cholesky (solve only) and
+the total pipeline including rSVD preprocessing ($0.084$\,s) is $18\times$
+faster than KKT-Cholesky ($1.52$\,s). The comparison is conservative:
+KKT-Cholesky also requires the correlation eigenpairs to assemble its active-set
+system, but is charged no preprocessing here.}
 \label{tab:scaling}
 \end{table}
 
-Two caveats frame this experiment. First, the growth law $k \approx n/21$ is
-observed on the real data at a single size ($k = 23$ at $n = 494$) and is
+Two caveats frame this experiment. First, the growth law $k \approx n/24$ is
+observed on the real data at a single size ($k = 17$ at $n = 494$) and is
 \emph{built into} the synthetic generator; the large-$n$ conclusions are
 conditional on it. Second, under that law both methods scale cubically
 (Cholesky as $O(n_a^3)$ with $n_a \propto n$, Woodbury as $O(n_a k^2)$ with
 $k \propto n$), so the asymptotic gap is a constant factor, not an order.
-The \emph{measured} ratio nevertheless grows from $26\times$ at $n=500$ to
-$86\times$ at $n=3000$, consistent with the $n_a \times n_a$ working set
+The \emph{measured} solve-only ratio nevertheless grows from $15\times$ at $n=500$
+to $53\times$ at $n=3000$, consistent with the $n_a \times n_a$ working set
 falling out of cache while the $k \times k$ correction matrix does not. If
 $k$ is fixed externally as $n$ grows (Remark~\ref{rem:external_factors}),
 Woodbury gains a full asymptotic order over Cholesky.
 
-\emph{Dense preprocessing dominates at large $n$}. At $n=3000$ the full
-eigendecomposition takes $1.25$\,s, versus $0.22$\,s for KKT-Cholesky and
-$0.003$\,s for the Woodbury solve. Dense preprocessing is impractical for
-$n > 750$.
-
-\emph{Randomised SVD preprocessing is competitive throughout}. The rSVD path
-($0.051$\,s at $n=3000$) is $25\times$ faster than dense preprocessing; combined
-with the Woodbury solve ($0.003$\,s), the total pipeline is $4.2\times$ faster
-than KKT-Cholesky alone ($0.224$\,s), confirming the headline claim of the
-abstract. For $S \geq 2$ portfolio solves (any frontier sweep, monthly rebalance
-sequence, etc.) the preprocessing cost amortises further, making the pipeline
-advantage grow with the number of solves.
+\emph{Randomised SVD preprocessing is competitive throughout}. At $n=3000$ the
+dense eigendecomposition takes $1.12$\,s, against $0.056$\,s for the rSVD path (a
+$20\times$ saving) and $0.028$\,s for the Woodbury solve; the full pipeline
+(rSVD $+$ Woodbury, $0.084$\,s) is $18\times$ faster than the KKT-Cholesky solve
+alone ($1.52$\,s). Dense preprocessing is impractical for $n > 750$. For
+$S \geq 2$ solves (a frontier sweep, a rebalance sequence) the preprocessing cost
+amortises further, so the pipeline advantage grows with the number of solves.
 
 \subsection{Efficient frontier}
 
 Figure~\ref{fig:frontier} shows the 50-point efficient frontier on synthetic equity
 data ($n=500$, $T=1250$), coloured by active-asset count. The minimum-variance
-point (star) has $n_a = 31$ active assets; the high-return end has $n_a = 97$.
+point (star) has $n_a = 20$ active assets; the high-return end has $n_a = 64$.
 The rapid decrease in active assets away from the mean-variance efficient region
 is characteristic of the long-only constraint and explains the warm-start efficiency:
 adjacent frontier points share all but a few active assets.
@@ -168,32 +163,23 @@ adjacent frontier points share all but a few active assets.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.68\linewidth]{graphs/rmt_frontier.pdf}
-\caption{Efficient frontier ($n=500$, $T=1250$, $k=22$, $\alpha=1$).
+\caption{Efficient frontier ($n=500$, $T=1250$, $k=21$, $\alpha=1$).
 Scatter: Woodbury warm, coloured by active-asset count (star = minimum-variance
-portfolio, $n_a=31$). Dashed: KKT-Cholesky warm (same portfolio to numerical
-precision, plotted to confirm equivalence). Both sweeps take under $0.05$\,s
+portfolio, $n_a=20$). Dashed: KKT-Cholesky warm (same portfolio to numerical
+precision, plotted to confirm equivalence). Both sweeps take under $0.02$\,s
 warm; see Table~\ref{tab:solvers} for timings.}
 \label{fig:frontier}
 \end{figure}
 
 \subsection{Exact frontier via the critical line algorithm}\label{ssec:cla}
 
-Remark~\ref{rem:cla} observed that on each active set the solution is affine
-in $\rho$, so the exact frontier can be traced breakpoint-to-breakpoint with
-one Woodbury solve per segment. We implement this sweep and run it on the
-Section~\ref{ssec:solvers} problem ($n = 500$, $k = 22$, $\rho \in [0, 2]$).
-The exact frontier has $144$ breakpoints and is traced in $9$\,ms, the same
-cost as the $50$-point warm grid sweep ($9$\,ms, Table~\ref{tab:solvers}) while
-returning the complete piecewise-affine solution path rather than $50$ samples
-of it. Evaluating the CLA path at the $50$ grid values reproduces the
-grid-swept portfolios up to the grid solver's KKT tolerance (maximum weight
-difference $2.7 \times 10^{-3}$); at every grid point the CLA portfolio
-attains an objective value at least as low as the grid solver's, confirming
-that the residual difference is grid-solver truncation at near-degenerate
-breakpoints, not an error in the path. For a fixed covariance the exact sweep
-is therefore strictly preferable; the grid sweep remains the tool of choice
-when consecutive solves differ in the data rather than in $\rho$
-(Remark~\ref{rem:cla}).
+On each active set the restricted solution is affine in $\rho$
+(Remark~\ref{rem:cla}), so the exact efficient frontier can be traced
+breakpoint-to-breakpoint with a single Woodbury solve per segment, at a cost
+comparable to the coarse grid sweep but returning the complete piecewise-affine
+path rather than a fixed number of samples. For a fixed covariance the exact
+sweep is preferable; the warm-started grid sweep remains the tool of choice when
+consecutive solves differ in the data rather than only in $\rho$.
 
 \input{sections/s6_ksensitivity}
 
@@ -205,15 +191,14 @@ minimum-variance backtests on two universes: the S\&P~500
 ($n/L \approx 0.98$, deliberately high-dimensional) and the FTSE~100
 ($n/L \approx 0.17$, a comfortably sampled regime in which cleaning should
 matter less). In both cases: estimation window $L = 504$ days, monthly
-rebalancing, buy-and-hold drift between rebalances. Assets with zero
-full-sample variance or more than $20\%$ exact-zero returns (delisted names
-forward-filled flat, late listings padded with zeros) are excluded: a
-zero-variance asset absorbs the entire minimum-variance portfolio and renders
-the comparison meaningless.
-Four strategies are compared: the RMT-CRE portfolio of this paper
-($\alpha = 1$, solved by Algorithm~\ref{alg:woodbury}); linear shrinkage to
-the scaled identity at the practitioner level $\alpha = 0.5$ and at the
-Ledoit--Wolf oracle intensity~\cite{ledoit2004}; and equal weight.
+rebalancing, buy-and-hold drift between rebalances. Assets with zero full-sample
+variance (delisted names forward-filled flat, late listings padded with zeros)
+are excluded: a zero-variance asset would absorb the entire minimum-variance
+portfolio. Four strategies are compared: the RMT-CRE portfolio of this paper
+($\alpha = 1$, cleaned on the correlation and solved by
+Algorithm~\ref{alg:woodbury}); linear shrinkage to the scaled identity at the
+practitioner level $\alpha = 0.5$ and at the Ledoit--Wolf oracle
+intensity~\cite{ledoit2004}; and equal weight.
 
 \input{tables/rmt_oos}
 \begin{table}[ht]
@@ -234,18 +219,16 @@ each panel header.}
 \end{table}
 
 The pattern is consistent across both universes. All three minimum-variance
-strategies reduce realised volatility by roughly a third relative to equal
-weight. On the S\&P~500 the RMT-CRE portfolio ($9.83\%$) sits within $0.1$
+strategies cut realised volatility by a fifth to a third relative to equal weight.
+On the S\&P~500 the RMT-CRE portfolio ($9.96\%$) sits within about $0.2$
 percentage points of the linear-shrinkage alternatives ($9.75\%$ and $9.74\%$)
-with comparable turnover; on the FTSE~100 it is the lowest-volatility strategy
-outright ($10.88\%$ against $10.97\%$ and $11.06\%$), though the margin is
-again within noise. In the well-sampled FTSE regime the three estimators
-nearly coincide, as expected when $n/L$ is small. We do not claim statistical
-superiority for CRE, only that the estimator whose structure enables the
-direct solver carries no measurable out-of-sample penalty in either regime,
-despite using no tuning parameter beyond the MP threshold. This is consistent
-with the larger comparative literature on RMT
-cleaning~\cite{bun2017,lopezdeprado2018}.
+with comparable turnover; on the FTSE~100 it is within roughly half a point
+($11.28\%$ against $10.79\%$ and $10.67\%$). CRE does not beat linear shrinkage on
+either universe, but the gap is within the noise of a single backtest, and CRE
+uses no tuning parameter beyond the MP threshold. We claim only that the estimator
+whose structure enables the direct solver carries no material out-of-sample
+penalty, consistent with the comparative literature on RMT
+cleaning~\cite{bun2017}.
 
 \paragraph{Reproducibility}
 All experiments are produced by a single script
