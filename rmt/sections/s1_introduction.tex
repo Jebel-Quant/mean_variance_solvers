@@ -47,7 +47,9 @@ form of $T_0^{\mathrm{RMT}}$ renders the active-set inner solve available in
 closed form via the Woodbury identity, at $O(n_a k^2 + k^3)$ per outer step in
 place of the $O(n_a^2 k + n_a^3)$ assemble-and-factor cost, without forming
 either the $n \times n$ covariance or its $n_a \times n_a$ active-set
-restriction (Section~\ref{sec:algorithm}). We derive the exact crossover
+restriction (Section~\ref{sec:algorithm}). The $p$ linear balance constraints
+$Bw=c$ (the budget $\mathbf{1}^\top w=1$ as the leading case) are eliminated
+analytically through a $p \times p$ Schur complement. We derive the exact crossover
 condition against KKT-Cholesky (Proposition~\ref{prop:crossover}): the Woodbury
 inner solve is cheaper per outer step precisely when $k < n_a$, a condition
 satisfied throughout the long-only equity regime ($k/n_a$ between roughly $0.2$
