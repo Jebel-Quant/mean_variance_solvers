@@ -67,7 +67,7 @@ $b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$; then $(x^\star, 
 the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below use $n=200$
 (support $50\%$) averaged over five seeds, with the smaller $n=120$ where the projected-gradient
 $O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
-NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the comparator
+NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the reference method
 directly from their definitions; the matrix-free deblurring study is likewise NumPy-only,
 while the external-solver benchmark below and the \texttt{shaw}/\texttt{phillips} ill-posed
 study are two further scripts whose only additional dependency is SciPy (and, for the

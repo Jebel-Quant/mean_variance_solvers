@@ -33,7 +33,7 @@ the outer loop rather than the inner solver, so the active-set method stands as 
 intermediate result in its own right: the same loop, with the same termination proof, accepts
 a direct factorisation of each free-set system in place of CG, combining just as readily with
 direct methods when the reduced blocks are small or structured. A loop-free
-projected-gradient comparator, which enforces the constraints simultaneously but forgoes the
+projected-gradient reference method, which enforces the constraints simultaneously but forgoes the
 Krylov subspace and so converges at the slower $O(\kappa)$ rate, is analysed alongside it.
 
 Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$ is
