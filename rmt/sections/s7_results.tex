@@ -16,18 +16,13 @@ actual S\&P~500 return series ($n=494$, $T=1213$); the out-of-sample backtests
 
 \subsection{Solver comparison}\label{ssec:solvers}
 
-Four solvers are applied to the same problem: minimise
+Two solvers are applied to the same problem: minimise
 $w^\top T_0^{\mathrm{RMT}} w - \rho\,\hat\mu^\top w$
 subject to $w \geq 0$, $\mathbf{1}^\top w = 1$ over a $50$-point efficient frontier.
 Synthetic equity data: $n = 500$ assets, $T = 1250$ days, $k = 22$ signal factors.
 Active-set sizes averaged $n_a = 42$ across the frontier (warm start).
 
 \begin{itemize}
-  \item \textbf{CVXPY} (Clarabel backend): general-purpose modelling-language
-        reference, cold start only.
-  \item \textbf{Clarabel (direct)}: the same interior-point solver called
-        through its native API with pre-assembled sparse problem data,
-        bypassing CVXPY's construction overhead; cold start only.
   \item \textbf{KKT-Cholesky}: the same primal-dual outer loop as
         Algorithm~\ref{alg:woodbury}, but with the inner solve replaced by
         explicitly assembling $T_{0,\mathcal{A}}^{\mathrm{RMT}}$ as a dense
@@ -56,23 +51,19 @@ Solver & Total (s) & ms/pt & Total (s) & ms/pt \\
 ms per frontier point.
 \emph{Bottom panel}: real S\&P~500 data ($n=494$, $T=1213$), single
 minimum-variance solve; the `ms/pt' column gives ms per solve.
-Woodbury and KKT-Cholesky produce identical portfolios to machine precision;
-agreement with the interior-point solutions is reported in the text.}
+Woodbury and KKT-Cholesky produce identical portfolios to machine precision.}
 \label{tab:solvers}
 \end{table}
 
 \paragraph{Correctness}
-Woodbury and KKT-Cholesky execute the same outer loop on the same subproblems
-and return identical portfolios (maximum frontier-volatility difference
-$9 \times 10^{-15}$ percentage points). Against the independent interior-point
-solution the agreement is
-$\norm{w_{\mathrm{WB}} - w_{\mathrm{Clarabel}}}_\infty = 2.5 \times 10^{-4}$
-at the minimum-variance point and $3.6 \times 10^{-5}$ at mid-frontier
-($1.4 \times 10^{-4}$ on the S\&P~500 solve). The discrepancy is attributable
-to interior-point truncation, not to the active-set method: the Woodbury
-solution attains a strictly \emph{lower} objective value than the Clarabel
-solution (relative difference $3.3 \times 10^{-5}$), so the direct solution is
-the better optimum of the two.
+The active-set loop terminates only on a verified KKT certificate (the $N=0$
+exit of Algorithm~\ref{alg:woodbury}), so each returned portfolio is the global
+optimum of its equality-constrained subproblem up to the tolerance
+$\varepsilon$. Woodbury and KKT-Cholesky execute the same outer loop on the same
+subproblems and differ only in the inner linear algebra, so they return
+identical portfolios: the maximum frontier-volatility difference across the
+sweep is $9 \times 10^{-15}$ percentage points, confirming that the Woodbury
+inverse reproduces the dense Cholesky solve to machine precision.
 
 \paragraph{Timings}
 On synthetic data (top panel), Woodbury is $19\times$ faster than KKT-Cholesky
@@ -98,18 +89,6 @@ rebalancing. The warm-start advantage is not an artefact of the synthetic
 data-generating process: the Markowitz frontier is piecewise linear in weight
 space with generically single-asset exchanges at breakpoints
 (Section~\ref{sec:algorithm}), for any return distribution.
-
-\paragraph{Interior-point baselines}
-The fair interior-point reference is the direct Clarabel call: just over $60$\,ms per
-solve, more than two orders of magnitude above Woodbury cold, attributable to the
-$n \times n$ dense quadratic form the interior-point method must factor at
-each of its iterations, against the $k \times k$ correction matrix of the
-direct method. The CVXPY route adds a further $\sim 25\times$ on top
-($1.6$\,s per solve) for Python-level problem construction and matrix
-assembly into the solver's internal format. We report both: the CVXPY number
-is what a practitioner observes out of the box, the direct-Clarabel number is
-what the interior-point algorithm itself costs; neither is a measure of
-Clarabel's quality on general problems.
 
 \subsection{Scaling with \texorpdfstring{$n$}{n}}\label{ssec:scaling}
 

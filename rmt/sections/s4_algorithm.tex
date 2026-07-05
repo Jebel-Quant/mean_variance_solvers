@@ -75,8 +75,8 @@ single-exchange step) and carries an iteration cap and an active-set-change
 check as a lightweight stand-in for the least-index fallback
 of~\cite{schmelzer2026nncg}. In all experiments of Section~\ref{sec:results}
 neither safeguard triggered and the batch drops did not affect the returned
-portfolio (the converged weights agree with interior-point solutions to solver
-accuracy, Section~\ref{ssec:solvers}).
+portfolio (the converged weights agree with the KKT-Cholesky reference to
+machine precision, Section~\ref{ssec:solvers}).
 \end{remark}
 
 \begin{remark}[Tolerance scale]\label{rem:tolerance}

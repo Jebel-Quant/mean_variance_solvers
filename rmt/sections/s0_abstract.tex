@@ -20,11 +20,10 @@ without forming $\hat\Sigma$, so that for a sweep of $S$ related solves the
 preprocessing amortises to $O(nTk/S)$ per solve.
 
 On efficient-frontier sweeps the measured advantage over the assemble-and-factor
-baseline is fivefold warm and roughly twentyfold cold, growing with $n$; the
-advantage over a tuned interior-point baseline exceeds two orders of magnitude,
-and an exact critical-line sweep built on the same kernel traces every frontier
+baseline is fivefold warm and roughly twentyfold cold, growing with $n$, and an
+exact critical-line sweep built on the same kernel traces every frontier
 breakpoint for the cost of a coarse grid.
-The returned weights match interior-point solutions to solver accuracy, the
+The returned weights satisfy the KKT optimality conditions to solver accuracy, the
 Marchenko--Pastur threshold is shown to be an insensitive hyperparameter, and
 rolling out-of-sample backtests on two universes confirm that the cleaned
 estimator carries no measurable statistical penalty relative to standard

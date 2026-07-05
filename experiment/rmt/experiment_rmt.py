@@ -11,7 +11,7 @@ Inputs:
 
 Outputs (stdout):
     A: Preprocessing benchmark — dense eigendecomp vs randomised SVD
-    B: Solver comparison — CVXPY | Cholesky | Woodbury on the RMT estimator
+    B: Solver comparison — Cholesky | Woodbury on the RMT estimator
     C: k-sensitivity — portfolio change at k±1
     D: Scaling with preprocessing — runtime vs n
 
@@ -142,13 +142,13 @@ print("  → wrote tables/rmt_preprocessing.tex")
 
 # ===========================================================================
 # Section B: Solver comparison
-#            CVXPY | KKT-Cholesky | Woodbury on the same RMT estimator
+#            KKT-Cholesky | Woodbury on the same RMT estimator
 #            n=500, T=1250, synthetic, 50-point efficient frontier
 # ===========================================================================
 
 print()
 print("=" * 70)
-print("B: Solver comparison  (CVXPY | Cholesky | Woodbury, all on RMT, n=500, T=1250)")
+print("B: Solver comparison  (Cholesky | Woodbury, all on RMT, n=500, T=1250)")
 print("=" * 70)
 
 n_ef, T_ef = 500, 1250
@@ -205,15 +205,6 @@ def _warm_sweep_kkt(prob_fn, repeats=3):
 
 print("  Running sweeps...")
 
-# CVXPY reference (cold only — warm-starting not available)
-t_cvxpy_cold = []
-for rho in rhos_ef:
-    p = MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, rho=rho, mu=mu_ef)
-    t0 = _time.perf_counter()
-    p.solve_cvxpy()
-    t_cvxpy_cold.append(_time.perf_counter() - t0)
-cvxpy_c = sum(t_cvxpy_cold)
-
 # KKT-Cholesky: solve_kkt WITHOUT target_lr (assembles n_a x n_a, then Cholesky)
 t_kkt_cold = _cold_sweep(
     "solve_kkt", lambda rho: MinVarProblem(R_ef, alpha=alpha_rmt_ef, target=tgt_rmt_ef, rho=rho, mu=mu_ef)
@@ -234,7 +225,6 @@ print(f"  {'-' * 95}")
 
 kkt_c, kkt_w = sum(t_kkt_cold), sum(t_kkt_warm)
 wb_c, wb_w = sum(t_wb_cold), sum(t_wb_warm)
-print(f"  {'CVXPY (Clarabel)':<42} {cvxpy_c:>9.3f} {cvxpy_c / N_PTS * 1000:>7.1f} {'---':>9} {'---':>7} {'---':>11}")
 print(
     f"  {'KKT-Cholesky':<42} {kkt_c:>9.3f} {kkt_c / N_PTS * 1000:>7.1f} "
     f"{kkt_w:>9.3f} {kkt_w / N_PTS * 1000:>7.1f} {'---':>11}"
@@ -246,7 +236,6 @@ print(
 
 print(f"\n  Woodbury vs KKT-Cholesky (cold): {kkt_c / wb_c:.1f}x")
 print(f"  Woodbury vs KKT-Cholesky (warm): {kkt_w / wb_w:.1f}x")
-print(f"  Woodbury vs CVXPY (cold):         {cvxpy_c / wb_c:.0f}x")
 
 # Woodbury warm sweep: capture frontier points and active-set sizes
 ef_vols_rmt, ef_rets_rmt, active_sizes = [], [], []
@@ -290,11 +279,9 @@ def _sp_cold(solve_fn_name, prob, repeats=3):
     return best
 
 
-p_cvxpy_sp = MinVarProblem(R_sp, alpha=alpha_sp_b, target=tgt_sp_b)
 p_kkt_sp = MinVarProblem(R_sp, alpha=alpha_sp_b, target=tgt_sp_b)
 p_wb_sp = MinVarProblem(R_sp, alpha=alpha_sp_b, target=tgt_sp_b, target_lr=lr_sp_b)
 
-cvxpy_sp_c = _sp_cold("solve_cvxpy", p_cvxpy_sp)
 kkt_sp_c = _sp_cold("solve_kkt", p_kkt_sp)
 wb_sp_c = _sp_cold("solve_kkt", p_wb_sp)
 
@@ -310,7 +297,6 @@ p_wb_sp.solve_kkt_warm(warm_start=warm_wb_sp)
 wb_sp_w = _time.perf_counter() - t0
 
 print(f"\n  S&P 500 single min-var solve (n={N_sp}, T={T_sp}, k={k_sp_b}):")
-print(f"    CVXPY cold:          {cvxpy_sp_c * 1000:>7.1f} ms")
 print(f"    KKT-Cholesky cold:   {kkt_sp_c * 1000:>7.1f} ms   warm: {kkt_sp_w * 1000:.1f} ms")
 print(f"    Woodbury cold:       {wb_sp_c * 1000:>7.1f} ms   warm: {wb_sp_w * 1000:.1f} ms")
 print(f"    Woodbury vs KKT-Chol (cold): {kkt_sp_c / wb_sp_c:.1f}x")
@@ -333,16 +319,12 @@ def _ms(t) -> str:
 
 
 synth_rows = (
-    f"{'CVXPY (Clarabel)':<38} & {_fmt(cvxpy_c):>7} & {_ms(cvxpy_c / N_PTS):>6}"
-    f" & \\multicolumn{{2}}{{c}}{{--}} \\\\\n"
     f"{'KKT-Cholesky ($k=' + str(k_rmt_ef) + '$)':<38} & {_fmt(kkt_c):>7} & {_ms(kkt_c / N_PTS):>6}"
     f" & {_fmt(kkt_w):>7} & {_ms(kkt_w / N_PTS):>6} \\\\\n"
     f"{'Woodbury ($k=' + str(k_rmt_ef) + '$)':<38} & {_fmt(wb_c):>7} & {_ms(wb_c / N_PTS):>6}"
     f" & {_fmt(wb_w):>7} & {_ms(wb_w / N_PTS):>6} \\\\\n"
 )
 sp_rows = (
-    f"{'CVXPY (Clarabel)':<38} & {_fmt(cvxpy_sp_c):>7} & {_ms(cvxpy_sp_c):>6}"
-    f" & \\multicolumn{{2}}{{c}}{{--}} \\\\\n"
     f"{'KKT-Cholesky ($k=' + str(k_sp_b) + '$)':<38} & {_fmt(kkt_sp_c):>7} & {_ms(kkt_sp_c):>6}"
     f" & {_fmt(kkt_sp_w):>7} & {_ms(kkt_sp_w):>6} \\\\\n"
     f"{'Woodbury ($k=' + str(k_sp_b) + '$)':<38} & {_fmt(wb_sp_c):>7} & {_ms(wb_sp_c):>6}"
