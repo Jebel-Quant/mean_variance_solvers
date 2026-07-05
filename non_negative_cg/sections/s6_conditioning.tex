@@ -2,10 +2,14 @@
 
 Both the inner CG rate (Proposition~\ref{prop:cg}) and the projected-gradient rate
 (Proposition~\ref{prop:proj}) are governed by $\kappa = \kappa(A)$, so anything that
-compresses the spectrum of $A$ shortens the solve. Two mechanisms are available, and they
-coincide in a convenient way.
+compresses the spectrum of $A$ shortens the solve. Two mechanisms are available: a
+\emph{regularising split}, which moves the operator toward a target the application deems
+preferable, and \emph{preconditioning}, which accelerates the solve of the operator as given.
+They coincide in a convenient way, developed in turn below.
 
-We now replace $A$ by the convex combination
+\subsection{Regularisation}\label{ssec:reg}
+
+We replace $A$ by the convex combination
 \begin{equation}\label{eq:regsplit}
   A_\alpha = (1-\alpha)\,A + \alpha\,R^\top R, \qquad \alpha \in (0,1),\; R^\top R \succ 0,
 \end{equation}
@@ -42,11 +46,83 @@ Theorem~\ref{thm:termination} depends. A strictly positive $\alpha$ is therefore
 setting for the active-set loop: it simultaneously conditions the inner solve and guarantees
 that every principal submatrix is invertible.
 
-We now discuss its impact on preconditioning. When the operator must be solved at its given $A$, a symmetric positive definite preconditioner $P \approx A$ replaces the CG rate's $\kappa(A)$ by $\kappa(P^{-1}A)$; standard choices (Jacobi, incomplete Cholesky, or a low-rank-plus-diagonal approximation built from a few dominant eigenpairs see \cite{saad2003iterative}) apply unchanged inside the active-set loop, since preconditioned CG
-still accesses $A_{\mathcal{F}}$ only through its mat-vec~\cite{golub2013,benzi2005}. The
-regularising split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner: it
-changes the problem, but toward a target the application deems statistically or structurally
-preferable, so the conditioning gain comes at no modelling cost. The companion
-papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} develop concrete instances (a
-scaled-identity split and a low-rank-plus-identity target inverted by the Woodbury identity)
+\subsection{Preconditioning}\label{ssec:precond}
+
+Regularisation lowers $\kappa$ by changing the operator. When no modelling change is
+admissible and $A$ must be solved as given, the same reduction in iteration count is available
+through preconditioning, which leaves the minimiser untouched. A symmetric positive definite
+preconditioner $P_{\mathcal{F}} \approx A_{\mathcal{F}}$ turns the inner
+solve~\eqref{eq:innerspd} into preconditioned CG (PCG), equivalently CG on the symmetrically
+scaled operator $P_{\mathcal{F}}^{-1/2} A_{\mathcal{F}} P_{\mathcal{F}}^{-1/2}$, whose spectrum
+coincides with that of $P_{\mathcal{F}}^{-1} A_{\mathcal{F}}$. PCG realises this without ever
+forming $P_{\mathcal{F}}^{-1/2}$: each iteration adds a single application of
+$P_{\mathcal{F}}^{-1}$ to the one mat-vec with $A_{\mathcal{F}}$~\cite{golub2013,benzi2005}.
+
+\begin{proposition}[Preconditioned inner rate]\label{prop:pcg}
+  Let $P_{\mathcal{F}}$ be SPD and write $\kappa_P = \kappa(P_{\mathcal{F}}^{-1}
+  A_{\mathcal{F}})$. The PCG iterates for~\eqref{eq:innerspd} satisfy the energy-norm bound of
+  Proposition~\ref{prop:cg} with $\kappa$ replaced by $\kappa_P$, so reaching a fixed relative
+  tolerance costs $O(\sqrt{\kappa_P}\,\log\varepsilon^{-1})$ iterations. A preconditioner helps
+  exactly when $\kappa_P < \kappa(A_{\mathcal{F}})$, and is ideal, $\kappa_P = 1$, when
+  $P_{\mathcal{F}} = A_{\mathcal{F}}$.
+\end{proposition}
+
+The bound is immediate: $P_{\mathcal{F}}^{-1/2} A_{\mathcal{F}} P_{\mathcal{F}}^{-1/2}$ is SPD
+and similar to $P_{\mathcal{F}}^{-1} A_{\mathcal{F}}$, so the two share the spectrum entering
+$\kappa_P$, and Proposition~\ref{prop:cg} applies to the scaled operator verbatim.
+
+\paragraph{Preconditioning on a changing free set.}
+Two constraints decide which preconditioners suit this method, both inherited from
+Section~\ref{sec:reduction}. First, the apply must be \emph{matrix-free}: forming
+$A_{\mathcal{F}}$ or a dense factor to build or invert $P_{\mathcal{F}}$ would forfeit the
+$O(m\,|\mathcal{F}|)$ operator and the absence of $O(n^2)$ storage that motivate the whole
+construction. Second, and particular to the active-set loop, the free set $\mathcal{F}$
+changes between outer steps: Algorithm~\ref{alg:elim} rebuilds the operator on each reduced
+$\mathcal{F}$, so a preconditioner is cheap only if it \emph{restricts} to the new free set at
+negligible cost. The standard choices sort by exactly this property. The Jacobi preconditioner
+$P = \operatorname{diag}(A)$ restricts exactly, $(\operatorname{diag} A)_{\mathcal{F}} =
+\operatorname{diag}(A_{\mathcal{F}})$, so $P_{\mathcal{F}}$ is the free-set slice of a single
+vector computed once; for $A = M^\top M$ that vector is the squared column norms of $M$,
+available without forming $A$, and its apply is $O(|\mathcal{F}|)$. It carries no per-step
+setup and is valid on every free set the loop visits, the natural default when $A$ has a
+widely varying diagonal. A factorised preconditioner (incomplete Cholesky, $P = LL^\top$) does
+\emph{not} restrict: in general $(P_{\mathcal{F}})^{-1} \neq (P^{-1})_{\mathcal{F}}$, and the
+factor of the full $P$ is not a factor of $P_{\mathcal{F}}$, so honouring $A_{\mathcal{F}}$
+would require refactorising on each free set, reintroducing the assembly the method avoids;
+such preconditioners pay off here only once the free set stabilises, as it does near
+convergence and across the support-stable warm starts of Proposition~\ref{prop:warm}, where
+one factor serves many outer steps. Between these sits the low-rank-plus-diagonal
+preconditioner $P = \operatorname{diag}(d) + U\Delta U^\top$ built from a few ($r$) dominant
+eigenpairs of $A$~\cite{saad2003iterative}: it restricts consistently in its \emph{apply},
+$P_{\mathcal{F}} = \operatorname{diag}(d)_{\mathcal{F}} + U_{\mathcal{F}}\Delta
+U_{\mathcal{F}}^\top$, and is inverted matrix-free in $O(|\mathcal{F}|\,r^2 + r^3)$ by the
+Woodbury identity, precisely the direct free-block solve that the companion random-matrix
+paper adopts as its backend~\cite{schmelzer2026rmt}. It captures the leading spectral structure
+a diagonal misses, and when $A$ is itself diagonal-plus-low-rank the preconditioner \emph{is}
+$A$, giving $\kappa_P = 1$ and a direct inner solve that bypasses CG altogether.
+
+\paragraph{Stopping criterion.}
+PCG naturally monitors the preconditioned residual norm $(r^\top P_{\mathcal{F}}^{-1}
+r)^{1/2}$, whereas the transfer of finite termination to inexact solves
+(Lemma~\ref{lem:inexact}) is stated for the ordinary residual $\rho = \lVert b_{\mathcal{F}} -
+A_{\mathcal{F}}\tilde x_{\mathcal{F}}\rVert_2$ that enters condition~\eqref{eq:inexactcond}.
+The two differ by a factor between $\lambda_{\min}(P_{\mathcal{F}})^{1/2}$ and
+$\lambda_{\max}(P_{\mathcal{F}})^{1/2}$. To keep the guarantee intact the inner stop is
+evaluated on the unpreconditioned $\rho$ (or the preconditioned tolerance is tightened by
+$\kappa(P_{\mathcal{F}})^{1/2}$); Lemma~\ref{lem:inexact} then applies word for word, because
+preconditioning changes only how fast $\rho$ falls, not $A$, not $\rho$, and not the decision
+margin $\mu$.
+
+Two remarks connect the subsection to the rest of the paper. The regularising
+split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner: it changes the
+problem, but toward a target the application deems statistically or structurally preferable, so
+the conditioning gain comes at no modelling cost while additionally repairing rank deficiency.
+And preconditioning is a lever the Krylov inner solver has that the projected-gradient
+reference of Section~\ref{ssec:proj} effectively lacks: a scaled gradient step minimises $f$ in
+the $P$-metric, but the orthant and simplex projections that make projected gradient cheap are
+closed-form only in the Euclidean norm and become non-negative quadratic programs under a
+general $P$. Preconditioning therefore \emph{widens} the $\sqrt\kappa$ advantage of the
+active-set/CG loop over projected gradient rather than closing it. The companion
+papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} develop concrete instances, a
+scaled-identity split and a low-rank-plus-identity target inverted by the Woodbury identity,
 and quantify the resulting iteration savings on their structured operators.
