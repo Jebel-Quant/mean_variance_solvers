@@ -57,10 +57,8 @@ stability \cite{demiguel2009,ledoit2003jpm}.
   \]
   The bound is $O\!\bigl((1-\alpha)/\alpha\bigr)$ and depends on the data only through
   $\lambda_{\max}(\hat\Sigma)/\bar\lambda$; no knowledge of $\lambda_{\min}(\hat\Sigma)$
-  is required. The constant $\lambda_{\max}(\hat\Sigma)/\bar\lambda$ is also the
-  condition number of the RMT-clipped target $T_0^{\mathrm{RMT}}$ (companion~\cite{schmelzer2026rmt}):
-  the rate at which scaled-identity shrinkage improves conditioning is governed by
-  the spectral dominance of the largest factor.
+  is required: the rate at which scaled-identity shrinkage improves conditioning
+  is governed by the spectral dominance of the largest factor.
 \end{corollary}
 On S\&P~500 data the bound is near-tight: at $\alpha=0.5$ it gives
 $\kappa(\hat\Sigma_{\mathrm{LW}}) \leq \lambda_{\max}(\hat\Sigma)/\bar\lambda + 1 \approx 147$,
