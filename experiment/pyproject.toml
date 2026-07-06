@@ -23,7 +23,7 @@ dependencies = [
     "pyarrow",
     "scikit-learn",
     # solver stack: nncg (method under study) + baselines.py comparison solvers
-    "nncg==0.3.2",
+    "nncg==0.4.1",
     "cvx-linalg",
     "clarabel",
     "osqp",

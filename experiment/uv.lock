@@ -1038,7 +1038,7 @@ requires-dist = [
     { name = "cvxpy" },
     { name = "lxml" },
     { name = "matplotlib" },
-    { name = "nncg", specifier = "==0.3.2" },
+    { name = "nncg", specifier = "==0.4.1" },
     { name = "numpy" },
     { name = "osqp" },
     { name = "pandas" },
@@ -1075,16 +1075,16 @@ wheels = [
 
 [[package]]
 name = "nncg"
-version = "0.3.2"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cvx-linalg" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/05/3cd1929b6fa9b64abf7cccae28010152716e286d9c767ceb5b8fae5d9fdf/nncg-0.3.2.tar.gz", hash = "sha256:e139c9d4affb6cf4e0bd710c2d8c8dcc75be6bdf4c753a051baa217eed7cb916", size = 262177, upload-time = "2026-07-05T09:07:51.259Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/81/623d79e1ca73bf3475f3e68b2139d9c591af18a2281fd2b92d7ac797fbe6/nncg-0.4.1.tar.gz", hash = "sha256:610363dcf69aba5260b5ad871dafdfed67d2430a9e7987ce6cb258b9f10d8a65", size = 268114, upload-time = "2026-07-06T11:25:59.106Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/b9/c97a031365f6de13348a5dd93156f517c52123efb3694e83b15e86c37aa7/nncg-0.3.2-py3-none-any.whl", hash = "sha256:c2b63173da52fb96641afa1ecc2d4060d6fd7f8060952de8653e57e27cf11e4e", size = 13650, upload-time = "2026-07-05T09:07:49.878Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/7e/1c674a7a793e5495cb6ec8e6b10682e964636a9a414f2dbe1e3286965984/nncg-0.4.1-py3-none-any.whl", hash = "sha256:d6356792b69606b56e549ee0520ee4456cf6e9fd126c72f8e03abf97e6db933d", size = 17980, upload-time = "2026-07-06T11:25:57.708Z" },
 ]
 
 [[package]]

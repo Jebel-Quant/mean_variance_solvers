@@ -6,7 +6,7 @@ on an N-by-N image (n = N^2 unknowns); applied as X -> K X K^T it costs O(N^3)
 per product and never materialises the n-by-n operator A = B^T B, whose dense
 storage would be O(n^2). Images are non-negative, so the reconstruction is a
 non-negative least-squares problem, solved by the matrix-free active-set loop
-(solve_nnqp_op) with a ridge split for the P-matrix property.
+(ActiveSetSolver) with a ridge split for the P-matrix property.
 
 At N = 128 the operator has n = 16384 unknowns; a dense A would need ~2 GB,
 yet the matrix-free loop runs in O(n) working memory. This is the regime the
@@ -35,7 +35,7 @@ from cvx.linalg import SymmetricOperator
 
 from common.util.runner import output_dirs
 
-from nncg import solve_nnqp
+from nncg import CG, ActiveSetConfig, ActiveSetSolver, KrylovConfig
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root
 GRAPHS, TABLES = output_dirs(HERE)
@@ -89,7 +89,7 @@ def matvec(xv):
 class BlurOperator(SymmetricOperator):
     """The SPD deblur operator A_alpha as a matrix-free cvx.linalg operator.
 
-    Wraps the ``matvec`` closure so :func:`nncg.solve_nnqp` can drive it without
+    Wraps the ``matvec`` closure so :class:`nncg.ActiveSetSolver` can drive it without
     ever assembling the ``n x n`` matrix (n = 16384 here; a dense A would be
     ~2 GB). ``block_matvec`` embeds the reduced vector into full space, applies
     the full operator, and reads back the active rows — the reduced action the
@@ -127,7 +127,9 @@ print(f"sigma = {SIGMA}, ridge alpha = {ALPHA:.0e}, noise = {NOISE_REL:.0e}")
 print("=" * 70)
 
 t0 = time.perf_counter()
-res = solve_nnqp(BlurOperator(matvec, n), b, cg_tol=1e-8, cg_maxit=500, max_outer=40)
+res = ActiveSetSolver(
+    CG(KrylovConfig(tol=1e-8, maxit=500)), ActiveSetConfig(max_outer=40)
+).solve(BlurOperator(matvec, n), b)
 dt = time.perf_counter() - t0
 
 x = res.x

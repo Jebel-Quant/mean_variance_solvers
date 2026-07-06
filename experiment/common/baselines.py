@@ -37,7 +37,7 @@ import numpy as np
 from cvx.linalg import Matrix, SymmetricOperator, Vector
 from numpy.typing import NDArray
 
-from nncg.krylov import cg
+from nncg.krylov import KrylovConfig, pcg
 
 Prox = Callable[[Vector], Vector]
 """A proximal / projection step ``v -> prox(v)`` of a FISTA iteration."""
@@ -289,7 +289,7 @@ def solve_lawson_hanson(
         while True:
             idx = np.flatnonzero(passive)
             mat_pp = mat[np.ix_(idx, idx)]
-            z_p, k = cg(lambda v, m=mat_pp: m @ v, rhs[idx], tol=cg_tol)
+            z_p, k = pcg(lambda v, m=mat_pp: m @ v, rhs[idx], KrylovConfig(tol=cg_tol))
             inner += k
             if z_p.size == 0 or float(np.min(z_p)) > 0.0:
                 x = np.zeros(n)
@@ -466,7 +466,7 @@ def solve_duchi(
 def ones_row(n: int) -> NDArray[np.float64]:
     """Return the ``1 x n`` all-ones equality matrix ``B = 1^T``.
 
-    The equality ``B x = c`` that turns :func:`nncg.solver.solve_nnqp_eq`,
+    The equality ``B x = c`` that turns :meth:`nncg.ActiveSetSolver.solve_eq`,
     :func:`solve_osqp` and :func:`solve_clarabel` into simplex solves matching
     :func:`solve_duchi`.
 

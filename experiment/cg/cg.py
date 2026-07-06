@@ -36,7 +36,7 @@ goes through CVXPY's problem-construction layer (hence its
 problem-construction overhead relative to the direct-API ``solve_clarabel`` /
 ``solve_osqp`` baselines), then dispatches to the same Clarabel/OSQP backend.
 
-The warm state is the ``(free_mask, x)`` pair :func:`nncg.solve_nnqp_eq`
+The warm state is the ``(free_mask, x)`` pair :meth:`nncg.ActiveSetSolver.solve_eq`
 consumes and :class:`nncg.Result` exposes as ``(.free, .x)``.
 
 Note on the first-order rows: the min-variance program is simplex-constrained
@@ -285,7 +285,7 @@ class CGProblem:
     # -- nncg: the matrix-free active-set method under study ----------------
 
     def _solve_nncg(self, inner: str, warm: Warm | None) -> nncg.Result:
-        """Run ``nncg.solve_nnqp_eq`` on the operator with the given inner solver.
+        """Run ``ActiveSetSolver.solve_eq`` on the operator with the given inner solver.
 
         The matrix-free ``"cg"``/``"pcg"`` paths use the composite operator; the
         direct ``"exact"`` path needs a single structured operator (see
@@ -294,7 +294,9 @@ class CGProblem:
         a = self._exact_operator() if inner == "exact" else self._operator()
         b = self._linear_term()
         b_eq, c_eq = self._equality()
-        return nncg.solve_nnqp_eq(a, b, b_eq, c_eq, inner=inner, warm=warm)
+        inner_solver = {"cg": nncg.CG, "pcg": nncg.Jacobi, "exact": nncg.Exact}[inner]()
+        solver = nncg.ActiveSetSolver(inner_solver)
+        return solver.solve_eq(a, b, b_eq, c_eq, warm=warm)
 
     def solve_cg(self, *, project: bool = True) -> tuple[Vector, int, int]:
         """Matrix-free CG active-set solve; return ``(w, outer, inner)``."""

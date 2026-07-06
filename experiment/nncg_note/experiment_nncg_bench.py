@@ -43,7 +43,7 @@ from scipy.optimize import nnls as scipy_nnls
 from cvx.linalg import DenseOperator
 from common.util.runner import SMOKE, output_dirs
 
-from nncg import solve_nnqp
+from nncg import CG, ActiveSetSolver, Exact
 from nncg_note.problems import make_problem, shaw
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root
@@ -96,12 +96,12 @@ def run_clarabel(A, b):
 
 def run_as_direct(A, b):
     """Algorithm 1 with a dense direct inner solve."""
-    return solve_nnqp(DenseOperator(A), b, inner="exact").x
+    return ActiveSetSolver(Exact()).solve(DenseOperator(A), b).x
 
 
 def run_as_cg(A, b):
     """Algorithm 1 with the matrix-free CG inner solve (the paper's method)."""
-    return solve_nnqp(DenseOperator(A), b).x
+    return ActiveSetSolver(CG()).solve(DenseOperator(A), b).x
 
 
 METHODS = [
