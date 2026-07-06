@@ -38,7 +38,7 @@ from cvx.linalg import DenseOperator
 from scipy.optimize import nnls as scipy_nnls
 from common.util.runner import output_dirs
 
-from nncg import kkt_violation, solve_nnqp
+from nncg import CG, ActiveSetConfig, ActiveSetSolver, KrylovConfig, kkt_violation
 from nncg_note.problems import phillips, shaw
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root
@@ -95,7 +95,9 @@ for alpha in ALPHAS:
     A = ridge(gram, alpha) if alpha > 0 else gram
     ka = cond(A)
     op = DenseOperator(A)
-    res = solve_nnqp(op, rhs, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
+    res = ActiveSetSolver(
+        CG(KrylovConfig(tol=1e-10, maxit=CG_MAXIT)), ActiveSetConfig(max_outer=MAX_OUTER)
+    ).solve(op, rhs)
     x = res.x
     kkt = kkt_violation(op, rhs, x)
     certified = bool(res.converged and kkt < 1e-6)
@@ -127,7 +129,9 @@ gp = np.random.default_rng(0).standard_normal(PHIL_N)
 dp_noisy = dp + NOISE_REL * np.linalg.norm(dp) * gp / np.linalg.norm(gp)
 Ap = ridge(Mp.T @ Mp, ALPHA_STAR)
 bp = Mp.T @ dp_noisy
-resp = solve_nnqp(DenseOperator(Ap), bp, cg_tol=1e-10, cg_maxit=CG_MAXIT, max_outer=MAX_OUTER)
+resp = ActiveSetSolver(
+    CG(KrylovConfig(tol=1e-10, maxit=CG_MAXIT)), ActiveSetConfig(max_outer=MAX_OUTER)
+).solve(DenseOperator(Ap), bp)
 xp = resp.x
 xp_lh = lawson_hanson(Ap, bp)
 phil_active = int(np.sum(xp <= 1e-8))

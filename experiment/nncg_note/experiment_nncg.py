@@ -44,7 +44,15 @@ import numpy as np
 from cvx.linalg import DenseOperator
 from common.util.runner import output_dirs
 
-from nncg import kkt_violation, solve_nnqp, solve_nnqp_eq
+from nncg import (
+    CG,
+    ActiveSetConfig,
+    ActiveSetSolver,
+    Exact,
+    Jacobi,
+    KrylovConfig,
+    kkt_violation,
+)
 from nncg_note.problems import make_problem
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root (graphs, tables)
@@ -144,7 +152,7 @@ for kap in KAPPAS:
     inners, outers, fbacks, errs = [], [], [], []
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        res = solve_nnqp(DenseOperator(A), b)
+        res = ActiveSetSolver(CG()).solve(DenseOperator(A), b)
         inners.append(res.inner)
         outers.append(res.outer)
         fbacks.append(res.fallback)
@@ -158,8 +166,9 @@ for kap in KAPPAS:
     )
 
 max_err = max(
-    float(np.max(np.abs(solve_nnqp(DenseOperator((mp := make_problem(N, k, seed=0))[0]), mp[1]).x
-                        - mp[2])))
+    float(np.max(np.abs(
+        ActiveSetSolver(CG()).solve(DenseOperator((mp := make_problem(N, k, seed=0))[0]), mp[1]).x
+        - mp[2])))
     for k in (KAPPAS[0], KAPPAS[-1])
 )
 cg_slope, cg_r2 = fit_slope(KAPPAS, cg_inner)
@@ -183,7 +192,7 @@ cg_pg_inner, pg_iters = [], []
 print(f"{'kappa':>12}  {'inner(CG)':>10}  {'iter(PG)':>10}  {'PG conv':>8}")
 for kap in KAPPAS_PG:
     A, b, x_star, _ = make_problem(N_PG, kap, seed=0)
-    res = solve_nnqp(DenseOperator(A), b)
+    res = ActiveSetSolver(CG()).solve(DenseOperator(A), b)
     it_pg, conv = solve_projgrad(A, b, x_star)
     cg_pg_inner.append(res.inner)
     pg_iters.append(it_pg)
@@ -227,7 +236,7 @@ for a in ALPHAS:
         eig_sd = np.linalg.eigvalsh(Asd)
         A_a = (1.0 - a) * Asd + a * np.eye(N)
         b_a = A_a @ xsd - ssd
-        inners_a.append(solve_nnqp(DenseOperator(A_a), b_a).inner)
+        inners_a.append(ActiveSetSolver(CG()).solve(DenseOperator(A_a), b_a).inner)
         kap_a = ((1.0 - a) * float(eig_sd[-1]) + a) / ((1.0 - a) * float(eig_sd[0]) + a)
     reg_inner.append(float(np.mean(inners_a)))
     reg_kappa.append(kap_a)
@@ -274,7 +283,7 @@ eq_err = 0.0
 for p in (1, 3, 10):
     for kap in (1e2, 1e4):
         A, b, B, c, x_star, lam_star, _ = make_eq_problem(N, kap, p, seed=p)
-        res = solve_nnqp_eq(DenseOperator(A), b, B, c)
+        res = ActiveSetSolver(CG()).solve_eq(DenseOperator(A), b, B, c)
         ex = float(np.max(np.abs(res.x - x_star)))
         feas = float(np.linalg.norm(B @ res.x - c))
         eq_err = max(eq_err, ex, feas)
@@ -299,8 +308,8 @@ traj_total = traj_agree = 0
 for kap in (1e2, 1e4, 1e6):
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        r_cg = solve_nnqp(DenseOperator(A), b, track=True)
-        r_ex = solve_nnqp(DenseOperator(A), b, inner="exact", track=True)
+        r_cg = ActiveSetSolver(CG(), ActiveSetConfig(track=True)).solve(DenseOperator(A), b)
+        r_ex = ActiveSetSolver(Exact(), ActiveSetConfig(track=True)).solve(DenseOperator(A), b)
         same = r_cg.traj == r_ex.traj
         traj_total += 1
         traj_agree += same
@@ -340,7 +349,9 @@ for k_rd in (50, 150):  # optimal support below / above the data rank m
             s_rd[perm[k_rd:]] = rng.uniform(0.5, 1.5, size=n_rd - k_rd)
             A_a = (1.0 - a) * A0 + a * np.eye(n_rd)
             b_a = A_a @ x_rd - s_rd  # planted KKT point for every alpha, incl. 0
-            res = solve_nnqp(DenseOperator(A_a), b_a, cg_maxit=RD_CAP, max_outer=RD_MAX_OUTER)
+            res = ActiveSetSolver(
+                CG(KrylovConfig(tol=1e-10, maxit=RD_CAP)), ActiveSetConfig(max_outer=RD_MAX_OUTER)
+            ).solve(DenseOperator(A_a), b_a)
             # a capped inner solve returned without meeting its tolerance:
             # no certificate, whatever the outer loop then does with it
             capped += res.inner >= RD_CAP
@@ -400,8 +411,8 @@ for spread in SPREADS:
         A, b, x_star = make_scaled_problem(200, 100.0, spread, seed=sd)
         eigs = np.linalg.eigvalsh(A)
         kappas.append(float(eigs[-1] / eigs[0]))
-        r_cg = solve_nnqp(DenseOperator(A), b)
-        r_pcg = solve_nnqp(DenseOperator(A), b, inner="pcg")
+        r_cg = ActiveSetSolver(CG()).solve(DenseOperator(A), b)
+        r_pcg = ActiveSetSolver(Jacobi()).solve(DenseOperator(A), b)
         for r in (r_cg, r_pcg):
             assert float(np.max(np.abs(r.x - x_star))) < 1e-6
         inners_cg.append(r_cg.inner)
@@ -445,10 +456,12 @@ for sd in range(FB_SEEDS):
     A, b = make_adversarial(20, sd)
     # pure block pivoting: patience unbounded, exact solves -- the theory-faithful
     # fast path with the guard removed. A revisited free set proves a cycle.
-    pure = solve_nnqp(DenseOperator(A), b, p_max=10**9, inner="exact", max_outer=300, track=True)
+    pure = ActiveSetSolver(
+        Exact(), ActiveSetConfig(p_max=10**9, max_outer=300, track=True)
+    ).solve(DenseOperator(A), b)
     cycled = (not pure.converged) and len(pure.traj) != len(set(pure.traj))
     # guarded loop: Algorithm 1 as stated (default patience, CG inner solves)
-    g = solve_nnqp(DenseOperator(A), b)
+    g = ActiveSetSolver(CG()).solve(DenseOperator(A), b)
     fb_cycles += cycled
     fb_conv += g.converged
     fb_fired += g.fallback > 0
@@ -483,11 +496,11 @@ prev_x = None
 prev_supp = None
 for k in range(STEPS_W):
     b_k = b0_w + k * db_w
-    rc = solve_nnqp(DenseOperator(A_w), b_k)
+    rc = ActiveSetSolver(CG()).solve(DenseOperator(A_w), b_k)
     if prev_free is None:
         rw = rc  # first point: nothing to warm-start from
     else:
-        rw = solve_nnqp(DenseOperator(A_w), b_k, warm=(prev_free, prev_x))
+        rw = ActiveSetSolver(CG()).solve(DenseOperator(A_w), b_k, warm=(prev_free, prev_x))
     assert float(np.max(np.abs(rw.x - rc.x))) < 1e-6  # same optimum
     supp = frozenset(np.flatnonzero(rc.free).tolist())
     drifts.append(len(supp ^ prev_supp) if prev_supp is not None else 0)
@@ -610,7 +623,7 @@ for kap in [1e1, 1e2, 1e3, 1e4, 1e5, 1e6]:
     inners, outers, fbacks = [], [], []
     for sd in SEEDS:
         A, b, x_star, _ = make_problem(N, kap, seed=sd)
-        res = solve_nnqp(DenseOperator(A), b)
+        res = ActiveSetSolver(CG()).solve(DenseOperator(A), b)
         inners.append(res.inner)
         outers.append(res.outer)
         fbacks.append(res.fallback)

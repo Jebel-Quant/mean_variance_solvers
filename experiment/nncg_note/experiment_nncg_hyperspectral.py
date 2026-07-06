@@ -10,7 +10,7 @@ poses
 
 This script instantiates the raster-scan warm start of Section 5 (Prop. 5.2):
 neighbouring pixels usually share the same mineral mix, so passing pixel
-(i-1)'s (free mask, solution) pair into solve_nnqp_eq's `warm` argument for
+(i-1)'s (free mask, solution) pair into ActiveSetSolver.solve_eq's `warm` argument for
 pixel i lets many pixels certify in a single outer iteration instead of
 re-searching the active set from scratch (cold start). On the offline
 synthetic proxy scene (see
@@ -91,7 +91,7 @@ import scipy.sparse as sp
 from cvx.linalg import DenseOperator
 from common.util.runner import SMOKE, output_dirs
 
-from nncg import solve_nnqp_eq
+from nncg import CG, ActiveSetSolver
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
@@ -313,7 +313,7 @@ def fista_fcls(A, b, L, tol=1e-6, max_iter=2000):
     whole scene, not per call. Stops on the fixed-point residual
     ||x - P(x - grad(x)/L)||_inf, the exact stationarity certificate for a
     projected-gradient step at any step size > 0 -- comparable in spirit to
-    solve_nnqp_eq's KKT-based stopping rule. Returns (x, n_iter).
+    ActiveSetSolver.solve_eq's KKT-based stopping rule. Returns (x, n_iter).
     """
     x = np.full(A.shape[0], 1.0 / A.shape[0])
     y = x.copy()
@@ -372,7 +372,9 @@ def unmix_image(Y, A_op, B, c, order, warm_start):
     warm = None
     t0 = time.perf_counter()
     for i in order:
-        res = solve_nnqp_eq(A_op, Y[:, i], B, c, warm=warm if warm_start else None)
+        res = ActiveSetSolver(CG()).solve_eq(
+            A_op, Y[:, i], B, c, warm=warm if warm_start else None
+        )
         X[:, i] = res.x
         outer[i] = res.outer
         inner[i] = res.inner
