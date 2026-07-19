@@ -65,7 +65,7 @@ mpl.rcParams.update(
 
 N = 500
 N_DOMINANT = 3
-TOP_GAP = 1000.0
+TOP_GAP = 1.0e5
 TAIL_KAPPA = 500.0
 RANK = 4
 N_SOLVES = 60
@@ -173,6 +173,7 @@ def main():
         ax.plot(range(1, len(cum) + 1), cum, marker="o", markersize=3, label=name, color=colors[name])
     ax.set_xlabel("right-hand side #")
     ax.set_ylabel("cumulative wall time (ms)")
+    ax.set_yscale("log")  # Jacobi's divergence and the finer CG/Nystrom/GlobalNystrom gap both need to be visible
     ax.legend()
     fig.tight_layout()
     fig.savefig(GRAPHS / "nncg_precond.pdf")
