@@ -29,8 +29,7 @@ backend realising these two operations runs the loop, its termination proof, and
 convergence analysis unchanged: a dense $A$ slices them directly; the Gram operator
 $A = M^\top M$ evaluates them from $M$ without ever forming $A$, as above; and a
 diagonal-plus-low-rank operator $A = \operatorname{diag}(d) + U\Delta U^\top$ inverts the free
-block by the Woodbury identity, a \emph{direct} inner solve that bypasses CG and is developed
-as the backend of the companion paper~\cite{schmelzer2026rmt}. The equality-augmented
+block by the Woodbury identity, a \emph{direct} inner solve that bypasses CG. The equality-augmented
 problem~\eqref{eq:eqp} adds only the column selections $v \mapsto B_{\mathcal{F}}v$ and
 $w \mapsto B_{\mathcal{F}}^\top w$ of the Schur elimination below. When a variable is released in the primal step, the operator is
 rebuilt on the reduced free set and CG restarts on the smaller system. We now state the standard convergence result for CG.

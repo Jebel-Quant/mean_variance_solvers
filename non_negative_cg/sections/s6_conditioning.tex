@@ -96,8 +96,7 @@ preconditioner $P = \operatorname{diag}(d) + U\Delta U^\top$ built from a few ($
 eigenpairs of $A$~\cite{saad2003iterative}: it restricts consistently in its \emph{apply},
 $P_{\mathcal{F}} = \operatorname{diag}(d)_{\mathcal{F}} + U_{\mathcal{F}}\Delta
 U_{\mathcal{F}}^\top$, and is inverted matrix-free in $O(|\mathcal{F}|\,r^2 + r^3)$ by the
-Woodbury identity, precisely the direct free-block solve that the companion random-matrix
-paper adopts as its backend~\cite{schmelzer2026rmt}. It captures the leading spectral structure
+Woodbury identity, precisely the direct free-block solve for the diagonal-plus-low-rank case. It captures the leading spectral structure
 a diagonal misses, and when $A$ is itself diagonal-plus-low-rank the preconditioner \emph{is}
 $A$, giving $\kappa_P = 1$ and a direct inner solve that bypasses CG altogether.
 
@@ -137,7 +136,4 @@ reference of Section~\ref{ssec:proj} effectively lacks: a scaled gradient step m
 the $P$-metric, but the orthant and simplex projections that make projected gradient cheap are
 closed-form only in the Euclidean norm and become non-negative quadratic programs under a
 general $P$. Preconditioning therefore \emph{widens} the $\sqrt\kappa$ advantage of the
-active-set/CG loop over projected gradient rather than closing it. The companion
-papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt} develop concrete instances, a
-scaled-identity split and a low-rank-plus-identity target inverted by the Woodbury identity,
-and quantify the resulting iteration savings on their structured operators.
+active-set/CG loop over projected gradient rather than closing it.
