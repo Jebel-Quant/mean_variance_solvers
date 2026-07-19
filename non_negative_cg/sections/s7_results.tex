@@ -26,34 +26,27 @@ Projected gradient (matrix-free)     & $O(nm)$         & $O(\kappa)$            
 $A = M^\top M$, $M \in \mathbb{R}^{m \times n}$. Here $k = |\mathcal{F}| \leq n$ is the
 free-set size, $s$ the number of active-set outer steps, $\kappa = \kappa(A_\alpha)$ the
 condition number after the split~\eqref{eq:regsplit}, and $r$ the factor rank of a
-diagonal-plus-low-rank operator (Section~\ref{sec:reduction}). The last four rows share the
-active-set loop and differ only in the backend~(Section~\ref{sec:reduction}): matrix-free CG
-and the Woodbury factor solve both avoid assembling $A$, the former iteratively at
-$O(\sqrt\kappa)$ inner steps, the latter by an exact rank-$r$ inverse. The active-set rows differ only in the
-inner solve: matrix-free CG applies $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ at $O(km)$ and
-never assembles the Gram matrix, whereas dense Cholesky forms and factorises
-$A_{\mathcal{F}}$ at $O(k^2 m)$; the matrix-free advantage grows with $k$. The CG
-``Iterations'' column counts $s \cdot O(\sqrt\kappa)$ inner iterations in total; because the
-loop starts at $\mathcal{F} = \{1,\dots,n\}$, the first solve at $k = n$ dominates and is
-governed by the full $\kappa$ bounded in Proposition~\ref{prop:regcond}. Projected gradient
-avoids the linear solve entirely but pays $O(\kappa)$, a factor $\sqrt\kappa$ more inner
-iterations than CG at the same per-step cost.}
+diagonal-plus-low-rank operator. The last four rows share the active-set loop and differ only
+in the backend: matrix-free CG and the Woodbury factor solve avoid assembling $A$, whereas
+dense Cholesky forms and factorises $A_{\mathcal{F}}$. The CG ``Iterations'' column counts
+$s \cdot O(\sqrt\kappa)$ inner iterations, dominated by the first solve at $k = n$; projected
+gradient pays $O(\kappa)$ at the same per-step cost.}
 \label{tab:complexity}
 \end{table}
 
 Two comparisons are structural. Within the active-set family, matrix-free CG and dense
-Cholesky share the outer loop and differ only in whether $A_{\mathcal{F}}$ is assembled; the
+Cholesky share the outer loop and differ only in whether $A_{\mathcal{F}}$ is assembled. The
 $O(km)$-versus-$O(k^2 m)$ gap means CG pulls ahead as the free set grows, while dense Cholesky
 can win when $k$ is small or $\kappa$ is large enough that CG needs many inner iterations
 (the crossover is near $\kappa \sim k^2$). Between the two matrix-free methods, CG's
-$O(\sqrt\kappa)$ dominates projected gradient's $O(\kappa)$ whenever $\kappa$ is large; only
+$O(\sqrt\kappa)$ dominates projected gradient's $O(\kappa)$ whenever $\kappa$ is large. Only
 when the regularising split compresses $\kappa$ to $O(1)$ do the inner counts become
-comparable, at which point projected gradient's loop-free simplicity is attractive.
+comparable, and then projected gradient's loop-free simplicity is attractive.
 
 The equality-augmented problem~\eqref{eq:eqp} multiplies the inner cost of an outer step by the
 $p+1$ right-hand sides that share the operator $A_{\mathcal{F}}$
 (Section~\ref{sec:reduction}), plus an $O(p^3)$ dense Schur solve that is negligible for the
-small $p$ of typical balance conditions; the asymptotics in $n$, $m$, and $\kappa$ are
+small $p$ of typical balance conditions. The asymptotics in $n$, $m$, and $\kappa$ are
 otherwise those of Table~\ref{tab:complexity}.
 
 \subsection{Behaviour on synthetic SPD problems}\label{ssec:synthetic}
@@ -61,35 +54,36 @@ otherwise those of Table~\ref{tab:complexity}.
 We test the propositions on a controlled family with a known optimum. Take
 $A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a geometric spectrum
 $\Lambda = \mathrm{diag}(\lambda_1,\dots,\lambda_n)$ on $[1,\kappa]$ of prescribed condition
-number $\kappa$ (equivalently $A = M^\top M$ for a random $M$ with the chosen singular values),
-and plant a non-negative solution $x^\star \geq 0$ of a chosen support by setting
-$b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$; then $(x^\star, s^\star)$ is
+number $\kappa$ (equivalently $A = M^\top M$ for a random $M$ with the chosen singular values).
+Plant a non-negative solution $x^\star \geq 0$ of a chosen support by setting
+$b = A x^\star - s^\star$ for a complementary $s^\star \geq 0$. Then $(x^\star, s^\star)$ is
 the exact solution of $\mathrm{LCP}(A,\,{-b})$ in closed form. The runs below use $n=200$
 (support $50\%$) averaged over five seeds, with the smaller $n=120$ where the projected-gradient
-$O(\kappa)$ cost forces a capped $\kappa$ range; all are reproduced by a self-contained
-NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the reference method
-directly from their definitions; the matrix-free deblurring study is likewise NumPy-only,
-while the external-solver benchmark below and the \texttt{shaw}/\texttt{phillips} ill-posed
-study are two further scripts whose only additional dependency is SciPy (and, for the
+$O(\kappa)$ cost forces a capped $\kappa$ range. All are reproduced by a self-contained
+NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and the reference
+method directly from their definitions. The matrix-free deblurring study is likewise
+NumPy-only. The external-solver benchmark below and the \texttt{shaw}/\texttt{phillips}
+ill-posed study are two further scripts whose only additional dependency is SciPy (and, for the
 benchmark, Clarabel). The algorithms are also released as the
 open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
-suite is this study: planted recovery, the equality-augmented solve, trajectory agreement
+suite is this study. Planted recovery, the equality-augmented solve, trajectory agreement
 under inexact solves, the warm-start single-step property, the \texttt{shaw}/\texttt{phillips}
 regularisation and recovery runs, the matrix-free deblurring solve, and the adversarial family
-that forces the fallback all run as continuous-integration checks. The geometric spectrum is the honest choice: its clustering
-lets CG converge faster than the worst-case bound, so the measured growth is an
-\emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a fitted exponent.
+that forces the fallback all run as continuous-integration checks. The geometric spectrum is
+the honest choice: its clustering lets CG converge faster than the worst-case bound, so the
+measured growth is an \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a
+fitted exponent.
 
 \begin{table}[ht]
 \centering
 \footnotesize
 \input{tables/nncg_synthetic}
 \caption{Active-set solve of~\eqref{eq:bqp} on the synthetic family ($n=200$, support $50\%$,
-mean over five seeds). Outer steps stay in single digits and grow only weakly with $\kappa$;
-the total CG inner count grows sublinearly in $\kappa$ (slope $\nncgCGslope$ in $\log$--$\log$,
-$R^2 = \nncgCGrtwo$, against the $O(\sqrt\kappa)$ worst case); the least-index Bland fallback is
-never triggered on this generic data, so the fast block-pivot path certifies optimality by
-itself. The solver recovers the planted $x^\star$ to $\nncgMaxErr$.}
+mean over five seeds). Outer steps stay in single digits, and the total CG inner count grows
+sublinearly in $\kappa$ (slope $\nncgCGslope$ in $\log$--$\log$, $R^2 = \nncgCGrtwo$, against
+the $O(\sqrt\kappa)$ worst case). The Bland fallback is never triggered here, so the fast
+block-pivot path certifies optimality alone. The solver recovers the planted $x^\star$ to
+$\nncgMaxErr$.}
 \label{tab:nncg_synthetic}
 \end{table}
 
@@ -101,7 +95,7 @@ staying under the $O(\sqrt\kappa)$ envelope of Proposition~\ref{prop:cg} (measur
 $\nncgCGslope < \tfrac12$, the clustered spectrum buying CG its superlinear phase). The
 regularising split~\eqref{eq:regsplit} with $R^\top R = I$ compresses $\kappa$ at rate
 $O((1-\alpha)/\alpha)$ (Proposition~\ref{prop:regcond}) and drives the count down monotonically
-as $\alpha$ increases (Figure~\ref{fig:nncg_reg}); the effect is largest in the rank-deficient
+as $\alpha$ increases (Figure~\ref{fig:nncg_reg}). The effect is largest in the rank-deficient
 regime $m < n$, where only $\alpha > 0$ makes the system well posed
 (Table~\ref{tab:nncg_rankdef} below).
 
@@ -145,16 +139,16 @@ regularisation.
 \end{figure}
 
 \emph{Exercising the fallback.} That the fallback lies dormant on generic data raises the
-question of whether it is needed at all; the following family answers it. Let the columns of
-$M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$ with small $\xi$ and a
-ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix: pushing a variable to the bound flips
+question of whether it is needed at all. The following family answers it. Let the columns of
+$M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$, with small $\xi$ and a
+ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix. Pushing a variable to the bound flips
 the sign of its partner's entry, so a batch drop systematically over-shoots and a later batch
-add restores it, the codimension-one near-tie event of Section~\ref{sec:nonneg} made
-systematic. On this family ($n = 20$, \nncgFbSeeds{} seeds) \emph{pure} block principal
+add restores it. This is the codimension-one near-tie event of Section~\ref{sec:nonneg} made
+systematic. On this family ($n = 20$, \nncgFbSeeds{} seeds), \emph{pure} block principal
 pivoting (Algorithm~\ref{alg:elim} with unbounded patience and exact inner solves)
 revisits a previously seen free set and cycles without terminating on \nncgFbCycles{} of
 \nncgFbSeeds{} seeds. The guarded loop, exactly as stated (default patience, CG inner
-solves), converges on all \nncgFbSeeds{}: on \nncgFbFired{} seeds the patience budget is
+solves), converges on all \nncgFbSeeds{}. On \nncgFbFired{} seeds the patience budget is
 exhausted and up to \nncgFbMax{} least-index pivots are taken before the batch path resumes,
 each exit certified by the KKT system to working tolerance. The guarantee of
 Theorem~\ref{thm:termination} is therefore not decorative: on adversarial data the unguarded
@@ -162,22 +156,22 @@ fast path genuinely cycles, and the fallback is what terminates it.
 
 \emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
 regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
-$M \in \mathbb{R}^{100\times 200}$, so every free block with $|\mathcal{F}| > m = 100$ is
+$M \in \mathbb{R}^{100\times 200}$. Every free block with $|\mathcal{F}| > m = 100$ is then
 singular, including the initial one, since the loop starts from
 $\mathcal{F} = \{1,\dots,n\}$. The failure at $\alpha = 0$ is instructive in its anatomy.
 When the planted support lies \emph{below} the rank, the first inner solve can never meet its
-tolerance (the residual stalls at the component of $b_{\mathcal{F}}$ outside the range of
-$A_{\mathcal{F}}$, so the iteration cap is hit and the iterate carries no certificate), yet
+tolerance: the residual stalls at the component of $b_{\mathcal{F}}$ outside the range of
+$A_{\mathcal{F}}$, so the iteration cap is hit and the iterate carries no certificate. Yet
 the uncertified signs may still identify the support, after which the shrunken free blocks
-are regular: the loop then reaches the optimum on \nncgRankConvLow{} of five seeds (at an
+are regular. The loop then reaches the optimum on \nncgRankConvLow{} of five seeds (at an
 order of magnitude more inner iterations) and fails to converge on the remainder. When the
 optimal support \emph{exceeds} the rank, the final free block is itself singular, no
 certificate is ever available, and the loop converges on \nncgRankConvHigh{} of five seeds.
 Any $\alpha > 0$ restores the $P$-matrix premise of Theorem~\ref{thm:termination}, and with
 it both reliability and speed: every run converges, recovering the planted optimum to
-$\nncgRankOkErr$. The point is sharpened rather than softened by the partial successes at
-$\alpha = 0$: what regularisation buys is not merely conditioning but the \emph{guarantee};
-without it, termination is luck.
+$\nncgRankOkErr$. The partial successes at $\alpha = 0$ sharpen the point rather than soften
+it. What regularisation buys is not merely conditioning but the \emph{guarantee}; without it,
+termination is luck.
 
 \begin{table}[ht]
 \centering
@@ -185,49 +179,49 @@ without it, termination is luck.
 \input{tables/nncg_rankdef}
 \caption{The rank-deficient regime ($n = 200$, $m = 100$, five seeds; CG capped at $2000$
 iterations per solve, $30$ outer steps). ``Capped solves'' counts runs whose first inner
-solve hit the iteration cap without meeting its tolerance. At $\alpha = 0$ the loop is
-unreliable below the rank and fails uniformly above it; any $\alpha > 0$ converges on every
-seed with an order of magnitude fewer inner iterations.}
+solve hit the cap without meeting its tolerance. At $\alpha = 0$ the loop is unreliable below
+the rank and fails uniformly above it; any $\alpha > 0$ converges on every seed with an order
+of magnitude fewer inner iterations.}
 \label{tab:nncg_rankdef}
 \end{table}
 
 \emph{An official ill-posed problem.} The synthetic family is planted for control; to confirm
-the same behaviour on a recognised instance we take the \texttt{shaw} problem from Hansen's
+the same behaviour on a recognised instance, we take the \texttt{shaw} problem from Hansen's
 Regularization Tools~\cite{hansen1994regutools,shaw1972}, a severely ill-posed one-dimensional
-image-restoration model whose exact solution, a sum of two Gaussians, is strictly positive and
+image-restoration model. Its exact solution, a sum of two Gaussians, is strictly positive and
 hence a genuine non-negative least-squares target. Its symmetric kernel $M$ is numerically
 rank-deficient, so the Gram operator $A = M^\top M$ ($n = \nncgReguN{}$) is numerically
-singular, $\kappa(A) \approx \nncgReguKappa{}$; adding $\nncgReguNoise{}$ relative noise to the
+singular, $\kappa(A) \approx \nncgReguKappa{}$. Adding $\nncgReguNoise{}$ relative noise to the
 data makes the unconstrained least-squares solution oscillate negative, so non-negativity
 binds as an active regulariser. Table~\ref{tab:nncg_regu} repeats the split sweep of
 Table~\ref{tab:nncg_rankdef} on this operator. At $\alpha = 0$ the loop cannot certify a
 solution: the singular free block leaves CG stalling on the inconsistent system, the outer
 budget is exhausted, and the KKT residual stays at $O(10)$. Any $\alpha > 0$ restores the
-$P$-matrix property and the loop terminates in a handful of outer steps with a KKT
-certificate; at the representative $\alpha = \nncgReguAlpha{}$ (which lowers $\kappa$ to
+$P$-matrix property, and the loop terminates in a handful of outer steps with a KKT
+certificate. At the representative $\alpha = \nncgReguAlpha{}$ (which lowers $\kappa$ to
 $\nncgReguKappaReg{}$) it converges in $\nncgReguOuter{}$ outer steps with $\nncgReguActive{}$
 constraints active, agreeing with SciPy's Lawson--Hanson on the same regularised operator to
 $\nncgReguErrLH{}$. The speed advantage over Lawson--Hanson is the one the synthetic benchmark
-already records: the block loop reaches the $\nncgReguSupp{}$-nonzero solution in
+already records. The block loop reaches the $\nncgReguSupp{}$-nonzero solution in
 $\nncgReguOuter{}$ outer steps, whereas Lawson--Hanson admits a single index per pivot and so
-needs on the order of $\nncgReguSupp{}$ of them; on the regularised operator this is a
+needs on the order of $\nncgReguSupp{}$ of them. On the regularised operator this is a
 $\nncgBenchShawLHvsASCG{}\times$ wall-clock speedup at $n = \nncgBenchShawN{}$, at an identical
 solution. The official problem tells the planted one's story: without the split,
 termination is luck; with it, the guarantee holds. A second Regularization Tools
 problem, \texttt{phillips}~\cite{hansen1994regutools,phillips1962} ($n = \nncgPhilN{}$), has a
 known non-negative solution that is exactly zero outside a central interval, so the active set
-is large and structured: the loop recovers the signal, certifies KKT optimality, and pins
+is large and structured. The loop recovers the signal, certifies KKT optimality, and pins
 $\nncgPhilActive{}$ variables at the bound against the $\nncgPhilTrueZeros{}$ true zeros,
 agreeing with Lawson--Hanson to $\nncgPhilErrLH{}$.
 
-\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely; the
+\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely. The
 method's reason for existing is the regime where that is impossible. A separable Gaussian blur
 $B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
 non-negative deconvolution~\cite{hansen2006deblurring} whose Gram operator $A = B^\top B$ has
-$n = N^2$ unknowns; the matrix-free loop (the operator solver of Section~\ref{sec:reduction},
+$n = N^2$ unknowns. The matrix-free loop (the operator solver of Section~\ref{sec:reduction},
 reaching $A$ only through $v \mapsto B^\top(Bv)$) never forms it. At $N = \nncgDeblurNside{}$,
-so $n = \nncgDeblurDim{}$, a dense $A$ would occupy $\nncgDeblurDenseGB{}$\,GB; with a ridge
-split for the $P$-matrix property the loop instead runs in $O(n)$ working memory, terminating
+so $n = \nncgDeblurDim{}$, a dense $A$ would occupy $\nncgDeblurDenseGB{}$\,GB. With a ridge
+split for the $P$-matrix property, the loop instead runs in $O(n)$ working memory, terminating
 in $\nncgDeblurOuter{}$ outer steps ($\nncgDeblurInner{}$ CG iterations total) with a KKT
 certificate and $\nncgDeblurActive{}$ of $\nncgDeblurDim{}$ pixels pinned at the non-negativity
 bound (Figure~\ref{fig:nncg_deblur}). Identical loop, identical proof; only the operator
@@ -252,7 +246,7 @@ by the $\nncgDeblurActive{}$ active non-negativity constraints.}
 \caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
 Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
 CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
-pinned at the bound. At $\alpha = 0$ the numerically singular Gram operator
+pinned at the bound. At $\alpha = 0$ the singular Gram operator
 ($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
 with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
 \label{tab:nncg_regu}
@@ -265,14 +259,14 @@ and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
 Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the spread
 (\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
 plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
-$\kappa(A) \approx \nncgPcgKappa$): a factor of $\nncgPcgRatio$ recovered by a
+$\kappa(A) \approx \nncgPcgKappa$). That is a factor of $\nncgPcgRatio$ recovered by a
 preconditioner that costs one vector division per iteration.
 
 \emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
 CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
 twin loop whose inner solver is an exact direct solve produces \emph{identical} free-set
 trajectories on all \nncgTrajTotal{} planted instances
-($\kappa \in \{10^2, 10^4, 10^6\}$, five seeds each): the guarantee of
+($\kappa \in \{10^2, 10^4, 10^6\}$, five seeds each). The guarantee of
 Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
 in principle but decision-for-decision.
 
@@ -281,14 +275,14 @@ Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp}
 $Bx = c$. On planted instances with $B \in \mathbb{R}^{p\times n}$ of full row rank, the solver
 recovers the optimum to $\nncgEqErr$ and meets the equality to machine precision for
 $p \in \{1, 3, 10\}$, with the inner cost scaling as the $p+1$ shared right-hand sides
-anticipated in Section~\ref{sec:reduction}; the case $p=1$ reproduces the single-normalisation
+anticipated in Section~\ref{sec:reduction}. The case $p=1$ reproduces the single-normalisation
 solve exactly.
 
 \emph{Warm-starting.} A sweep $b_k = b_0 + k\,\delta$ of \nncgWarmSteps{} steps ($n = 200$,
 $\kappa = 10^4$, $\lVert\delta\rVert = 2\%$ of $\lVert b_0\rVert$) is solved cold and
 warm-started from the previous step's $(\mathcal{F}, x)$ pair
 (Figure~\ref{fig:nncg_warm}). The mean outer count drops from \nncgWarmColdOuter{} to
-\nncgWarmOuter{} and the total inner count by a factor of \nncgWarmInnerX{}; the mean support
+\nncgWarmOuter{} and the total inner count by a factor of \nncgWarmInnerX{}. The mean support
 drift is \nncgWarmDrift{} indices per step. The support-stable case of
 Proposition~\ref{prop:warm} is confirmed exactly: all \nncgWarmStable{} of
 \nncgWarmStableTot{} steps whose optimal support is unchanged are solved in a single
@@ -304,38 +298,37 @@ optimal support moves.}
 \label{fig:nncg_warm}
 \end{figure}
 
-\emph{External baselines.} The comparisons so far are internal---active-set variants against
+\emph{External baselines.} The comparisons so far are internal: active-set variants against
 one another and against projected gradient. We close the section by placing
-Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for,
-with the understanding that this dense, explicitly assembled family is chosen to make that
-placement fair to the baselines, not to exhibit the matrix-free regime the method is built
-for. On it the same planted family is solved by SciPy's Lawson--Hanson NNLS~\cite{lawson1974}
-(fed the Cholesky factor $M = L^\top$, factorisation included in the timing) and the
-interior-point solver Clarabel~\cite{clarabel2024}, against Algorithm~\ref{alg:elim} with a
-direct and with the matrix-free CG inner solve. Figure~\ref{fig:nncg_bench} reports wall-clock
-times against $n$ at $\kappa = 10^4$; Table~\ref{tab:nncg_bench} the $\kappa$-sensitivity at
-$n = 500$ and the accuracy of every solver against the planted optimum. Three observations.
+Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for.
+This dense, explicitly assembled family is chosen to make that placement fair to the
+baselines, not to exhibit the matrix-free regime the method is built for. On it the same
+planted family is solved by SciPy's Lawson--Hanson NNLS~\cite{lawson1974} (fed the Cholesky
+factor $M = L^\top$, factorisation included in the timing) and the interior-point solver
+Clarabel~\cite{clarabel2024}, against Algorithm~\ref{alg:elim} with a direct and with the
+matrix-free CG inner solve. Figure~\ref{fig:nncg_bench} reports wall-clock times against $n$
+at $\kappa = 10^4$; Table~\ref{tab:nncg_bench} reports the $\kappa$-sensitivity at $n = 500$
+and the accuracy of every solver against the planted optimum. Three observations follow.
 First, the active-set loop dominates both baselines on this family, at $n = \nncgBenchRatioN$
 by a factor of \nncgBenchLHvsASD{} over Lawson--Hanson and \nncgBenchIPvsASD{} over Clarabel
-(direct inner solve), for the structural reason of Section~\ref{sec:nonneg}: block pivoting
+(direct inner solve). The reason is structural (Section~\ref{sec:nonneg}): block pivoting
 reaches the optimal support in single-digit outer steps, where Lawson--Hanson moves one index
 per iteration and the interior point pays its Newton solves on the full $n \times n$ system.
 Second, the two inner solvers answer different questions, and this benchmark is the one that
-favours the direct block solve: it is the faster in single digits at $n = 500$ (dense BLAS-3
+favours the direct block solve. It is faster in single digits at $n = 500$ (dense BLAS-3
 factorisations beat memory-bound mat-vecs at these sizes) and is $\kappa$-insensitive, whereas
 the CG inner cost grows as $\sqrt\kappa$ (Table~\ref{tab:nncg_bench}: a factor
-\nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$). This is by design, not a deficit: where
+\nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$). This is by design, not a deficit. Where
 $A$ is small and dense enough to assemble and factorise, the direct solve should win, and the
-active-set loop---the paper's actual object---accommodates it unchanged, as
-Theorem~\ref{thm:termination} governs the exact inner solve and Lemma~\ref{lem:inexact}
-carries the guarantee to the inexact CG one. The matrix-free CG inner solve earns its
-$\sqrt\kappa$ rate and $O(n)$ working memory only in the complementary regime---the Gram and
-structured operators of Section~\ref{sec:reduction} that are never assembled, and
-warm-started parametric sweeps where each solve reuses the previous free set. Third, every
-solver recovers the planted optimum: Lawson--Hanson and the direct active set to $10^{-13}$,
-CG to its residual tolerance ($10^{-8}$), Clarabel to its default interior-point tolerance
-($10^{-4}$); the active-set methods certify KKT optimality exactly rather than to a
-duality-gap tolerance.
+active-set loop (the paper's actual object) accommodates it unchanged: Theorem~\ref{thm:termination}
+governs the exact inner solve, and Lemma~\ref{lem:inexact} carries the guarantee to the
+inexact CG one. The matrix-free CG inner solve earns its $\sqrt\kappa$ rate and $O(n)$ working
+memory only in the complementary regime, namely the Gram and structured operators of
+Section~\ref{sec:reduction} that are never assembled, and warm-started parametric sweeps where
+each solve reuses the previous free set. Third, every solver recovers the planted optimum:
+Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance
+($10^{-8}$), and Clarabel to its default interior-point tolerance ($10^{-4}$). The active-set
+methods certify KKT optimality exactly rather than to a duality-gap tolerance.
 
 \begin{figure}[ht]
 \centering
@@ -353,8 +346,8 @@ CG inner solves.}
 \input{tables/nncg_bench}
 \caption{$\kappa$-sensitivity at $n = 500$ (mean over three seeds) and accuracy against the
 planted optimum. The direct methods are $\kappa$-insensitive at fixed $n$; only the CG inner
-cost grows, as Proposition~\ref{prop:cg} prescribes. Accuracy is each solver's own stopping
-criterion made visible: the active-set exits are KKT certificates, the interior point stops
-at its duality-gap tolerance.}
+cost grows, as Proposition~\ref{prop:cg} prescribes. Accuracy reflects each solver's own
+stopping criterion: the active-set exits are KKT certificates, the interior point stops at its
+duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
