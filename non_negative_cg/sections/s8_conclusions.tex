@@ -15,9 +15,7 @@ $P$-matrix property, so it both accelerates the inner solve and licenses the ter
 
 The construction is deliberately application-agnostic: it takes an SPD operator (or a
 rectangular $M$ with $A = M^\top M$), a right-hand side, and an optional linear equality
-system $Bx = c$, and returns the non-negative minimiser. The companion papers~\cite{schmelzer2026matrixfree,%
-schmelzer2026rmt} instantiate it as their computational kernel and report quantitative
-benchmarks on structured operators; the guarantees and complexity recorded here hold for any
+system $Bx = c$, and returns the non-negative minimiser. The guarantees and complexity recorded here hold for any
 SPD $A$. A reference implementation is available as the open-source package \texttt{nncg}
 (\url{https://github.com/Jebel-Quant/nncg}), whose test suite reproduces the synthetic study
 of Section~\ref{sec:results}.

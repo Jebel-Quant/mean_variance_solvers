@@ -322,8 +322,7 @@ and it is $\kappa$-insensitive, whereas the CG inner cost grows as $\sqrt\kappa$
 (Table~\ref{tab:nncg_bench}: a factor \nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$).
 The matrix-free inner solve is not the point of this dense benchmark; its regime is the one
 the matrix-free operator of Section~\ref{sec:reduction} targets (Gram and structured
-operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps),
-which the companion papers quantify. Third, every solver recovers the planted optimum:
+operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps). Third, every solver recovers the planted optimum:
 Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance
 ($10^{-8}$), Clarabel to its default interior-point tolerance ($10^{-4}$); the active-set
 methods certify KKT optimality exactly rather than to a duality-gap tolerance.
@@ -349,8 +348,3 @@ criterion made visible: the active-set exits are KKT certificates, the interior 
 at its duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
-
-Quantitative wall-clock studies on structured operators arising in applications (including
-scaling with problem size and warm-started parametric sweeps) are reported in the companion
-papers~\cite{schmelzer2026matrixfree,schmelzer2026rmt}, whose numerical sections instantiate
-Algorithm~\ref{alg:elim} with the matrix-free CG inner solver analysed here.
