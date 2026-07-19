@@ -106,8 +106,8 @@ It captures the leading spectral structure a diagonal misses. When $A$ is itself
 diagonal-plus-low-rank the preconditioner \emph{is} $A$, giving $\kappa_P = 1$ and a direct
 inner solve that bypasses CG altogether.
 
-\textcolor{blue}{
-  The \texttt{nncg} method builds this low-rank-plus-diagonal preconditioner by randomized
+\paragraph{Randomized Nystr\"om preconditioner.}
+The \texttt{nncg} method builds this low-rank-plus-diagonal preconditioner by randomized
 Nystr\"om sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$ for an
 orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$, and a scalar
 tail shift $\mu$. This is the constant-diagonal case $d = \mu\mathbf{1}$,
@@ -131,7 +131,6 @@ whole-operator sketch cost once, then amortises it across every outer step of a 
 across the support-stable warm-started re-solves of Proposition~\ref{prop:warm}. That is
 exactly where a resketched-per-block \texttt{Nystrom} pays repeatedly for work
 \texttt{GlobalNystrom} does once.
-}
 
 \paragraph{Stopping criterion.}
 PCG naturally monitors the preconditioned residual norm $(r^\top P_{\mathcal{F}}^{-1}
