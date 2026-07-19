@@ -390,7 +390,7 @@ materials: Asphalt, Grass, Tree, Roof, Metal, Dirt) poses the fully-constrained 
 abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$, $\mathbf{1}^\top x
 = 1$, $A = M^\top M$, independently at every pixel, with $M$ the per-material mean reference
 spectrum. At $n = \nncgHsUrbMaterials{}$ material classes the loop and Clarabel are essentially
-matched ($\nncgHsUrbSpeedupWall{}\times$) -- consistent with Table~\ref{tab:complexity}'s
+matched ($\nncgHsUrbSpeedupWall{}\times$) --- consistent with Table~\ref{tab:complexity}'s
 per-step costs crossing over only once $n$ grows enough for Clarabel's $O(n^3)$ factorisation
 to outweigh the active-set loop's $O(km)$ mat-vecs, which a handful of material classes is far
 too small to exercise; FISTA is not competitive at any $n$

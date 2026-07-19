@@ -112,6 +112,18 @@ class BlurOperator(SymmetricOperator):
         full[cols] = v
         return self.matvec(full)[rows]
 
+    def restricted(self, idx):
+        """Free-block view of this operator: matvec via block_matvec(idx, idx, ·).
+
+        There is no cheaper "pre-sliced" representation for a matrix-free blur
+        (unlike a Gram operator's factor columns): every application still
+        re-embeds into full space and reads back the free rows. This just
+        satisfies nncg's operator protocol, which builds a restricted view
+        once per free set rather than calling block_matvec per CG iteration.
+        """
+        idx = np.asarray(idx)
+        return BlurOperator(lambda v: self.block_matvec(idx, idx, v), idx.size)
+
     def rcond_free(self, idx):
         raise NotImplementedError("BlurOperator supports matrix-free CG only")
 
