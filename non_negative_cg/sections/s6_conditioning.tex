@@ -38,11 +38,11 @@ regularisation~\cite{golub2013,lawson1974}.
   = O\!\big((1-\alpha)/\alpha\big)$.
 \end{proposition}
 
-The split works twofold. It lowers $\kappa$ and hence the iteration count of both solvers
-(Propositions~\ref{prop:cg} and~\ref{prop:proj}), and, because $A_\alpha \succ 0$ strictly
-whenever $\alpha > 0$, even when $A$ is only positive semidefinite (a rank-deficient
-least-squares operator with $m < n$), it restores the $P$-matrix property on which
-Theorem~\ref{thm:termination} depends. A strictly positive $\alpha$ is therefore the natural
+The split works twofold. First, it lowers $\kappa$ and hence the iteration count of both
+solvers (Propositions~\ref{prop:cg} and~\ref{prop:proj}). Second, because $A_\alpha \succ 0$
+strictly whenever $\alpha > 0$, it restores the $P$-matrix property on which
+Theorem~\ref{thm:termination} depends, even when $A$ is only positive semidefinite (a
+rank-deficient least-squares operator with $m < n$). A strictly positive $\alpha$ is therefore the natural
 setting for the active-set loop: it simultaneously conditions the inner solve and guarantees
 that every principal submatrix is invertible.
 
@@ -73,46 +73,64 @@ $\kappa_P$, and Proposition~\ref{prop:cg} applies to the scaled operator verbati
 
 \paragraph{Preconditioning on a changing free set.}
 Two constraints decide which preconditioners suit this method, both inherited from
-Section~\ref{sec:reduction}. First, the apply must be \emph{matrix-free}: forming
+Section~\ref{sec:reduction}. First, the apply must be \emph{matrix-free}. Forming
 $A_{\mathcal{F}}$ or a dense factor to build or invert $P_{\mathcal{F}}$ would forfeit the
 $O(m\,|\mathcal{F}|)$ operator and the absence of $O(n^2)$ storage that motivate the whole
 construction. Second, and particular to the active-set loop, the free set $\mathcal{F}$
-changes between outer steps: Algorithm~\ref{alg:elim} rebuilds the operator on each reduced
+changes between outer steps. Algorithm~\ref{alg:elim} rebuilds the operator on each reduced
 $\mathcal{F}$, so a preconditioner is cheap only if it \emph{restricts} to the new free set at
-negligible cost. The standard choices sort by exactly this property. The Jacobi preconditioner
-$P = \operatorname{diag}(A)$ restricts exactly, $(\operatorname{diag} A)_{\mathcal{F}} =
-\operatorname{diag}(A_{\mathcal{F}})$, so $P_{\mathcal{F}}$ is the free-set slice of a single
-vector computed once; for $A = M^\top M$ that vector is the squared column norms of $M$,
-available without forming $A$, and its apply is $O(|\mathcal{F}|)$. It carries no per-step
-setup and is valid on every free set the loop visits, the natural default when $A$ has a
-widely varying diagonal. A factorised preconditioner (incomplete Cholesky, $P = LL^\top$) does
-\emph{not} restrict: in general $(P_{\mathcal{F}})^{-1} \neq (P^{-1})_{\mathcal{F}}$, and the
-factor of the full $P$ is not a factor of $P_{\mathcal{F}}$, so honouring $A_{\mathcal{F}}$
-would require refactorising on each free set, reintroducing the assembly the method avoids;
-such preconditioners pay off here only once the free set stabilises, as it does near
-convergence and across the support-stable warm starts of Proposition~\ref{prop:warm}, where
-one factor serves many outer steps. Between these sits the low-rank-plus-diagonal
-preconditioner $P = \operatorname{diag}(d) + U\Delta U^\top$ built from a few ($r$) dominant
-eigenpairs of $A$~\cite{saad2003iterative}: it restricts consistently in its \emph{apply},
+negligible cost. The standard choices sort by exactly this property.
+
+The Jacobi preconditioner $P = \operatorname{diag}(A)$ restricts exactly,
+$(\operatorname{diag} A)_{\mathcal{F}} = \operatorname{diag}(A_{\mathcal{F}})$, so
+$P_{\mathcal{F}}$ is the free-set slice of a single vector computed once. For $A = M^\top M$
+that vector is the squared column norms of $M$, available without forming $A$, and its apply
+is $O(|\mathcal{F}|)$. It carries no per-step setup and is valid on every free set the loop
+visits, the natural default when $A$ has a widely varying diagonal.
+
+A factorised preconditioner (incomplete Cholesky, $P = LL^\top$) does \emph{not} restrict. In
+general $(P_{\mathcal{F}})^{-1} \neq (P^{-1})_{\mathcal{F}}$, and the factor of the full $P$ is
+not a factor of $P_{\mathcal{F}}$, so honouring $A_{\mathcal{F}}$ would require refactorising
+on each free set, reintroducing the assembly the method avoids. Such preconditioners pay off
+here only once the free set stabilises, as it does near convergence and across the
+support-stable warm starts of Proposition~\ref{prop:warm}, where one factor serves many outer
+steps.
+
+Between these sits the low-rank-plus-diagonal preconditioner
+$P = \operatorname{diag}(d) + U\Delta U^\top$ built from a few ($r$) dominant eigenpairs of
+$A$~\cite{saad2003iterative}. It restricts consistently in its \emph{apply},
 $P_{\mathcal{F}} = \operatorname{diag}(d)_{\mathcal{F}} + U_{\mathcal{F}}\Delta
 U_{\mathcal{F}}^\top$, and is inverted matrix-free in $O(|\mathcal{F}|\,r^2 + r^3)$ by the
-Woodbury identity, precisely the direct free-block solve for the diagonal-plus-low-rank case. It captures the leading spectral structure
-a diagonal misses, and when $A$ is itself diagonal-plus-low-rank the preconditioner \emph{is}
-$A$, giving $\kappa_P = 1$ and a direct inner solve that bypasses CG altogether.
+Woodbury identity, precisely the direct free-block solve for the diagonal-plus-low-rank case.
+It captures the leading spectral structure a diagonal misses. When $A$ is itself
+diagonal-plus-low-rank the preconditioner \emph{is} $A$, giving $\kappa_P = 1$ and a direct
+inner solve that bypasses CG altogether.
 
 \textcolor{blue}{
-  The \texttt{nncg} method builds this low-rank-plus-diagonal preconditioner by randomized Nystr\"om
-sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$ for an
-orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$ and a scalar
-tail shift $\mu$, the constant-diagonal case $d = \mu\mathbf{1}$, $\Delta = \Lambda - \mu I$
-of the preconditioner above, in two variants that trade off exactly where the free set changes. The first method, \texttt{Nystrom} sketches the \emph{current} free block $A_{\mathcal{F}}$ on every outer step consisting of a handful of matrix-free products against $A_{\mathcal{F}}$ plus a QR and a
-small eigendecomposition. This means it is always built on the operator the loop is about to solve, at the price of repeating that work whenever $\mathcal{F}$ changes. In contrast, the \texttt{GlobalNystrom} approach
-sketches the \emph{full} operator $A$ once, and exploits that restricting a rank-$r$
-factorisation to a principal submatrix is exact,
+  The \texttt{nncg} method builds this low-rank-plus-diagonal preconditioner by randomized
+Nystr\"om sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$ for an
+orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$, and a scalar
+tail shift $\mu$. This is the constant-diagonal case $d = \mu\mathbf{1}$,
+$\Delta = \Lambda - \mu I$ of the preconditioner above. It comes in two variants that trade
+off exactly where the free set changes. The first, \texttt{Nystrom}, sketches the
+\emph{current} free block $A_{\mathcal{F}}$ on every outer step, using a handful of
+matrix-free products against $A_{\mathcal{F}}$ plus a QR and a small eigendecomposition. It is
+thus always built on the operator the loop is about to solve, at the price of repeating that
+work whenever $\mathcal{F}$ changes. The second, \texttt{GlobalNystrom}, sketches the
+\emph{full} operator $A$ once. It exploits that restricting a rank-$r$ factorisation to a
+principal submatrix is exact,
 $(U\Lambda U^\top + \mu(I-UU^\top))_{\mathcal{F}} = U_{\mathcal{F}}\Lambda U_{\mathcal{F}}^\top +
 \mu(I_{\mathcal{F}} - U_{\mathcal{F}} U_{\mathcal{F}}^\top)$ with $U_{\mathcal{F}} =
-U[\mathcal{F},:]$. This means that every later free set reuses the one global sketch by masking rows rather than resketching. The masked $U_{\mathcal{F}}$ is no longer orthonormal, so its inverse needs the general Sherman--Morrison--Woodbury identity rather than \texttt{Nystrom}'s specialised identity-plus-projection form, built once per free set in $O(|\mathcal{F}|\,r + r^3)$ and applied in $O(|\mathcal{F}|\,r)$ thereafter. The trade mirrors the factorised-preconditioner case above: \texttt{GlobalNystrom} pays its (larger, whole-operator) sketch cost once and
-amortises it across every outer step of a solve and across the support-stable warm-started re-solves of Proposition~\ref{prop:warm} as well, exactly where a resketched-per-block \texttt{Nystrom} pays repeatedly for work \texttt{GlobalNystrom} does once.
+U[\mathcal{F},:]$. Every later free set then reuses the one global sketch by masking rows
+rather than resketching. The masked $U_{\mathcal{F}}$ is no longer orthonormal, so its inverse
+needs the general Sherman--Morrison--Woodbury identity rather than \texttt{Nystrom}'s
+specialised identity-plus-projection form; it is built once per free set in
+$O(|\mathcal{F}|\,r + r^3)$ and applied in $O(|\mathcal{F}|\,r)$ thereafter. The trade mirrors
+the factorised-preconditioner case above. \texttt{GlobalNystrom} pays its larger,
+whole-operator sketch cost once, then amortises it across every outer step of a solve and
+across the support-stable warm-started re-solves of Proposition~\ref{prop:warm}. That is
+exactly where a resketched-per-block \texttt{Nystrom} pays repeatedly for work
+\texttt{GlobalNystrom} does once.
 }
 
 \paragraph{Stopping criterion.}
@@ -121,19 +139,19 @@ r)^{1/2}$, whereas the transfer of finite termination to inexact solves
 (Lemma~\ref{lem:inexact}) is stated for the ordinary residual $\rho = \lVert b_{\mathcal{F}} -
 A_{\mathcal{F}}\tilde x_{\mathcal{F}}\rVert_2$ that enters condition~\eqref{eq:inexactcond}.
 The two differ by a factor between $\lambda_{\min}(P_{\mathcal{F}})^{1/2}$ and
-$\lambda_{\max}(P_{\mathcal{F}})^{1/2}$. To keep the guarantee intact the inner stop is
+$\lambda_{\max}(P_{\mathcal{F}})^{1/2}$. To keep the guarantee intact, the inner stop is
 evaluated on the unpreconditioned $\rho$ (or the preconditioned tolerance is tightened by
-$\kappa(P_{\mathcal{F}})^{1/2}$); Lemma~\ref{lem:inexact} then applies word for word, because
-preconditioning changes only how fast $\rho$ falls, not $A$, not $\rho$, and not the decision
-margin $\mu$.
+$\kappa(P_{\mathcal{F}})^{1/2}$). Lemma~\ref{lem:inexact} then applies word for word, because
+preconditioning changes only how fast $\rho$ falls, leaving $A$, the residual $\rho$ itself,
+and the decision margin $\mu$ untouched.
 
-Two remarks connect the subsection to the rest of the paper. The regularising
-split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner: it changes the
+Two remarks connect the subsection to the rest of the paper. First, the regularising
+split~\eqref{eq:regsplit} may itself be read as an implicit preconditioner. It changes the
 problem, but toward a target the application deems statistically or structurally preferable, so
 the conditioning gain comes at no modelling cost while additionally repairing rank deficiency.
-And preconditioning is a lever the Krylov inner solver has that the projected-gradient
-reference of Section~\ref{ssec:proj} effectively lacks: a scaled gradient step minimises $f$ in
+Second, preconditioning is a lever the Krylov inner solver has that the projected-gradient
+reference of Section~\ref{ssec:proj} effectively lacks. A scaled gradient step minimises $f$ in
 the $P$-metric, but the orthant and simplex projections that make projected gradient cheap are
-closed-form only in the Euclidean norm and become non-negative quadratic programs under a
+closed-form only in the Euclidean norm, and become non-negative quadratic programs under a
 general $P$. Preconditioning therefore \emph{widens} the $\sqrt\kappa$ advantage of the
 active-set/CG loop over projected gradient rather than closing it.
