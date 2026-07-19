@@ -239,6 +239,55 @@ by the $\nncgDeblurActive{}$ active non-negativity constraints.}
 \label{fig:nncg_deblur}
 \end{figure}
 
+\emph{Matrix-free timing at scale.} The same family places the method against four external
+solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
+OSQP~\cite{osqp} need the explicit Gram operator $A = B^\top B$, available here in
+closed form as $A_\alpha = (1-\alpha)(G \otimes G) + \alpha I$ with $G = K^\top K$, so they pay
+$O(n^2)$ storage and an $O(n^3)$ factorisation. MPRGP~\cite{dostalschoberl2005}, the
+feasible-point competitor of Section~\ref{sec:nonneg}, is matrix-free like the active-set loop
+and pays neither. Table~\ref{tab:nncg_deblur} and Figure~\ref{fig:nncg_deblur_bench} report
+wall-clock against $n$. At $n = \nncgDeblurHeadDim{}$ ($N = \nncgDeblurHeadNside{}$), the
+largest size the dense solvers still handle, the active-set loop finishes in
+$\nncgDeblurHeadMFTime{}$\,s against $\nncgDeblurHeadLHTime{}$\,s for Lawson--Hanson and
+$\nncgDeblurHeadIPTime{}$\,s for Clarabel, a $\nncgDeblurHeadLHx{}\times$ and
+$\nncgDeblurHeadIPx{}\times$ margin. Past that size the dense operator is the binding
+constraint: at $N = \nncgDeblurMaxNside{}$ ($n = \nncgDeblurMaxDim{}$) it would occupy
+$\nncgDeblurMaxDenseGB{}$\,GB, so none of the three dense solvers can even be instantiated,
+whereas the active-set loop solves the problem in $\nncgDeblurMaxTime{}$\,s in $O(n)$ working
+memory. This is the regime the method is built for. The win is not a constant factor on
+assembled problems but a solver that runs at all once $A$ cannot be formed. The comparison also
+makes the enabling property explicit rather than proprietary: MPRGP is matrix-free too, clears
+the same wall, and on this well-conditioned blur is in fact the faster of the two ($O(n)$
+memory, $\nncgDeblurMaxMPRGPTime{}$\,s at the largest size). What the family isolates is
+matrix-free operation, which the active-set loop shares; the choice between it and MPRGP then
+turns on the properties of Section~\ref{sec:nonneg} (an exact KKT certificate at termination,
+and a free-set structure that carries a direct inner solve and warm starts) rather than on raw
+speed here.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.55\textwidth]{graphs/nncg_deblur_bench}
+\caption{Wall-clock time against problem size $n = N^2$ on the matrix-free deblurring family:
+the two matrix-free methods (the active-set CG loop and MPRGP) against dense Lawson--Hanson,
+Clarabel, and OSQP. The dense baselines stop where the Gram matrix $A = B^\top B$ ceases to be
+practical to form and factorise; the matrix-free methods continue to $n = \nncgDeblurMaxDim{}$
+(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory.}
+\label{fig:nncg_deblur_bench}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_deblur}
+\caption{Matrix-free deblurring: wall-clock (s) against problem size $n = N^2$, the two
+matrix-free methods (MPRGP and the active-set CG loop) versus the dense Lawson--Hanson,
+Clarabel, and OSQP (Gaussian blur $\sigma = 2$, ridge $\alpha = 10^{-3}$). ``dense $A$ (GB)''
+is the storage the dense solvers would need for the Gram operator, which the matrix-free
+methods never form; ``---'' marks sizes where that operator exceeds the benchmark's storage
+budget and the dense solvers are not run.}
+\label{tab:nncg_deblur}
+\end{table}
+
 \begin{table}[ht]
 \centering
 \footnotesize

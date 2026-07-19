@@ -44,7 +44,12 @@ SCRIPTS = {
     "nncg_note.experiment_nncg": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
     "nncg_note.experiment_nncg_bench": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
     "nncg_note.experiment_nncg_regu": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],
-    "nncg_note.experiment_nncg_deblur": ["graphs/nncg_deblur.pdf", "tables/nncg_deblur_defs.tex"],
+    "nncg_note.experiment_nncg_deblur": [
+        "graphs/nncg_deblur.pdf",
+        "graphs/nncg_deblur_bench.pdf",
+        "tables/nncg_deblur.tex",
+        "tables/nncg_deblur_defs.tex",
+    ],
     "nncg_note.experiment_nncg_hyperspectral": [
         "graphs/nncg_hyperspectral.pdf",
         "tables/nncg_hyperspectral_defs.tex",
