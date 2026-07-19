@@ -304,28 +304,38 @@ optimal support moves.}
 \label{fig:nncg_warm}
 \end{figure}
 
-\emph{External baselines.} To place the method among solvers a practitioner would reach for,
-the same planted family is solved by SciPy's Lawson--Hanson NNLS~\cite{lawson1974} (fed the
-Cholesky factor $M = L^\top$, factorisation included in the timing) and the interior-point
-solver Clarabel~\cite{clarabel2024}, against Algorithm~\ref{alg:elim} with a direct and with
-the matrix-free CG inner solve. Figure~\ref{fig:nncg_bench} reports wall-clock times against
-$n$ at $\kappa = 10^4$; Table~\ref{tab:nncg_bench} the $\kappa$-sensitivity at $n = 500$ and
-the accuracy of every solver against the planted optimum. Three observations. First, the
-active-set loop dominates both baselines on this family, at $n = \nncgBenchRatioN$ by a
-factor of \nncgBenchLHvsASD{} over Lawson--Hanson and \nncgBenchIPvsASD{} over Clarabel (direct
-inner solve), for the structural reason of Section~\ref{sec:nonneg}: block pivoting reaches
-the optimal support in single-digit outer steps, where Lawson--Hanson moves one index per
-iteration and the interior point pays its Newton solves on the full $n \times n$ system.
-Second, between the two inner solvers, the \emph{direct} block solve is the faster on a dense,
-explicitly assembled $A$ (BLAS-3 factorisations beat memory-bound mat-vecs at these sizes)
-and it is $\kappa$-insensitive, whereas the CG inner cost grows as $\sqrt\kappa$
-(Table~\ref{tab:nncg_bench}: a factor \nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$).
-The matrix-free inner solve is not the point of this dense benchmark; its regime is the one
-the matrix-free operator of Section~\ref{sec:reduction} targets (Gram and structured
-operators that are never assembled, $O(n)$ working memory, and warm-started parametric sweeps). Third, every solver recovers the planted optimum:
-Lawson--Hanson and the direct active set to $10^{-13}$, CG to its residual tolerance
-($10^{-8}$), Clarabel to its default interior-point tolerance ($10^{-4}$); the active-set
-methods certify KKT optimality exactly rather than to a duality-gap tolerance.
+\emph{External baselines.} The comparisons so far are internal---active-set variants against
+one another and against projected gradient. We close the section by placing
+Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for,
+with the understanding that this dense, explicitly assembled family is chosen to make that
+placement fair to the baselines, not to exhibit the matrix-free regime the method is built
+for. On it the same planted family is solved by SciPy's Lawson--Hanson NNLS~\cite{lawson1974}
+(fed the Cholesky factor $M = L^\top$, factorisation included in the timing) and the
+interior-point solver Clarabel~\cite{clarabel2024}, against Algorithm~\ref{alg:elim} with a
+direct and with the matrix-free CG inner solve. Figure~\ref{fig:nncg_bench} reports wall-clock
+times against $n$ at $\kappa = 10^4$; Table~\ref{tab:nncg_bench} the $\kappa$-sensitivity at
+$n = 500$ and the accuracy of every solver against the planted optimum. Three observations.
+First, the active-set loop dominates both baselines on this family, at $n = \nncgBenchRatioN$
+by a factor of \nncgBenchLHvsASD{} over Lawson--Hanson and \nncgBenchIPvsASD{} over Clarabel
+(direct inner solve), for the structural reason of Section~\ref{sec:nonneg}: block pivoting
+reaches the optimal support in single-digit outer steps, where Lawson--Hanson moves one index
+per iteration and the interior point pays its Newton solves on the full $n \times n$ system.
+Second, the two inner solvers answer different questions, and this benchmark is the one that
+favours the direct block solve: it is the faster in single digits at $n = 500$ (dense BLAS-3
+factorisations beat memory-bound mat-vecs at these sizes) and is $\kappa$-insensitive, whereas
+the CG inner cost grows as $\sqrt\kappa$ (Table~\ref{tab:nncg_bench}: a factor
+\nncgBenchASCGSens{} from $\kappa = 10^2$ to $10^6$). This is by design, not a deficit: where
+$A$ is small and dense enough to assemble and factorise, the direct solve should win, and the
+active-set loop---the paper's actual object---accommodates it unchanged, as
+Theorem~\ref{thm:termination} governs the exact inner solve and Lemma~\ref{lem:inexact}
+carries the guarantee to the inexact CG one. The matrix-free CG inner solve earns its
+$\sqrt\kappa$ rate and $O(n)$ working memory only in the complementary regime---the Gram and
+structured operators of Section~\ref{sec:reduction} that are never assembled, and
+warm-started parametric sweeps where each solve reuses the previous free set. Third, every
+solver recovers the planted optimum: Lawson--Hanson and the direct active set to $10^{-13}$,
+CG to its residual tolerance ($10^{-8}$), Clarabel to its default interior-point tolerance
+($10^{-4}$); the active-set methods certify KKT optimality exactly rather than to a
+duality-gap tolerance.
 
 \begin{figure}[ht]
 \centering
