@@ -35,6 +35,7 @@ figures:  ## Regenerate every graph and table for all three papers
 	uv run python -m cg.experiment_oos
 	uv run python -m rmt.experiment_rmt
 	uv run python -m nncg_note.experiment_nncg
+	uv run python -m nncg_note.experiment_nncg_frontier
 	uv run python -m nncg_note.experiment_nncg_bench
 	uv run python -m nncg_note.experiment_nncg_regu
 	uv run python -m nncg_note.experiment_nncg_deblur

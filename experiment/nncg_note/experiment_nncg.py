@@ -21,7 +21,6 @@ Outputs (files):
     graphs/nncg_kappa.pdf      CG inner iterations vs kappa, with a sqrt(kappa) guide
     graphs/nncg_cg_vs_pg.pdf   CG vs projected gradient: O(sqrt kappa) vs O(kappa)
     graphs/nncg_reg.pdf        CG iterations and kappa vs the regularising split alpha
-    graphs/nncg_warm.pdf       warm vs cold CG iterations along a parametric sweep
     tables/nncg_synthetic.tex  per-kappa outer/inner/PG counts (booktabs fragment)
     tables/nncg_rankdef.tex    rank-deficient (m<n) alpha sweep (booktabs fragment)
     tables/nncg_defs.tex       fitted scaling exponents etc. as \\newcommand macros
@@ -475,74 +474,6 @@ print(f"guarded loop (p_max=3, CG inner): converges {fb_conv}/{FB_SEEDS}; "
       f"pivots; max KKT violation {fb_kkt:.1e}")
 
 
-# ===========================================================================
-# Panel I: warm-starting across a parametric sweep  (Section 5.4)
-# ===========================================================================
-
-print()
-print("=" * 72)
-print("Warm-started parametric sweep  (n=200, kappa=1e4, 40 steps)")
-print("=" * 72)
-
-N_W, KAPPA_W, STEPS_W = 200, 1e4, 40
-A_w, b0_w, x0_w, _ = make_problem(N_W, KAPPA_W, seed=0)
-rng_w = np.random.default_rng(1)
-db_w = rng_w.standard_normal(N_W)
-db_w *= 0.02 * np.linalg.norm(b0_w) / np.linalg.norm(db_w)  # 2% drift per step
-
-cold_outer, cold_inner, warm_outer, warm_inner, drifts = [], [], [], [], []
-prev_free = None
-prev_x = None
-prev_supp = None
-for k in range(STEPS_W):
-    b_k = b0_w + k * db_w
-    rc = ActiveSetSolver(CG()).solve(DenseOperator(A_w), b_k)
-    if prev_free is None:
-        rw = rc  # first point: nothing to warm-start from
-    else:
-        rw = ActiveSetSolver(CG()).solve(DenseOperator(A_w), b_k, warm=(prev_free, prev_x))
-    assert float(np.max(np.abs(rw.x - rc.x))) < 1e-6  # same optimum
-    supp = frozenset(np.flatnonzero(rc.free).tolist())
-    drifts.append(len(supp ^ prev_supp) if prev_supp is not None else 0)
-    cold_outer.append(rc.outer)
-    cold_inner.append(rc.inner)
-    warm_outer.append(rw.outer)
-    warm_inner.append(rw.inner)
-    prev_free, prev_x, prev_supp = rw.free, rw.x, supp
-
-# steps after the first, where warm-starting actually applies
-co, ci = np.array(cold_outer[1:]), np.array(cold_inner[1:])
-wo, wi = np.array(warm_outer[1:]), np.array(warm_inner[1:])
-dr = np.array(drifts[1:])
-print(f"{'':>12}  {'outer (mean)':>13}  {'inner (total)':>14}")
-print(f"{'cold':>12}  {co.mean():>13.1f}  {ci.sum():>14d}")
-print(f"{'warm':>12}  {wo.mean():>13.1f}  {wi.sum():>14d}")
-print(f"\nsupport drift per step: mean {dr.mean():.1f}, max {dr.max()} of "
-      f"{len(prev_supp)} active indices")
-print(f"warm-start speedup: outer {co.mean() / wo.mean():.1f}x, "
-      f"inner {ci.sum() / wi.sum():.1f}x")
-print(f"steps with unchanged support solved in one outer step (warm): "
-      f"{int(np.sum((dr == 0) & (wo == 1)))}/{int(np.sum(dr == 0))} "
-      f"(Prop. support-stable case)")
-
-# Figure: per-step inner iterations, cold vs warm
-figW, axW = plt.subplots(figsize=(4.5, 3.2))
-axW.plot(range(1, STEPS_W), ci, marker="o", markersize=3, color=COLOR_KAPPA,
-         label="cold start")
-axW.plot(range(1, STEPS_W), wi, marker="s", markersize=3, color=COLOR_CG,
-         label="warm start")
-axW.set_yscale("log")
-axW.set_xlabel("Sweep step $k$")
-axW.set_ylabel("CG iterations for step $k$")
-axW.set_title(rf"Warm-started sweep  ($n={N_W}$, $\kappa=10^4$)")
-axW.legend(framealpha=0.9)
-axW.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.7)
-figW.tight_layout(pad=1.0)
-figW.savefig(GRAPHS / "nncg_warm.pdf", bbox_inches="tight")
-figW.savefig(GRAPHS / "nncg_warm.png", bbox_inches="tight", dpi=150)
-print(f"Saved {GRAPHS / 'nncg_warm.pdf'}")
-
-
 # ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
@@ -695,12 +626,5 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgFbConv}}{{{fb_conv}}}\n")
     fh.write(f"\\newcommand{{\\nncgFbFired}}{{{fb_fired}}}\n")
     fh.write(f"\\newcommand{{\\nncgFbMax}}{{{fb_max}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmSteps}}{{{STEPS_W - 1}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmColdOuter}}{{{co.mean():.1f}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmOuter}}{{{wo.mean():.1f}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmInnerX}}{{{ci.sum() / wi.sum():.1f}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmDrift}}{{{dr.mean():.1f}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmStable}}{{{int(np.sum((dr == 0) & (wo == 1)))}}}\n")
-    fh.write(f"\\newcommand{{\\nncgWarmStableTot}}{{{int(np.sum(dr == 0))}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")

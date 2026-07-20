@@ -64,12 +64,14 @@ NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and t
 method directly from their definitions. The matrix-free deblurring study is likewise
 NumPy-only. The external-solver benchmark below and the \texttt{shaw}/\texttt{phillips}
 ill-posed study are two further scripts whose only additional dependency is SciPy (and, for the
-benchmark, Clarabel). The algorithms are also released as the
+benchmark, Clarabel). The warm-started efficient-frontier study reads the committed S\&P~500
+returns panel and adds pandas. The algorithms are also released as the
 open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
 suite is this study. Planted recovery, the equality-augmented solve, trajectory agreement
-under inexact solves, the warm-start single-step property, the \texttt{shaw}/\texttt{phillips}
-regularisation and recovery runs, the matrix-free deblurring solve, and the adversarial family
-that forces the fallback all run as continuous-integration checks. The geometric spectrum is
+under inexact solves, the warm-started frontier's single-step property, the
+\texttt{shaw}/\texttt{phillips} regularisation and recovery runs, the matrix-free deblurring
+solve, and the adversarial family that forces the fallback all run as continuous-integration
+checks. The geometric spectrum is
 the honest choice: its clustering lets CG converge faster than the worst-case bound, so the
 measured growth is an \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a
 fitted exponent.
@@ -356,25 +358,64 @@ $p \in \{1, 3, 10\}$, with the inner cost scaling as the $p+1$ shared right-hand
 anticipated in Section~\ref{sec:reduction}. The case $p=1$ reproduces the single-normalisation
 solve exactly.
 
-\emph{Warm-starting.} A sweep $b_k = b_0 + k\,\delta$ of \nncgWarmSteps{} steps ($n = 200$,
-$\kappa = 10^4$, $\lVert\delta\rVert = 2\%$ of $\lVert b_0\rVert$) is solved cold and
-warm-started from the previous step's $(\mathcal{F}, x)$ pair
-(Figure~\ref{fig:nncg_warm}). The mean outer count drops from \nncgWarmColdOuter{} to
-\nncgWarmOuter{} and the total inner count by a factor of \nncgWarmInnerX{}. The mean support
-drift is \nncgWarmDrift{} indices per step. The support-stable case of
-Proposition~\ref{prop:warm} is confirmed exactly: all \nncgWarmStable{} of
-\nncgWarmStableTot{} steps whose optimal support is unchanged are solved in a single
-warm-started outer step, and both starts return the same optimum on every step.
+\emph{Warm-starting along the efficient frontier.} The parametric sweep a practitioner
+actually runs is the long-only efficient frontier itself. On the S\&P~500 (\nncgFrontN{}
+assets, daily returns \nncgFrontStart{}--\nncgFrontEnd{}) we fit a rank-\nncgFrontK{} factor
+covariance $\Sigma = D + L L^\top$---the diagonal-plus-low-rank operator of
+Table~\ref{tab:complexity}, whose \nncgFrontK{} statistical factors carry
+\nncgFrontSysFrac{}\% of the variance---and trace the frontier
+$\min_{w\ge0,\,\mathbf{1}^\top w = 1}\tfrac12 w^\top\Sigma w - \gamma\,\mu^\top w$ over
+\nncgFrontGammas{} values of the risk-aversion $\gamma$, the equality-augmented problem of
+Section~\ref{sec:reduction} with $B = \mathbf{1}^\top$. The operator is reached only through
+$v \mapsto D v + L(L^\top v)$, so $\Sigma$ is never formed and the matrix-free CG inner solve
+of Proposition~\ref{prop:cg} is the natural one. As $\gamma$ grows the holding concentrates
+from \nncgFrontHeldMax{} names toward \nncgFrontHeldMin{}, so adjacent frontier points share
+most of their support. Warm-starting each solve from the previous $\gamma$'s $(\mathcal{F}, x)$
+pair cuts the mean outer count from \nncgWarmColdOuter{} to \nncgWarmOuter{} and the total CG
+inner count by a factor of \nncgWarmInnerX{} (Figure~\ref{fig:nncg_frontier}), a
+\nncgWarmX{}$\times$ wall-clock speedup at an identical optimum (max deviation \nncgWarmErr{}).
+The support-stable case of Proposition~\ref{prop:warm} is confirmed on live data: of the
+\nncgWarmStableTot{} steps, \nncgWarmStable{} leave the optimal support unchanged, and
+\emph{every one} is solved in a single warm-started outer step. The gain is a property of the
+outer loop, so it is independent of the inner solver---the same reduction attends the direct
+free-set solve. MPRGP does not enter this comparison: the budget $\mathbf{1}^\top w = 1$ is an
+equality constraint outside its bound-only scope.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.55\textwidth]{graphs/nncg_warm}
-\caption{Per-step CG iterations along the parametric sweep, cold versus warm-started
-($n = 200$, $\kappa = 10^4$). Warm starts pay only for the support drift and the
-$\log\lVert\delta\rVert$ of Proposition~\ref{prop:warm}; the spikes are the steps where the
-optimal support moves.}
-\label{fig:nncg_warm}
+\includegraphics[width=\textwidth]{graphs/nncg_frontier}
+\caption{Warm-starting the long-only efficient frontier on a matrix-free factor covariance
+$\Sigma = D + L L^\top$ (S\&P~500, $n = \nncgFrontN{}$). \emph{Left}: the frontier, each
+$\gamma$ coloured by the number of names held, concentrating from the min-variance support
+toward a single asset. \emph{Right}: active-set outer steps per frontier point, cold versus
+warm-started from the previous $\gamma$. The reduction is a property of the outer loop, hence
+independent of the inner solver; the warm run pays only for the support drift
+(Proposition~\ref{prop:warm}).}
+\label{fig:nncg_frontier}
 \end{figure}
+
+\emph{Matrix-free at portfolio scale.} Because the factor operator is never assembled, the
+sweep runs in $O(nK)$ memory where a dense $\Sigma$ cannot be formed. Calibrating the fitted
+model to a synthetic universe of $n = \nncgFrontMaxN{}$ assets---a dense $\Sigma$ of
+\nncgFrontMaxGB{}\,GB---the warm-started sweep traces the entire frontier in under a second, a
+\nncgFrontMaxX{}$\times$ speedup over the cold sweep (Table~\ref{tab:nncg_frontier}), in the
+regime where the assembled solvers of the external benchmark cannot instantiate the operator at
+all. The efficient frontier is one representative parametric family; the same warm-started loop
+applies to any slowly varying sequence of non-negative quadratic programs---rolling
+rebalancing, regularisation-path sweeps, scenario families---which we do not pursue further
+here.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_frontier}
+\caption{Warm-started matrix-free frontier on a calibrated factor universe: cold versus
+warm-started wall-clock (s) for the whole \nncgFrontGammas{}-point sweep against problem size
+$n$, with the storage a dense $\Sigma$ would need but the factor operator never forms. Applied
+in $O(nK)$; the direct solvers of the external benchmark cannot factorise $\Sigma$ at these
+sizes.}
+\label{tab:nncg_frontier}
+\end{table}
 
 \emph{External baselines.} The comparisons so far are internal: active-set variants against
 one another and against projected gradient. We close the section by placing

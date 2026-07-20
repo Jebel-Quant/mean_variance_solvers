@@ -42,6 +42,11 @@ SCRIPTS = {
     ],
     # companion "Non-Negative Conjugate Gradients" note (nncg package + nncg_note.problems)
     "nncg_note.experiment_nncg": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
+    "nncg_note.experiment_nncg_frontier": [
+        "graphs/nncg_frontier.pdf",
+        "tables/nncg_frontier.tex",
+        "tables/nncg_frontier_defs.tex",
+    ],
     "nncg_note.experiment_nncg_bench": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
     "nncg_note.experiment_nncg_regu": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],
     "nncg_note.experiment_nncg_deblur": [
