@@ -37,10 +37,10 @@ CG on the modified free set each time. The variable toggles are precisely the \e
 pivots} of the linear complementarity problem (LCP) $(A,\,{-b})$. Since $A \succ 0$ makes it a
 $P$-matrix, every principal submatrix is invertible and each pivot is well
 defined~\cite{murty1988,judice1994,kim2011}. Guarding a fast block-pivot path with a
-least-index Bland-style fallback then yields \emph{unconditional} finite termination at the
-unique global minimiser, with no non-degeneracy hypothesis (Theorem~\ref{thm:termination}).
-Classical block-principal-pivoting termination arguments rely on exactly that hypothesis. A
-perturbation lemma extends the guarantee to the inexact CG solves the loop actually performs:
+least-index Bland-style fallback yields finite termination at the unique global minimiser
+even under degeneracy---the block-principal-pivoting construction of Júdice and
+Pires~\cite{judice1994} (Theorem~\ref{thm:termination}). What we add is its transfer to the
+inexact CG solves the loop actually performs: a perturbation lemma shows that
 once the residual is small against the problem's decision margin, the inexact loop visits
 exactly the free sets of the exact one (Lemma~\ref{lem:inexact}). Combining this guarantee
 with a Krylov inner solver on a changing free set turns it into a fast solver in practice. In
@@ -72,9 +72,11 @@ Both building blocks are individually classical. One is an active-set method and
 block-principal-pivoting method for the non-negative and complementarity
 problems~\cite{lawson1974,judice1994,kim2011,murty1988,nocedal2006}. The other is CG with
 preconditioning for SPD systems~\cite{hestenes1952,golub2013,greenbaum1997,trefethenbau1997,%
-benzi2005}. What is \emph{not} classical is the termination result. Block principal pivoting
-is classically shown to terminate only under a non-degeneracy assumption, and the least-index
-Bland fallback removes it (Theorem~\ref{thm:termination}). The synthetic study of
+benzi2005}. What is \emph{not} classical is carrying that termination guarantee to inexact,
+matrix-free inner solves. Pure block principal pivoting terminates only under a non-degeneracy
+assumption; Júdice and Pires' least-index fallback already removes that for exact
+solves~\cite{judice1994}, and Lemma~\ref{lem:inexact} shows the guarantee survives the inexact
+CG solves the matrix-free regime requires (Theorem~\ref{thm:termination}). The synthetic study of
 Section~\ref{sec:results} then shows this unconditional guarantee to be dormant on generic
 data yet genuinely necessary: on an adversarial family of anti-correlated designs the
 unguarded batch path cycles, and only the fallback terminates it. Wrapping this guaranteed
@@ -93,10 +95,18 @@ proportioning and MPRGP algorithms~\cite{dostal1997,dostalschoberl2005} are
 changes through gradient projections. The switches between projection and CG phases are
 governed by sufficient-decrease or proportioning tests. Their convergence rates are stated in
 terms of $\kappa$, and they identify the optimal face finitely under a non-degeneracy
-(strict-complementarity) assumption. The loop developed here is instead a
-\emph{complementary-basis} method. Its iterates are infeasible between outer steps, and the
-free set changes by principal pivots driven by signs alone, with no line search or decrease
-test. Termination is combinatorial: it rests on Murty's least-index rule, which is what
+(strict-complementarity) assumption. They are moreover \emph{bound-constrained} solvers: a
+general equality $Bx = c$---a budget or factor-neutrality condition in the portfolio
+application---breaks the closed-form orthant projection they rely on, and is reached only by
+wrapping them in an outer augmented-Lagrangian loop~\cite{dostal2006smalbe}, at the price of an
+extra level of iteration and of the exact certificate. The loop developed here is instead a
+\emph{complementary-basis} method. Its iterates are infeasible between outer steps, the free
+set changes by principal pivots driven by signs alone with no line search or decrease test, and
+it takes $Bx = c$ directly through the Schur-complement elimination of
+Section~\ref{sec:reduction}. The trade cuts both ways: this loop adds the equality $Bx = c$ but
+treats only the non-negative orthant $x \geq 0$ (equivalently a single lower bound per
+variable), whereas the feasible-point family handles general two-sided box constraints
+$\ell \leq x \leq u$ that our two-state complementary basis does not express. Termination is combinatorial: it rests on Murty's least-index rule, which is what
 removes the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast
 NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations
 cross-products, but it still assembles $M^\top M$ and solves each working-set system by dense

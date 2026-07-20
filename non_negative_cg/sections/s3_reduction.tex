@@ -16,14 +16,12 @@ outer step, and the inequality $x \geq 0$ is imposed by which indices $\mathcal{
 never inside the linear solve. The inner solver is the proposed CG method.
 
 \paragraph{Matrix-free operator.}
-As a Krylov subspace method, CG requires only the mat-vec $v \mapsto A_{\mathcal{F}}\,v$ for
-$A_{\mathcal{F}}$, never the explicit matrix. On the free set $\mathcal{F}$ for
-$A = M^\top M$ this factors as $A_{\mathcal{F}}\,v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$
-with $M_{\mathcal{F}} = M_{:,\mathcal{F}}$. These are two products with the
-$m \times |\mathcal{F}|$ submatrix at $O(m\,|\mathcal{F}|)$, so the Gram matrix is never formed
-and no $O(n^2)$ storage is used. This is equivalent to the standard
-CG-on-the-normal-equations arrangement~\cite{golub2013,paige1975,choi2006} applied to a column
-subset that changes between outer steps.
+CG needs only the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never the explicit matrix. For
+$A = M^\top M$ this is $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
+$M_{\mathcal{F}} = M_{:,\mathcal{F}}$, two products at $O(m\,|\mathcal{F}|)$ and no $O(n^2)$
+storage---the standard CG-on-the-normal-equations
+arrangement~\cite{golub2013,paige1975,choi2006} on a column subset that changes between outer
+steps.
 
 The whole method requires only two operations of $A$, and this mat-vec is the first. The
 \emph{free-block application} $v \mapsto A_{\mathcal{F}}v$ is all CG needs to
@@ -56,18 +54,13 @@ for CG.
   $A_{\mathcal{F}}$-energy norm of the error $e = x_{\mathcal{F}} - x_k$.
 \end{proposition}
 
-The rate of convergence is thus $O(\sqrt\kappa)$, so reaching a fixed relative energy-norm
-tolerance takes $O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations. The bound follows from a
-Chebyshev minimax argument: the $k$-th CG error is majorised by the best degree-$k$ polynomial
-on $[\lambda_{\min}, \lambda_{\max}]$ normalised at the origin, which is a scaled Chebyshev
-polynomial~\cite[Lecture~38]{trefethenbau1997}. Clustered spectra beat this bound. CG
-converges superlinearly once the extremal eigenvalues are resolved, which is exactly the
-behaviour the synthetic study of Section~\ref{sec:results} measures. Because $A \succ 0$
-forces every $A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and
-Section~\ref{sec:conditioning} shows how a regularising split lowers $\kappa$ and hence the
-count. This $\sqrt\kappa$ dependence is the whole reason to keep a Krylov inner solver rather
-than a plain gradient iteration: the projected-gradient reference method of
-Section~\ref{sec:nonneg} pays $O(\kappa)$ for the same per-step cost.
+Reaching a fixed relative energy-norm tolerance thus takes
+$O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations, and clustered spectra do better---the
+superlinear phase the synthetic study of Section~\ref{sec:results} measures. Because
+$A \succ 0$ forces every $A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and
+the regularising split of Section~\ref{sec:conditioning} lowers $\kappa$. This $\sqrt\kappa$
+dependence is the whole reason to keep a Krylov inner solver: the projected-gradient reference
+of Section~\ref{sec:nonneg} pays $O(\kappa)$ at the same per-step cost.
 
 \paragraph{Eliminating the equality multipliers.}
 For the equality-augmented problem~\eqref{eq:eqp}, stationarity and feasibility on the free
