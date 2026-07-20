@@ -263,21 +263,6 @@ black-background pixels exactly at the non-negativity bound.}
 \label{fig:nncg_deblur}
 \end{figure}
 
-\subsection{Preconditioning}\label{ssec:precond_results}
-
-Section~\ref{sec:conditioning}'s claim that a preconditioner slots
-into the loop unchanged is tested on operators with a well-conditioned core and a badly
-scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
-and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
-Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the spread
-(\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
-plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
-$\kappa(A) \approx \nncgPcgKappa$). That is a factor of $\nncgPcgRatio$ recovered by a
-preconditioner that costs one vector division per iteration. A more powerful
-low-rank-plus-diagonal (randomized Nyström) preconditioner, and the economics of sketching the
-operator once versus resketching each free block, are developed and timed in
-Appendix~\ref{app:nystrom}.
-
 \subsection{Inexactness and general equality constraints}\label{ssec:robustness}
 
 \subsubsection{Inexact inner solves}\label{sssec:inexact}

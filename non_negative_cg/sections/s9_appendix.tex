@@ -1,5 +1,16 @@
-\section{Randomized Nyström preconditioning}\label{app:nystrom}
+\section{Preconditioning experiments}\label{app:precond}
 
+\paragraph{Jacobi.}
+Section~\ref{sec:conditioning}'s claim that a preconditioner slots into the loop unchanged is
+tested on operators with a well-conditioned core and a badly scaled diagonal,
+$A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$ and the entries of
+$D$ spread over four decades. Jacobi-preconditioned CG inside Algorithm~\ref{alg:elim} runs at
+the core's conditioning regardless of the spread (\nncgPcgPCG{} inner iterations against
+\nncgPcgBase{} for the unscaled operator), while plain CG pays for the scaling in full
+($\nncgPcgCG$ iterations at $\kappa(A) \approx \nncgPcgKappa$)---a factor of $\nncgPcgRatio$
+recovered by a preconditioner that costs one vector division per iteration.
+
+\paragraph{Randomized Nyström.}
 The low-rank-plus-diagonal preconditioner of Section~\ref{ssec:precond} is built in \texttt{nncg}
 by randomized Nyström sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$
 for an orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$, and a scalar
