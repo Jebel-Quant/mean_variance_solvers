@@ -23,7 +23,10 @@ dependencies = [
     "pyarrow",
     "scikit-learn",
     # solver stack: nncg (method under study) + baselines.py comparison solvers
-    "nncg==0.4.1",
+    # Pinned to a commit rather than a release: GlobalNystrom (used by
+    # experiment_nncg_precond.py) landed on main after the v0.5.0 tag was cut.
+    # Swap this back to a plain version pin once a release includes it.
+    "nncg",
     "cvx-linalg",
     "clarabel",
     "osqp",
@@ -38,6 +41,9 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+nncg = { git = "https://github.com/Jebel-Quant/nncg", rev = "52346e12b4ec9f18f4ad497827867bbbaefccec9" }
 
 [dependency-groups]
 dev = ["pytest", "pytest-cov"]
