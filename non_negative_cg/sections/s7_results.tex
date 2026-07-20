@@ -49,7 +49,7 @@ $p+1$ right-hand sides that share the operator $A_{\mathcal{F}}$
 small $p$ of typical balance conditions. The asymptotics in $n$, $m$, and $\kappa$ are
 otherwise those of Table~\ref{tab:complexity}.
 
-\subsection{Behaviour on synthetic SPD problems}\label{ssec:synthetic}
+\subsection{A controlled test family}\label{ssec:synthetic}
 
 We test the propositions on a controlled family with a known optimum. Take
 $A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a geometric spectrum
@@ -140,7 +140,9 @@ regularisation.
 \end{minipage}
 \end{figure}
 
-\emph{Exercising the fallback.} That the fallback lies dormant on generic data raises the
+\subsubsection{Exercising the fallback}\label{sssec:fallback}
+
+That the fallback lies dormant on generic data raises the
 question of whether it is needed at all. The following family answers it. Let the columns of
 $M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$, with small $\xi$ and a
 ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix. Pushing a variable to the bound flips
@@ -156,7 +158,9 @@ each exit certified by the KKT system to working tolerance. The guarantee of
 Theorem~\ref{thm:termination} is therefore not decorative: on adversarial data the unguarded
 fast path genuinely cycles, and the fallback is what terminates it.
 
-\emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
+\subsubsection{Rank deficiency}
+
+Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
 regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
 $M \in \mathbb{R}^{100\times 200}$. Every free block with $|\mathcal{F}| > m = 100$ is then
 singular, including the initial one, since the loop starts from
@@ -187,7 +191,9 @@ of magnitude fewer inner iterations.}
 \label{tab:nncg_rankdef}
 \end{table}
 
-\emph{An official ill-posed problem.} The synthetic family is planted for control; to confirm
+\subsubsection{A recognised ill-posed problem}
+
+The synthetic family is planted for control; to confirm
 the same behaviour on a recognised instance, we take the \texttt{shaw} problem from Hansen's
 Regularization Tools~\cite{hansen1994regutools,shaw1972}, a severely ill-posed one-dimensional
 image-restoration model. Its exact solution, a sum of two Gaussians, is strictly positive and
@@ -216,7 +222,24 @@ is large and structured. The loop recovers the signal, certifies KKT optimality,
 $\nncgPhilActive{}$ variables at the bound against the $\nncgPhilTrueZeros{}$ true zeros,
 agreeing with Lawson--Hanson to $\nncgPhilErrLH{}$.
 
-\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely. The
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_regu}
+\caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
+Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
+CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
+pinned at the bound. At $\alpha = 0$ the singular Gram operator
+($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
+with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
+\label{tab:nncg_regu}
+\end{table}
+
+\subsection{Matrix-free operation at scale}\label{ssec:matrixfree}
+
+\subsubsection{Deblurring beyond a dense operator}
+
+The problems so far are small enough to store $A$ densely. The
 method's reason for existing is the regime where that is impossible. A separable Gaussian blur
 $B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
 non-negative deconvolution~\cite{hansen2006deblurring} whose Gram operator $A = B^\top B$ has
@@ -241,7 +264,9 @@ by the $\nncgDeblurActive{}$ active non-negativity constraints.}
 \label{fig:nncg_deblur}
 \end{figure}
 
-\emph{Matrix-free timing at scale.} The same family places the method against four external
+\subsubsection{Timing against dense baselines}
+
+The same family places the method against four external
 solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
 OSQP~\cite{osqp} need the explicit Gram operator $A = B^\top B$, available here in
 closed form as $A_\alpha = (1-\alpha)(G \otimes G) + \alpha I$ with $G = K^\top K$, so they pay
@@ -290,20 +315,11 @@ budget and the dense solvers are not run.}
 \label{tab:nncg_deblur}
 \end{table}
 
-\begin{table}[ht]
-\centering
-\footnotesize
-\input{tables/nncg_regu}
-\caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
-Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
-CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
-pinned at the bound. At $\alpha = 0$ the singular Gram operator
-($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
-with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
-\label{tab:nncg_regu}
-\end{table}
+\subsection{Preconditioning}\label{ssec:precond_results}
 
-\emph{Preconditioning.} Section~\ref{sec:conditioning}'s claim that a preconditioner slots
+\subsubsection{Jacobi preconditioning}
+
+Section~\ref{sec:conditioning}'s claim that a preconditioner slots
 into the loop unchanged is tested on operators with a well-conditioned core and a badly
 scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
 and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
@@ -313,8 +329,10 @@ plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
 $\kappa(A) \approx \nncgPcgKappa$). That is a factor of $\nncgPcgRatio$ recovered by a
 preconditioner that costs one vector division per iteration.
 
+\subsubsection{Preconditioner reuse: \texttt{Nystrom} versus \texttt{GlobalNystrom}}
+
 \textcolor{blue}{
-\emph{Preconditioner reuse: \texttt{Nystrom} versus \texttt{GlobalNystrom}.} The sketch-once
+The sketch-once
 design of Section~\ref{ssec:precond} is tested on the planted spectral-gap family of
 github.com/Jebel-Quant/nncg's solver-comparison notebook: $\nncgPrecondN{}$ dominant-over-tail
 eigenvalues, sketch rank $\nncgPrecondRank{}$, solved against $\nncgPrecondNSolves{}$
@@ -342,7 +360,11 @@ across every later free-block solve rather than repaid on each one.}}
 \label{fig:nncg_precond}
 \end{figure}
 
-\emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
+\subsection{Inexactness and general equality constraints}\label{ssec:robustness}
+
+\subsubsection{Inexact inner solves}\label{sssec:inexact}
+
+In line with Lemma~\ref{lem:inexact}, running the loop with its
 CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
 twin loop whose inner solver is an exact direct solve produces \emph{identical} free-set
 trajectories on all \nncgTrajTotal{} planted instances
@@ -350,7 +372,9 @@ trajectories on all \nncgTrajTotal{} planted instances
 Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
 in principle but decision-for-decision.
 
-\emph{The general equality constraint.} The same loop with the Schur-complement elimination of
+\subsubsection{The general equality constraint}
+
+The same loop with the Schur-complement elimination of
 Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp} for a general
 $Bx = c$. On planted instances with $B \in \mathbb{R}^{p\times n}$ of full row rank, the solver
 recovers the optimum to $\nncgEqErr$ and meets the equality to machine precision for
@@ -358,7 +382,11 @@ $p \in \{1, 3, 10\}$, with the inner cost scaling as the $p+1$ shared right-hand
 anticipated in Section~\ref{sec:reduction}. The case $p=1$ reproduces the single-normalisation
 solve exactly.
 
-\emph{Warm-starting along the efficient frontier.} The parametric sweep a practitioner
+\subsection{Warm-starting a parametric sweep}\label{ssec:frontier}
+
+\subsubsection{The long-only efficient frontier}
+
+The parametric sweep a practitioner
 actually runs is the long-only efficient frontier itself. On the S\&P~500 (\nncgFrontN{}
 assets, daily returns \nncgFrontStart{}--\nncgFrontEnd{}) we fit a rank-\nncgFrontK{} factor
 covariance $\Sigma = D + L L^\top$---the diagonal-plus-low-rank operator of
@@ -394,7 +422,9 @@ independent of the inner solver; the warm run pays only for the support drift
 \label{fig:nncg_frontier}
 \end{figure}
 
-\emph{Matrix-free at portfolio scale.} Because the factor operator is never assembled, the
+\subsubsection{Matrix-free at portfolio scale}
+
+Because the factor operator is never assembled, the
 sweep runs in $O(nK)$ memory where a dense $\Sigma$ cannot be formed. Calibrating the fitted
 model to a synthetic universe of $n = \nncgFrontMaxN{}$ assets---a dense $\Sigma$ of
 \nncgFrontMaxGB{}\,GB---the warm-started sweep traces the entire frontier in under a second, a
@@ -417,7 +447,11 @@ sizes.}
 \label{tab:nncg_frontier}
 \end{table}
 
-\emph{External baselines.} The comparisons so far are internal: active-set variants against
+\subsection{Comparison with external solvers}\label{ssec:external}
+
+\subsubsection{A planted benchmark}
+
+The comparisons so far are internal: active-set variants against
 one another and against projected gradient. We close the section by placing
 Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for.
 This dense, explicitly assembled family is chosen to make that placement fair to the
@@ -471,8 +505,10 @@ duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
 
+\subsubsection{A real, non-synthetic check}
+
 \textcolor{blue}{
-\emph{A real, non-synthetic check.} The external-baseline comparison above is on a planted
+The external-baseline comparison above is on a planted
 family designed to be fair to Lawson--Hanson and Clarabel alike; a genuine hyperspectral
 unmixing problem confirms the same ordering on real data. The Urban scene (HYDICE sensor,
 $\nncgHsUrbPixels{}$ pixels, $\nncgHsUrbBands{}$ clean bands, $\nncgHsUrbMaterials{}$ named
