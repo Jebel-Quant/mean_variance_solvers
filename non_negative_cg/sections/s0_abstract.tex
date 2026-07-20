@@ -1,7 +1,6 @@
 \begin{abstract}
-The conjugate gradient method (CG) solves a symmetric positive definite (SPD) system
-$Ax = b$, but on its own it does not respect $x \geq 0$. We develop \emph{non-negative
-conjugate gradients}, a solver for the bound-constrained quadratic
+
+The conjugate gradient method (CG) solves a symmetric positive definite (SPD) system $Ax = b$, but on its own it does not respect $x \geq 0$. We develop \emph{non-negative conjugate gradients}, a solver for the bound-constrained quadratic
 \[
   \min_{x}\; \tfrac{1}{2}\,x^\top A x - b^\top x
   \quad\text{subject to}\quad x \geq 0,\;\; Bx = c,
