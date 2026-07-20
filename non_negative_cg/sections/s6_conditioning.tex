@@ -106,31 +106,12 @@ It captures the leading spectral structure a diagonal misses. When $A$ is itself
 diagonal-plus-low-rank the preconditioner \emph{is} $A$, giving $\kappa_P = 1$ and a direct
 inner solve that bypasses CG altogether.
 
-\paragraph{Randomized Nystr\"om preconditioner.}
-The \texttt{nncg} method builds this low-rank-plus-diagonal preconditioner by randomized
-Nystr\"om sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$ for an
-orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$, and a scalar
-tail shift $\mu$. This is the constant-diagonal case $d = \mu\mathbf{1}$,
-$\Delta = \Lambda - \mu I$ of the preconditioner above. It comes in two variants that trade
-off exactly where the free set changes. The first, \texttt{Nystrom}, sketches the
-\emph{current} free block $A_{\mathcal{F}}$ on every outer step, using a handful of
-matrix-free products against $A_{\mathcal{F}}$ plus a QR and a small eigendecomposition. It is
-thus always built on the operator the loop is about to solve, at the price of repeating that
-work whenever $\mathcal{F}$ changes. The second, \texttt{GlobalNystrom}, sketches the
-\emph{full} operator $A$ once. It exploits that restricting a rank-$r$ factorisation to a
-principal submatrix is exact,
-$(U\Lambda U^\top + \mu(I-UU^\top))_{\mathcal{F}} = U_{\mathcal{F}}\Lambda U_{\mathcal{F}}^\top +
-\mu(I_{\mathcal{F}} - U_{\mathcal{F}} U_{\mathcal{F}}^\top)$ with $U_{\mathcal{F}} =
-U[\mathcal{F},:]$. Every later free set then reuses the one global sketch by masking rows
-rather than resketching. The masked $U_{\mathcal{F}}$ is no longer orthonormal, so its inverse
-needs the general Sherman--Morrison--Woodbury identity rather than \texttt{Nystrom}'s
-specialised identity-plus-projection form; it is built once per free set in
-$O(|\mathcal{F}|\,r + r^3)$ and applied in $O(|\mathcal{F}|\,r)$ thereafter. The trade mirrors
-the factorised-preconditioner case above. \texttt{GlobalNystrom} pays its larger,
-whole-operator sketch cost once, then amortises it across every outer step of a solve and
-across the support-stable warm-started re-solves of Proposition~\ref{prop:warm}. That is
-exactly where a resketched-per-block \texttt{Nystrom} pays repeatedly for work
-\texttt{GlobalNystrom} does once.
+The \texttt{nncg} package realises this low-rank-plus-diagonal preconditioner by randomized
+Nyström sketching, in a resketch-per-block variant (\texttt{Nystrom}) and a
+sketch-once-and-mask variant (\texttt{GlobalNystrom}) that trade setup cost against reuse
+exactly as the factorised-preconditioner case above; the global sketch amortises across the
+support-stable warm-started re-solves of Proposition~\ref{prop:warm}. Appendix~\ref{app:nystrom}
+gives the construction and a timing comparison.
 
 \paragraph{Stopping criterion.}
 PCG naturally monitors the preconditioned residual norm $(r^\top P_{\mathcal{F}}^{-1}

@@ -265,8 +265,6 @@ black-background pixels exactly at the non-negativity bound.}
 
 \subsection{Preconditioning}\label{ssec:precond_results}
 
-\subsubsection{Jacobi preconditioning}
-
 Section~\ref{sec:conditioning}'s claim that a preconditioner slots
 into the loop unchanged is tested on operators with a well-conditioned core and a badly
 scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
@@ -275,38 +273,10 @@ Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the sprea
 (\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
 plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
 $\kappa(A) \approx \nncgPcgKappa$). That is a factor of $\nncgPcgRatio$ recovered by a
-preconditioner that costs one vector division per iteration.
-
-\subsubsection{Preconditioner reuse: \texttt{Nystrom} versus \texttt{GlobalNystrom}}
-
-\textcolor{blue}{
-The sketch-once
-design of Section~\ref{ssec:precond} is tested on the planted spectral-gap family of
-github.com/Jebel-Quant/nncg's solver-comparison notebook: $\nncgPrecondN{}$ dominant-over-tail
-eigenvalues, sketch rank $\nncgPrecondRank{}$, solved against $\nncgPrecondNSolves{}$
-independent right-hand sides sharing one operator and one solver instance per method (so
-\texttt{GlobalNystrom}'s cache persists across solves exactly as Proposition~\ref{prop:warm}'s
-warm-started re-solves would reuse it). Figure~\ref{fig:nncg_precond} plots cumulative wall
-time against the number of solves for \texttt{CG}, \texttt{Jacobi}, \texttt{Nystrom}, and
-\texttt{GlobalNystrom}: all four reach the identical solution on every right-hand side (max
-disagreement $\nncgPrecondMaxError{}$), so only the cost differs. \texttt{GlobalNystrom}'s
-cumulative cost falls below \texttt{Nystrom}'s already by solve $\nncgPrecondCrossover{}$ and
-finishes $\nncgPrecondFinalSpeedup{}\times$ ahead ($\nncgPrecondGlobalFinalMs{}$\,ms versus
-$\nncgPrecondNystromFinalMs{}$\,ms), confirming that paying the larger whole-operator sketch
-once is cheaper than resketching every free block, on every solve, once the same operator is
-reused often enough.
-}
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.55\textwidth]{graphs/nncg_precond}
-\caption{\textcolor{blue}{Cumulative wall time over $\nncgPrecondNSolves{}$ repeated solves of
-the same $n=\nncgPrecondN{}$ spectral-gap operator (sketch rank $\nncgPrecondRank{}$), one line
-per inner solver. \texttt{GlobalNystrom} overtakes \texttt{Nystrom} at solve
-$\nncgPrecondCrossover{}$ and stays ahead, since its one-time full-operator sketch is amortised
-across every later free-block solve rather than repaid on each one.}}
-\label{fig:nncg_precond}
-\end{figure}
+preconditioner that costs one vector division per iteration. A more powerful
+low-rank-plus-diagonal (randomized Nyström) preconditioner, and the economics of sketching the
+operator once versus resketching each free block, are developed and timed in
+Appendix~\ref{app:nystrom}.
 
 \subsection{Inexactness and general equality constraints}\label{ssec:robustness}
 

@@ -1,0 +1,47 @@
+\section{Randomized Nyström preconditioning}\label{app:nystrom}
+
+The low-rank-plus-diagonal preconditioner of Section~\ref{ssec:precond} is built in \texttt{nncg}
+by randomized Nyström sketching~\cite{halko2011}, $A \approx U\Lambda U^\top + \mu(I - UU^\top)$
+for an orthonormal $U \in \mathbb{R}^{n \times r}$, captured eigenvalues $\Lambda$, and a scalar
+tail shift $\mu$; this is the constant-diagonal case $d = \mu\mathbf{1}$,
+$\Delta = \Lambda - \mu I$ of that preconditioner. It comes in two variants that trade off
+exactly where the free set changes. The first, \texttt{Nystrom}, sketches the \emph{current}
+free block $A_{\mathcal{F}}$ on every outer step, using a handful of matrix-free products
+against $A_{\mathcal{F}}$ plus a QR and a small eigendecomposition. It is thus always built on
+the operator the loop is about to solve, at the price of repeating that work whenever
+$\mathcal{F}$ changes. The second, \texttt{GlobalNystrom}, sketches the \emph{full} operator $A$
+once. It exploits that restricting a rank-$r$ factorisation to a principal submatrix is exact,
+$(U\Lambda U^\top + \mu(I-UU^\top))_{\mathcal{F}} = U_{\mathcal{F}}\Lambda U_{\mathcal{F}}^\top +
+\mu(I_{\mathcal{F}} - U_{\mathcal{F}} U_{\mathcal{F}}^\top)$ with $U_{\mathcal{F}} =
+U[\mathcal{F},:]$. Every later free set then reuses the one global sketch by masking rows rather
+than resketching. The masked $U_{\mathcal{F}}$ is no longer orthonormal, so its inverse needs the
+general Sherman--Morrison--Woodbury identity rather than \texttt{Nystrom}'s specialised
+identity-plus-projection form; it is built once per free set in $O(|\mathcal{F}|\,r + r^3)$ and
+applied in $O(|\mathcal{F}|\,r)$ thereafter. \texttt{GlobalNystrom} pays its larger,
+whole-operator sketch cost once, then amortises it across every outer step of a solve and across
+the support-stable warm-started re-solves of Proposition~\ref{prop:warm}, exactly where a
+resketched-per-block \texttt{Nystrom} pays repeatedly for work \texttt{GlobalNystrom} does once.
+
+The sketch-once design is borne out empirically. On the planted spectral-gap family of the
+\texttt{nncg} solver-comparison notebook ($\nncgPrecondN{}$ dominant-over-tail eigenvalues,
+sketch rank $\nncgPrecondRank{}$, solved against $\nncgPrecondNSolves{}$ independent right-hand
+sides sharing one operator and one solver instance per method, so \texttt{GlobalNystrom}'s cache
+persists across solves as Proposition~\ref{prop:warm}'s warm-started re-solves would reuse it),
+all of \texttt{CG}, \texttt{Jacobi}, \texttt{Nystrom}, and \texttt{GlobalNystrom} reach the
+identical solution on every right-hand side (max disagreement $\nncgPrecondMaxError{}$), so only
+the cost differs (Figure~\ref{fig:nncg_precond}). \texttt{GlobalNystrom}'s cumulative cost falls
+below \texttt{Nystrom}'s by solve $\nncgPrecondCrossover{}$ and finishes
+$\nncgPrecondFinalSpeedup{}\times$ ahead ($\nncgPrecondGlobalFinalMs{}$\,ms versus
+$\nncgPrecondNystromFinalMs{}$\,ms), confirming that paying the larger whole-operator sketch once
+is cheaper than resketching every free block once the operator is reused often enough.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.55\textwidth]{graphs/nncg_precond}
+\caption{Cumulative wall time over $\nncgPrecondNSolves{}$ repeated solves of the same
+$n=\nncgPrecondN{}$ spectral-gap operator (sketch rank $\nncgPrecondRank{}$), one line per inner
+solver. \texttt{GlobalNystrom} overtakes \texttt{Nystrom} at solve $\nncgPrecondCrossover{}$ and
+stays ahead, since its one-time full-operator sketch is amortised across every later free-block
+solve rather than repaid on each one.}
+\label{fig:nncg_precond}
+\end{figure}
