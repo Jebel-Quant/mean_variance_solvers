@@ -79,8 +79,7 @@ principal pivoting~\cite{judice1994}.
 \begin{theorem}[Finite convergence of Algorithm~\ref{alg:elim}]\label{thm:termination}
 Let $f(x) = \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$. Then for any patience budget
 $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim} terminates in finitely many outer
-iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$. No
-non-degeneracy assumption is required. The same holds for the equality-augmented
+iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$, even under degeneracy. The same holds for the equality-augmented
 problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $B^\top\lambda$,
 provided $B_{\mathcal{F}}$ retains full row rank on every free set the loop visits (automatic
 for $p=1$; generic once $|\mathcal{F}| \geq p$).
@@ -138,9 +137,42 @@ reduce $N$ only when a dropped index is immediately re-added (or vice versa), wh
 $s_i = 0$ exactly for some toggled $i$, a codimension-one and hence non-generic
 condition~\cite{judice1994}. Block principal pivoting therefore converges in a handful of
 outer steps on typical data, with the fast path alone certifying optimality.
-Section~\ref{ssec:synthetic} exhibits the flip side: an anti-correlated design family that
+Section~\ref{sssec:fallback} exhibits the flip side: an anti-correlated design family that
 makes the event systematic, on which the unguarded batch path provably cycles and only the
 fallback terminates.
+
+\paragraph{What is new relative to Júdice--Pires.}
+For exact inner solves, the guarded loop above \emph{is} the block-principal-pivoting
+algorithm of Júdice and Pires~\cite{judice1994}: a batch exchange safeguarded by Murty's
+least-index single pivot~\cite{murty1988}, already finite on the strictly monotone
+($A \succ 0$) LCP, even under degeneracy. We claim no novelty for that
+construction; Theorem~\ref{thm:termination} restates it in active-set language for
+self-containedness. The contribution is what Table~\ref{tab:novelty} isolates, and its crux is
+the first row: classical block-pivoting termination assumes each principal-block system is
+solved \emph{exactly}, whereas the matrix-free regime solves it only to a tolerance.
+Lemma~\ref{lem:inexact} closes exactly this gap---once the inner residual is tied to the
+decision margin, the inexact loop makes the identical primal and dual sign decisions as the
+exact loop, so the Júdice--Pires count transfers verbatim. Without it, block pivoting and
+Krylov inner solves do not obviously compose: a tolerance-level solve can flip a sign test and
+reintroduce the cycling the fallback exists to prevent.
+
+\begin{table}[ht]\centering\footnotesize
+\begin{tabular}{lll}
+\toprule
+ & Júdice--Pires~\cite{judice1994} / Murty~\cite{murty1988} & This paper \\
+\midrule
+Inner solve  & exact principal-block solve & inexact matrix-free CG, guarantee preserved (Lemma~\ref{lem:inexact}) \\
+Operator     & assembled/dense             & never forms $A$; $O(\sqrt\kappa)$ Krylov rate, $O(n)$ memory \\
+Constraints  & bounds ($x\ge0$)            & bounds \emph{and} equality $Bx=c$ (Schur complement) \\
+SPD premise  & assumed                     & secured for rank-deficient $A=M^\top M$ by the regularising split \\
+\bottomrule
+\end{tabular}
+\caption{What Theorem~\ref{thm:termination} and Lemma~\ref{lem:inexact} add over the
+finite-termination guarantee of block principal pivoting. The termination \emph{count} is
+Júdice--Pires'; the novelty is carrying it to the inexact, matrix-free, equality-augmented
+setting.}
+\label{tab:novelty}
+\end{table}
 
 Theorem~\ref{thm:termination} assumes each inner call returns the exact minimiser of
 $f_{\mathcal{F}}$, whereas CG returns an iterate accurate only to its residual tolerance. The
@@ -209,7 +241,7 @@ entries being zero in both.
 \begin{remark}[Reading the margin condition]\label{rem:inexact}
 Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
 excluded. The threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
-lemma, like the theorem it protects, needs no non-degeneracy assumption. Moreover, since
+lemma, like the theorem it protects, holds even under degeneracy. Moreover, since
 $\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
 with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
 algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a
@@ -219,7 +251,7 @@ condition~\eqref{eq:inexactcond} becomes a bound on $\varepsilon_{\mathrm{cg}}$ 
 (iii) The margin $\mu$ is not computable a priori, so the lemma is a license, not a recipe. It
 guarantees that \emph{some} finite tolerance reproduces the exact trajectory, and in practice
 a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffices
-(Section~\ref{ssec:synthetic} verifies trajectory-for-trajectory agreement at
+(Section~\ref{sssec:inexact} verifies trajectory-for-trajectory agreement at
 $\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$).
 \end{remark}
 
@@ -316,10 +348,10 @@ yields the bound.
 \end{proof}
 
 When the support does drift, no comparable a-priori bound is available; the loop is not
-monotone in the free set, as the adversarial family of Section~\ref{ssec:synthetic} makes
+monotone in the free set, as the adversarial family of Section~\ref{sssec:fallback} makes
 plain. The empirical picture is nonetheless simple: the warm-started outer count tracks the
 support drift $|\mathcal{F} \,\triangle\, \mathcal{F}'|$ and collapses to one whenever the
-drift is zero, exactly as the proposition prescribes (Section~\ref{ssec:synthetic}). A direct
+drift is zero, exactly as the proposition prescribes (Section~\ref{ssec:frontier}). A direct
 inner solver profits only from the warm free set, having no analogue of an initial guess. The
 matrix-free CG inner solver profits from both, which is where warm-started parametric sweeps
 obtain their largest speed-ups.

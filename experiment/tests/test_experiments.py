@@ -42,8 +42,23 @@ SCRIPTS = {
     ],
     # companion "Non-Negative Conjugate Gradients" note (nncg package + nncg_note.problems)
     "nncg_note.experiment_nncg": ["graphs/nncg_kappa.pdf", "tables/nncg_synthetic.tex"],
+    "nncg_note.experiment_nncg_frontier": [
+        "graphs/nncg_frontier.pdf",
+        "tables/nncg_frontier.tex",
+        "tables/nncg_frontier_defs.tex",
+    ],
+    "nncg_note.experiment_nncg_certificate": [
+        "graphs/nncg_certificate.pdf",
+        "tables/nncg_certificate_defs.tex",
+    ],
     "nncg_note.experiment_nncg_bench": ["graphs/nncg_bench.pdf", "tables/nncg_bench_defs.tex"],
     "nncg_note.experiment_nncg_regu": ["tables/nncg_regu.tex", "tables/nncg_regu_defs.tex"],
+    "nncg_note.experiment_nncg_deblur": [
+        "graphs/nncg_deblur.pdf",
+        "graphs/nncg_deblur_bench.pdf",
+        "tables/nncg_deblur.tex",
+        "tables/nncg_deblur_defs.tex",
+    ],
     "nncg_note.experiment_nncg_deblur": ["graphs/nncg_deblur.pdf", "tables/nncg_deblur_defs.tex"],
     "nncg_note.experiment_nncg_precond": ["graphs/nncg_precond.pdf", "tables/nncg_precond_defs.tex"],
     "nncg_note.experiment_nncg_hyperspectral": [

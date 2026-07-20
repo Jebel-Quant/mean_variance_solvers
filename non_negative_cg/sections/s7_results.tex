@@ -49,7 +49,7 @@ $p+1$ right-hand sides that share the operator $A_{\mathcal{F}}$
 small $p$ of typical balance conditions. The asymptotics in $n$, $m$, and $\kappa$ are
 otherwise those of Table~\ref{tab:complexity}.
 
-\subsection{Behaviour on synthetic SPD problems}\label{ssec:synthetic}
+\subsection{A controlled test family}\label{ssec:synthetic}
 
 We test the propositions on a controlled family with a known optimum. Take
 $A = Q\Lambda Q^\top$ with $Q$ a random orthogonal matrix and a geometric spectrum
@@ -64,12 +64,14 @@ NumPy script that implements Algorithm~\ref{alg:elim}, the CG inner solve, and t
 method directly from their definitions. The matrix-free deblurring study is likewise
 NumPy-only. The external-solver benchmark below and the \texttt{shaw}/\texttt{phillips}
 ill-posed study are two further scripts whose only additional dependency is SciPy (and, for the
-benchmark, Clarabel). The algorithms are also released as the
+benchmark, Clarabel). The warm-started efficient-frontier study reads the committed S\&P~500
+returns panel and adds pandas. The algorithms are also released as the
 open-source package \texttt{nncg} (\url{https://github.com/Jebel-Quant/nncg}), whose test
 suite is this study. Planted recovery, the equality-augmented solve, trajectory agreement
-under inexact solves, the warm-start single-step property, the \texttt{shaw}/\texttt{phillips}
-regularisation and recovery runs, the matrix-free deblurring solve, and the adversarial family
-that forces the fallback all run as continuous-integration checks. The geometric spectrum is
+under inexact solves, the warm-started frontier's single-step property, the
+\texttt{shaw}/\texttt{phillips} regularisation and recovery runs, the matrix-free deblurring
+solve, and the adversarial family that forces the fallback all run as continuous-integration
+checks. The geometric spectrum is
 the honest choice: its clustering lets CG converge faster than the worst-case bound, so the
 measured growth is an \emph{upper}-bounded confirmation of Proposition~\ref{prop:cg}, not a
 fitted exponent.
@@ -138,7 +140,9 @@ regularisation.
 \end{minipage}
 \end{figure}
 
-\emph{Exercising the fallback.} That the fallback lies dormant on generic data raises the
+\subsubsection{Exercising the fallback}\label{sssec:fallback}
+
+That the fallback lies dormant on generic data raises the
 question of whether it is needed at all. The following family answers it. Let the columns of
 $M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$, with small $\xi$ and a
 ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix. Pushing a variable to the bound flips
@@ -154,7 +158,9 @@ each exit certified by the KKT system to working tolerance. The guarantee of
 Theorem~\ref{thm:termination} is therefore not decorative: on adversarial data the unguarded
 fast path genuinely cycles, and the fallback is what terminates it.
 
-\emph{Rank deficiency.} Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
+\subsubsection{Rank deficiency}
+
+Table~\ref{tab:nncg_rankdef} probes the semidefinite regime the
 regularising split is claimed to repair: a Gram operator $A = M^\top M$ with
 $M \in \mathbb{R}^{100\times 200}$. Every free block with $|\mathcal{F}| > m = 100$ is then
 singular, including the initial one, since the loop starts from
@@ -185,7 +191,9 @@ of magnitude fewer inner iterations.}
 \label{tab:nncg_rankdef}
 \end{table}
 
-\emph{An official ill-posed problem.} The synthetic family is planted for control; to confirm
+\subsubsection{A recognised ill-posed problem}
+
+The synthetic family is planted for control; to confirm
 the same behaviour on a recognised instance, we take the \texttt{shaw} problem from Hansen's
 Regularization Tools~\cite{hansen1994regutools,shaw1972}, a severely ill-posed one-dimensional
 image-restoration model. Its exact solution, a sum of two Gaussians, is strictly positive and
@@ -214,7 +222,22 @@ is large and structured. The loop recovers the signal, certifies KKT optimality,
 $\nncgPhilActive{}$ variables at the bound against the $\nncgPhilTrueZeros{}$ true zeros,
 agreeing with Lawson--Hanson to $\nncgPhilErrLH{}$.
 
-\emph{Matrix-free at scale.} The problems so far are small enough to store $A$ densely. The
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_regu}
+\caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
+Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
+CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
+pinned at the bound. At $\alpha = 0$ the singular Gram operator
+($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
+with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
+\label{tab:nncg_regu}
+\end{table}
+
+\subsection{Matrix-free operation at scale}\label{ssec:matrixfree}
+
+The problems so far are small enough to store $A$ densely. The
 method's reason for existing is the regime where that is impossible. A separable Gaussian blur
 $B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
 non-negative deconvolution~\cite{hansen2006deblurring} whose Gram operator $A = B^\top B$ has
@@ -230,68 +253,21 @@ changes.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\linewidth]{graphs/nncg_deblur}
-\caption{Matrix-free non-negative deblurring at $N = \nncgDeblurNside{}$
-($n = \nncgDeblurDim{}$ unknowns): the true scene, its Gaussian blur with additive noise, and
-the reconstruction from the matrix-free active-set loop (Algorithm~\ref{alg:elim} with
-\texttt{solve\_nnqp\_op}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
-never forms it, a dense $A$ being $\nncgDeblurDenseGB{}$\,GB. The black background is recovered
-by the $\nncgDeblurActive{}$ active non-negativity constraints.}
+\caption{Matrix-free non-negative deblurring of the Shepp--Logan phantom at
+$N = \nncgDeblurNside{}$ ($n = \nncgDeblurDim{}$ unknowns): the true image, its Gaussian blur
+with additive noise, and the reconstruction from the matrix-free active-set loop
+(Algorithm~\ref{alg:elim}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
+never forms it---a dense $A$ would be $\nncgDeblurDenseGB{}$\,GB. The solve lifts the image from
+$\nncgDeblurPSNRblur{}$ to $\nncgDeblurPSNR{}$\,dB PSNR and pins the $\nncgDeblurActive{}$
+black-background pixels exactly at the non-negativity bound.}
 \label{fig:nncg_deblur}
 \end{figure}
 
-\begin{table}[ht]
-\centering
-\footnotesize
-\input{tables/nncg_regu}
-\caption{The \texttt{shaw} ill-posed problem from Hansen's Regularization
-Tools~\cite{hansen1994regutools} ($n = \nncgReguN{}$, $\nncgReguNoise{}$ relative data noise;
-CG capped at $2000$ iterations per solve, $30$ outer steps). ``Active'' counts components
-pinned at the bound. At $\alpha = 0$ the singular Gram operator
-($\kappa \approx \nncgReguKappa{}$) leaves the loop uncertified; any $\alpha > 0$ terminates
-with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
-\label{tab:nncg_regu}
-\end{table}
+\subsection{Inexactness and general equality constraints}\label{ssec:robustness}
 
-\emph{Preconditioning.} Section~\ref{sec:conditioning}'s claim that a preconditioner slots
-into the loop unchanged is tested on operators with a well-conditioned core and a badly
-scaled diagonal, $A = D^{1/2}(Q\Lambda Q^\top)D^{1/2}$ with $\kappa(Q\Lambda Q^\top) = 10^2$
-and the entries of $D$ spread over four decades. Jacobi-preconditioned CG inside
-Algorithm~\ref{alg:elim} runs at the core's conditioning regardless of the spread
-(\nncgPcgPCG{} inner iterations against \nncgPcgBase{} for the unscaled operator), while
-plain CG pays for the scaling in full ($\nncgPcgCG$ iterations at
-$\kappa(A) \approx \nncgPcgKappa$). That is a factor of $\nncgPcgRatio$ recovered by a
-preconditioner that costs one vector division per iteration.
+\subsubsection{Inexact inner solves}\label{sssec:inexact}
 
-\textcolor{blue}{
-\emph{Preconditioner reuse: \texttt{Nystrom} versus \texttt{GlobalNystrom}.} The sketch-once
-design of Section~\ref{ssec:precond} is tested on the planted spectral-gap family of
-github.com/Jebel-Quant/nncg's solver-comparison notebook: $\nncgPrecondN{}$ dominant-over-tail
-eigenvalues, sketch rank $\nncgPrecondRank{}$, solved against $\nncgPrecondNSolves{}$
-independent right-hand sides sharing one operator and one solver instance per method (so
-\texttt{GlobalNystrom}'s cache persists across solves exactly as Proposition~\ref{prop:warm}'s
-warm-started re-solves would reuse it). Figure~\ref{fig:nncg_precond} plots cumulative wall
-time against the number of solves for \texttt{CG}, \texttt{Jacobi}, \texttt{Nystrom}, and
-\texttt{GlobalNystrom}: all four reach the identical solution on every right-hand side (max
-disagreement $\nncgPrecondMaxError{}$), so only the cost differs. \texttt{GlobalNystrom}'s
-cumulative cost falls below \texttt{Nystrom}'s already by solve $\nncgPrecondCrossover{}$ and
-finishes $\nncgPrecondFinalSpeedup{}\times$ ahead ($\nncgPrecondGlobalFinalMs{}$\,ms versus
-$\nncgPrecondNystromFinalMs{}$\,ms), confirming that paying the larger whole-operator sketch
-once is cheaper than resketching every free block, on every solve, once the same operator is
-reused often enough.
-}
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.55\textwidth]{graphs/nncg_precond}
-\caption{\textcolor{blue}{Cumulative wall time over $\nncgPrecondNSolves{}$ repeated solves of
-the same $n=\nncgPrecondN{}$ spectral-gap operator (sketch rank $\nncgPrecondRank{}$), one line
-per inner solver. \texttt{GlobalNystrom} overtakes \texttt{Nystrom} at solve
-$\nncgPrecondCrossover{}$ and stays ahead, since its one-time full-operator sketch is amortised
-across every later free-block solve rather than repaid on each one.}}
-\label{fig:nncg_precond}
-\end{figure}
-
-\emph{Inexact inner solves.} In line with Lemma~\ref{lem:inexact}, running the loop with its
+In line with Lemma~\ref{lem:inexact}, running the loop with its
 CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
 twin loop whose inner solver is an exact direct solve produces \emph{identical} free-set
 trajectories on all \nncgTrajTotal{} planted instances
@@ -299,7 +275,9 @@ trajectories on all \nncgTrajTotal{} planted instances
 Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
 in principle but decision-for-decision.
 
-\emph{The general equality constraint.} The same loop with the Schur-complement elimination of
+\subsubsection{The general equality constraint}
+
+The same loop with the Schur-complement elimination of
 Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp} for a general
 $Bx = c$. On planted instances with $B \in \mathbb{R}^{p\times n}$ of full row rank, the solver
 recovers the optimum to $\nncgEqErr$ and meets the equality to machine precision for
@@ -307,27 +285,80 @@ $p \in \{1, 3, 10\}$, with the inner cost scaling as the $p+1$ shared right-hand
 anticipated in Section~\ref{sec:reduction}. The case $p=1$ reproduces the single-normalisation
 solve exactly.
 
-\emph{Warm-starting.} A sweep $b_k = b_0 + k\,\delta$ of \nncgWarmSteps{} steps ($n = 200$,
-$\kappa = 10^4$, $\lVert\delta\rVert = 2\%$ of $\lVert b_0\rVert$) is solved cold and
-warm-started from the previous step's $(\mathcal{F}, x)$ pair
-(Figure~\ref{fig:nncg_warm}). The mean outer count drops from \nncgWarmColdOuter{} to
-\nncgWarmOuter{} and the total inner count by a factor of \nncgWarmInnerX{}. The mean support
-drift is \nncgWarmDrift{} indices per step. The support-stable case of
-Proposition~\ref{prop:warm} is confirmed exactly: all \nncgWarmStable{} of
-\nncgWarmStableTot{} steps whose optimal support is unchanged are solved in a single
-warm-started outer step, and both starts return the same optimum on every step.
+\subsection{Warm-starting a parametric sweep}\label{ssec:frontier}
+
+\subsubsection{The long-only efficient frontier}
+
+The parametric sweep a practitioner
+actually runs is the long-only efficient frontier itself. On the S\&P~500 (\nncgFrontN{}
+assets, daily returns \nncgFrontStart{}--\nncgFrontEnd{}) we fit a rank-\nncgFrontK{} factor
+covariance $\Sigma = D + L L^\top$---the diagonal-plus-low-rank operator of
+Table~\ref{tab:complexity}, whose \nncgFrontK{} statistical factors carry
+\nncgFrontSysFrac{}\% of the variance---and trace the frontier
+$\min_{w\ge0,\,\mathbf{1}^\top w = 1}\tfrac12 w^\top\Sigma w - \gamma\,\mu^\top w$ over
+\nncgFrontGammas{} values of the risk-aversion $\gamma$, the equality-augmented problem of
+Section~\ref{sec:reduction} with $B = \mathbf{1}^\top$. The operator is reached only through
+$v \mapsto D v + L(L^\top v)$, so $\Sigma$ is never formed and the matrix-free CG inner solve
+of Proposition~\ref{prop:cg} is the natural one. As $\gamma$ grows the holding concentrates
+from \nncgFrontHeldMax{} names toward \nncgFrontHeldMin{}, so adjacent frontier points share
+most of their support. Warm-starting each solve from the previous $\gamma$'s $(\mathcal{F}, x)$
+pair cuts the mean outer count from \nncgWarmColdOuter{} to \nncgWarmOuter{} and the total CG
+inner count by a factor of \nncgWarmInnerX{} (Figure~\ref{fig:nncg_frontier}), a
+\nncgWarmX{}$\times$ wall-clock speedup at an identical optimum (max deviation \nncgWarmErr{}).
+The support-stable case of Proposition~\ref{prop:warm} is confirmed on live data: of the
+\nncgWarmStableTot{} steps, \nncgWarmStable{} leave the optimal support unchanged, and
+\emph{every one} is solved in a single warm-started outer step. The gain is a property of the
+outer loop, so it is independent of the inner solver---the same reduction attends the direct
+free-set solve. MPRGP does not enter this comparison at all: the budget $\mathbf{1}^\top w = 1$
+is an equality constraint outside its bound-only scope, reachable only by wrapping it in an
+outer augmented-Lagrangian loop~\cite{dostal2006smalbe}, whereas the active-set loop absorbs it
+directly through the Schur-complement elimination of Section~\ref{sec:reduction}. The long-only
+frontier is thus not a problem on which the two methods compete---it is one the feasible-point
+family cannot pose.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.55\textwidth]{graphs/nncg_warm}
-\caption{Per-step CG iterations along the parametric sweep, cold versus warm-started
-($n = 200$, $\kappa = 10^4$). Warm starts pay only for the support drift and the
-$\log\lVert\delta\rVert$ of Proposition~\ref{prop:warm}; the spikes are the steps where the
-optimal support moves.}
-\label{fig:nncg_warm}
+\includegraphics[width=\textwidth]{graphs/nncg_frontier}
+\caption{Warm-starting the long-only efficient frontier on a matrix-free factor covariance
+$\Sigma = D + L L^\top$ (S\&P~500, $n = \nncgFrontN{}$). \emph{Left}: the frontier, each
+$\gamma$ coloured by the number of names held, concentrating from the min-variance support
+toward a single asset. \emph{Right}: active-set outer steps per frontier point, cold versus
+warm-started from the previous $\gamma$. The reduction is a property of the outer loop, hence
+independent of the inner solver; the warm run pays only for the support drift
+(Proposition~\ref{prop:warm}).}
+\label{fig:nncg_frontier}
 \end{figure}
 
-\emph{External baselines.} The comparisons so far are internal: active-set variants against
+\subsubsection{Matrix-free at portfolio scale}
+
+Because the factor operator is never assembled, the
+sweep runs in $O(nK)$ memory where a dense $\Sigma$ cannot be formed. Calibrating the fitted
+model to a synthetic universe of $n = \nncgFrontMaxN{}$ assets---a dense $\Sigma$ of
+\nncgFrontMaxGB{}\,GB---the warm-started sweep traces the entire frontier in under a second, a
+\nncgFrontMaxX{}$\times$ speedup over the cold sweep (Table~\ref{tab:nncg_frontier}), in the
+regime where the assembled solvers of the external benchmark cannot instantiate the operator at
+all. The efficient frontier is one representative parametric family; the same warm-started loop
+applies to any slowly varying sequence of non-negative quadratic programs---rolling
+rebalancing, regularisation-path sweeps, scenario families---which we do not pursue further
+here.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_frontier}
+\caption{Warm-started matrix-free frontier on a calibrated factor universe: cold versus
+warm-started wall-clock (s) for the whole \nncgFrontGammas{}-point sweep against problem size
+$n$, with the storage a dense $\Sigma$ would need but the factor operator never forms. Applied
+in $O(nK)$; the direct solvers of the external benchmark cannot factorise $\Sigma$ at these
+sizes.}
+\label{tab:nncg_frontier}
+\end{table}
+
+\subsection{Comparison with external solvers}\label{ssec:external}
+
+\subsubsection{Dense, assembled problems}
+
+The comparisons so far are internal: active-set variants against
 one another and against projected gradient. We close the section by placing
 Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for.
 This dense, explicitly assembled family is chosen to make that placement fair to the
@@ -381,34 +412,130 @@ duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
 
-\textcolor{blue}{
-\emph{A real, non-synthetic check.} The external-baseline comparison above is on a planted
-family designed to be fair to Lawson--Hanson and Clarabel alike; a genuine hyperspectral
-unmixing problem confirms the same ordering on real data. The Urban scene (HYDICE sensor,
-$\nncgHsUrbPixels{}$ pixels, $\nncgHsUrbBands{}$ clean bands, $\nncgHsUrbMaterials{}$ named
-materials: Asphalt, Grass, Tree, Roof, Metal, Dirt) poses the fully-constrained least-squares
-abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$, $\mathbf{1}^\top x
-= 1$, $A = M^\top M$, independently at every pixel, with $M$ the per-material mean reference
-spectrum. At $n = \nncgHsUrbMaterials{}$ material classes the loop and Clarabel are essentially
-matched ($\nncgHsUrbSpeedupWall{}\times$) --- consistent with Table~\ref{tab:complexity}'s
-per-step costs crossing over only once $n$ grows enough for Clarabel's $O(n^3)$ factorisation
-to outweigh the active-set loop's $O(km)$ mat-vecs, which a handful of material classes is far
-too small to exercise; FISTA is not competitive at any $n$
-($\nncgHsUrbSpeedupFista{}\times$ slower, needing a mean of $\nncgHsUrbFistaIters{}$ and up to
-$\nncgHsUrbFistaItersMax{}$ iterations to the same fixed-point-residual tolerance). Raster-order
-warm starting cuts total outer steps by $\nncgHsUrbSpeedupOuter{}\times$
-($\nncgHsUrbFracSingle{}\%$ of pixels certify in a single warm-started outer step), and cold and
-warm starts agree to $\nncgHsUrbAgree{}$. Figure~\ref{fig:nncg_hyperspectral_urban} shows the
-recovered dominant-material map: the recovered abundances trace out the scene's roads,
-rooftops, and running track, rather than a speckled, uninterpretable field.
-}
+\subsubsection{Matrix-free at scale}
+
+The matrix-free deblurring family of Section~\ref{ssec:matrixfree} places the method against
+four external solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
+OSQP~\cite{osqp} need the explicit Gram operator $A = B^\top B$, available here in
+closed form as $A_\alpha = (1-\alpha)(G \otimes G) + \alpha I$ with $G = K^\top K$, so they pay
+$O(n^2)$ storage and an $O(n^3)$ factorisation. MPRGP~\cite{dostalschoberl2005}, the
+feasible-point competitor of Section~\ref{sec:nonneg}, is matrix-free like the active-set loop
+and pays neither. Table~\ref{tab:nncg_deblur} and Figure~\ref{fig:nncg_deblur_bench} report
+wall-clock against $n$. At $n = \nncgDeblurHeadDim{}$ ($N = \nncgDeblurHeadNside{}$), the
+largest size the dense solvers still handle, the active-set loop finishes in
+$\nncgDeblurHeadMFTime{}$\,s against $\nncgDeblurHeadLHTime{}$\,s for Lawson--Hanson and
+$\nncgDeblurHeadIPTime{}$\,s for Clarabel, a $\nncgDeblurHeadLHx{}\times$ and
+$\nncgDeblurHeadIPx{}\times$ margin. Past that size the dense operator is the binding
+constraint: at $N = \nncgDeblurMaxNside{}$ ($n = \nncgDeblurMaxDim{}$) it would occupy
+$\nncgDeblurMaxDenseGB{}$\,GB, so none of the three dense solvers can even be instantiated,
+whereas the active-set loop solves the problem in $\nncgDeblurMaxTime{}$\,s in $O(n)$ working
+memory. This is the regime the method is built for. The win is not a constant factor on
+assembled problems but a solver that runs at all once $A$ cannot be formed. The comparison also
+makes the enabling property explicit rather than proprietary: MPRGP is matrix-free too, clears
+the same wall, and on this well-conditioned blur is in fact the faster of the two ($O(n)$
+memory, $\nncgDeblurMaxMPRGPTime{}$\,s at the largest size). What the family isolates is
+matrix-free operation, which the active-set loop shares; the choice between it and MPRGP then
+turns on the properties of Section~\ref{sec:nonneg} (an exact KKT certificate at termination,
+and a free-set structure that carries a direct inner solve and warm starts) rather than on raw
+speed here.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.75\textwidth]{graphs/nncg_hyperspectral_urban}
-\caption{\textcolor{blue}{Urban hyperspectral scene ($\nncgHsUrbPixels{}$ pixels,
-$\nncgHsUrbBands{}$ bands, $\nncgHsUrbMaterials{}$ materials): dominant recovered material per
-pixel (left) and the outer-iteration count of the active-set loop, cold versus warm-started
-(right).}}
-\label{fig:nncg_hyperspectral_urban}
+\includegraphics[width=0.55\textwidth]{graphs/nncg_deblur_bench}
+\caption{Wall-clock time against problem size $n = N^2$ on the matrix-free deblurring family:
+the two matrix-free methods (the active-set CG loop and MPRGP) against dense Lawson--Hanson,
+Clarabel, and OSQP. The dense baselines stop where the Gram matrix $A = B^\top B$ ceases to be
+practical to form and factorise; the matrix-free methods continue to $n = \nncgDeblurMaxDim{}$
+(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory. Both matrix-free
+methods run unpreconditioned.}
+\label{fig:nncg_deblur_bench}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_deblur}
+\caption{Matrix-free deblurring: wall-clock (s) against problem size $n = N^2$, the two
+matrix-free methods (MPRGP and the active-set CG loop) versus the dense Lawson--Hanson,
+Clarabel, and OSQP (Gaussian blur $\sigma = 2$, ridge $\alpha = 10^{-3}$). ``dense $A$ (GB)''
+is the storage the dense solvers would need for the Gram operator, which the matrix-free
+methods never form; ``---'' marks sizes where that operator exceeds the benchmark's storage
+budget and the dense solvers are not run. The active-set CG loop is run without a
+preconditioner, as is MPRGP.}
+\label{tab:nncg_deblur}
+\end{table}
+
+\subsubsection{What a feasible-point method cannot certify}
+
+The timing above conceded that MPRGP can be the faster matrix-free solver on a well-conditioned
+operator. Speed, however, is not what separates the two methods. The active-set loop returns an
+\emph{exact} KKT certificate---it identifies the optimal active set combinatorially and returns
+a dual-feasible, complementary $(x, s)$ pair to machine precision---whereas MPRGP, a
+feasible-point method, only drives the KKT residual below a requested tolerance and never
+certifies the active set. On near-degenerate problems the gap is stark. We plant a
+bound-constrained quadratic ($n = \nncgCertN{}$, $\nncgCertSeeds{}$ seeds) whose optimum
+carries a geometric ladder of primal and dual margins down to $\nncgCertMinMargin{}$, so
+identifying the support means resolving ever-smaller gaps. The active-set loop with an exact
+inner solve recovers the support exactly---zero misclassifications---with a KKT residual of
+$\nncgCertASresid{}$ in $\nncgCertASouter{}$ outer steps. MPRGP, run to a practical tolerance of
+$\nncgCertMPtolHi{}$, mislabels $\nncgCertMPerrHi{}$ of the $\nncgCertN{}$ variables and exits
+dual-infeasible (most-negative reduced gradient $\nncgCertMPdualHi{}$); its support error and
+dual infeasibility fall only as fast as the tolerance it is asked for
+(Figure~\ref{fig:nncg_certificate}), matching the active-set support only near
+$\nncgCertMPtolZero{}$ ($\nncgCertMPitZero{}$ iterations)---and even there it emits no
+certificate. This is the structural payoff of the complementary-basis loop, compounded by the
+equality constraint of Section~\ref{ssec:frontier}: the budget $\mathbf{1}^\top x = c$ is
+outside MPRGP's bound-only scope entirely.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/nncg_certificate}
+\caption{Exact certificate versus feasible-point tolerance on a near-degenerate planted
+bound-constrained QP ($n = \nncgCertN{}$, margins down to $\nncgCertMinMargin{}$,
+$\nncgCertSeeds{}$ seeds). \emph{Left}: support-identification errors against the planted
+optimum. \emph{Right}: the KKT natural residual $\|\min(x,s)\|_\infty$. The active-set loop
+(dashed) is exact---zero support errors, residual $\nncgCertASresid{}$---in a fixed
+$\nncgCertASouter{}$ outer steps; MPRGP's error and residual track its stopping tolerance, and
+it never returns a dual-feasible certificate.}
+\label{fig:nncg_certificate}
+\end{figure}
+
+\subsubsection{A real, non-synthetic check at scale}
+
+The external-baseline comparison above is on a planted family designed to be fair to
+Lawson--Hanson and Clarabel alike; a genuine, over-complete hyperspectral unmixing problem
+confirms the same ordering on real data at a scale where the matrix-free argument bites. We
+unmix the Cuprite scene against the full USGS spectral library~\cite{clark2007}---the standard
+over-complete dictionary of the sparse-unmixing literature~\cite{iordache2011}---so each pixel
+poses the fully-constrained
+least-squares abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$,
+$\mathbf{1}^\top x = 1$, $A = M^\top M$, now with $M$ holding $n = \nncgHsLibSignatures{}$
+candidate mineral signatures over $\nncgHsLibBands{}$ bands. The Gram operator is
+$\nncgHsLibSignatures{} \times \nncgHsLibSignatures{}$ of rank only $\nncgHsLibRank{}$, hence
+rank-deficient; a ridge of $\nncgHsLibRidgeFrac{}$ restores the $P$-matrix premise
+(Section~\ref{sec:conditioning}). At this $n$ Clarabel's per-pixel $O(n^3)$ factorisation is
+the binding cost, exactly the regime Table~\ref{tab:complexity} anticipates and the one the
+$n = 6$ Urban scene is far too small to exercise, so the active-set loop's matrix-free $O(km)$
+step wins; FISTA is $\nncgHsLibSpeedupFista{}\times$ slower. Because neighbouring pixels share
+their active dictionary members, raster-order warm starting cuts total outer steps from
+$\nncgHsLibOuterCold{}$ to $\nncgHsLibOuterWarm{}$ ($\nncgHsLibSpeedupOuter{}\times$), a
+$\nncgHsLibSpeedupWall{}\times$ wall-clock speedup, with $\nncgHsLibFracSingle{}\%$ of pixels
+certified in a single warm-started outer step and cold and warm agreeing to $\nncgHsLibAgree{}$.
+Most tellingly for the certificate, from an over-complete dictionary of
+$\nncgHsLibSignatures{}$ candidates the loop identifies a mean of $\nncgHsLibSupportMean{}$
+active signature per pixel (at most $\nncgHsLibSupportMax{}$): it recovers the exact,
+single-mineral support with a KKT certificate, where a feasible-point method returns only an
+approximate abundance vector left to be thresholded
+(Figure~\ref{fig:nncg_hyperspectral_library}).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/nncg_hyperspectral_library}
+\caption{Library-scale FCLS unmixing of the Cuprite scene against the USGS spectral library
+($n = \nncgHsLibSignatures{}$ signatures, $\nncgHsLibBands{}$ bands, $\nncgHsLibPixels{}$
+pixels). \emph{Left}: per-pixel active-set outer-iteration counts, cold versus warm-started;
+warm starting collapses them, with $\nncgHsLibFracSingle{}\%$ of pixels solved in a single
+outer step. \emph{Right}: active library members per pixel---the loop certifies a mean of
+$\nncgHsLibSupportMean{}$, the exact single-mineral support the sparse-unmixing model expects.}
+\label{fig:nncg_hyperspectral_library}
 \end{figure}

@@ -8,7 +8,7 @@ matrix-free. Non-negativity is enforced around it by a primal-dual active-set lo
 toggles are the principal pivots of $\mathrm{LCP}(A,\,{-b})$. Because $A \succ 0$ is a
 $P$-matrix, guarding a fast block-pivot path with a least-index Bland fallback yields
 unconditional finite termination at the unique global minimiser (Theorem~\ref{thm:termination}),
-with no non-degeneracy assumption. The inner solver retains CG's $O(\sqrt\kappa)$ Krylov rate,
+even under degeneracy. The inner solver retains CG's $O(\sqrt\kappa)$ Krylov rate,
 a factor $\sqrt\kappa$ ahead of the loop-free projected-gradient reference method. A
 regularising split $A_\alpha = (1-\alpha)A + \alpha R^\top R$ simultaneously compresses
 $\kappa$ and secures the $P$-matrix property, so it both accelerates the inner solve and
@@ -16,7 +16,14 @@ licenses the termination proof.
 
 The construction is deliberately application-agnostic: it takes an SPD operator (or a
 rectangular $M$ with $A = M^\top M$), a right-hand side, and an optional linear equality
-system $Bx = c$, and returns the non-negative minimiser. The guarantees and complexity recorded here hold for any
-SPD $A$. A reference implementation is available as the open-source package \texttt{nncg}
+system $Bx = c$, and returns the non-negative minimiser. Handling $Bx = c$ directly
+distinguishes the method from the bound-constrained feasible-point solvers (MPRGP and its kin),
+which reach a linear equality only through an outer augmented-Lagrangian
+loop~\cite{dostal2006smalbe}: the long-only portfolio with a budget or factor-neutrality
+constraint is a problem they cannot pose but this loop solves as a single instance. The trade
+is genuine, and runs the other way too: the method treats only the non-negative orthant
+$x \geq 0$, not the general two-sided box $\ell \leq x \leq u$ those methods support, which
+would need a mixed-complementarity formulation we do not develop. The guarantees and complexity
+recorded here hold for any SPD $A$. A reference implementation is available as the open-source package \texttt{nncg}
 (\url{https://github.com/Jebel-Quant/nncg}), whose test suite reproduces the synthetic study
 of Section~\ref{sec:results}.
