@@ -487,7 +487,8 @@ speed here.
 the two matrix-free methods (the active-set CG loop and MPRGP) against dense Lawson--Hanson,
 Clarabel, and OSQP. The dense baselines stop where the Gram matrix $A = B^\top B$ ceases to be
 practical to form and factorise; the matrix-free methods continue to $n = \nncgDeblurMaxDim{}$
-(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory.}
+(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory. Both matrix-free
+methods run unpreconditioned.}
 \label{fig:nncg_deblur_bench}
 \end{figure}
 
@@ -500,9 +501,45 @@ matrix-free methods (MPRGP and the active-set CG loop) versus the dense Lawson--
 Clarabel, and OSQP (Gaussian blur $\sigma = 2$, ridge $\alpha = 10^{-3}$). ``dense $A$ (GB)''
 is the storage the dense solvers would need for the Gram operator, which the matrix-free
 methods never form; ``---'' marks sizes where that operator exceeds the benchmark's storage
-budget and the dense solvers are not run.}
+budget and the dense solvers are not run. The active-set CG loop is run without a
+preconditioner, as is MPRGP.}
 \label{tab:nncg_deblur}
 \end{table}
+
+\subsubsection{What a feasible-point method cannot certify}
+
+The timing above conceded that MPRGP can be the faster matrix-free solver on a well-conditioned
+operator. Speed, however, is not what separates the two methods. The active-set loop returns an
+\emph{exact} KKT certificate---it identifies the optimal active set combinatorially and returns
+a dual-feasible, complementary $(x, s)$ pair to machine precision---whereas MPRGP, a
+feasible-point method, only drives the KKT residual below a requested tolerance and never
+certifies the active set. On near-degenerate problems the gap is stark. We plant a
+bound-constrained quadratic ($n = \nncgCertN{}$, $\nncgCertSeeds{}$ seeds) whose optimum
+carries a geometric ladder of primal and dual margins down to $\nncgCertMinMargin{}$, so
+identifying the support means resolving ever-smaller gaps. The active-set loop with an exact
+inner solve recovers the support exactly---zero misclassifications---with a KKT residual of
+$\nncgCertASresid{}$ in $\nncgCertASouter{}$ outer steps. MPRGP, run to a practical tolerance of
+$\nncgCertMPtolHi{}$, mislabels $\nncgCertMPerrHi{}$ of the $\nncgCertN{}$ variables and exits
+dual-infeasible (most-negative reduced gradient $\nncgCertMPdualHi{}$); its support error and
+dual infeasibility fall only as fast as the tolerance it is asked for
+(Figure~\ref{fig:nncg_certificate}), matching the active-set support only near
+$\nncgCertMPtolZero{}$ ($\nncgCertMPitZero{}$ iterations)---and even there it emits no
+certificate. This is the structural payoff of the complementary-basis loop, compounded by the
+equality constraint of Section~\ref{ssec:frontier}: the budget $\mathbf{1}^\top x = c$ is
+outside MPRGP's bound-only scope entirely.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/nncg_certificate}
+\caption{Exact certificate versus feasible-point tolerance on a near-degenerate planted
+bound-constrained QP ($n = \nncgCertN{}$, margins down to $\nncgCertMinMargin{}$,
+$\nncgCertSeeds{}$ seeds). \emph{Left}: support-identification errors against the planted
+optimum. \emph{Right}: the KKT natural residual $\|\min(x,s)\|_\infty$. The active-set loop
+(dashed) is exact---zero support errors, residual $\nncgCertASresid{}$---in a fixed
+$\nncgCertASouter{}$ outer steps; MPRGP's error and residual track its stopping tolerance, and
+it never returns a dual-feasible certificate.}
+\label{fig:nncg_certificate}
+\end{figure}
 
 \subsubsection{A real, non-synthetic check at scale}
 
