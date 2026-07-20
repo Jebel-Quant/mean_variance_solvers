@@ -309,8 +309,12 @@ The support-stable case of Proposition~\ref{prop:warm} is confirmed on live data
 \nncgWarmStableTot{} steps, \nncgWarmStable{} leave the optimal support unchanged, and
 \emph{every one} is solved in a single warm-started outer step. The gain is a property of the
 outer loop, so it is independent of the inner solver---the same reduction attends the direct
-free-set solve. MPRGP does not enter this comparison: the budget $\mathbf{1}^\top w = 1$ is an
-equality constraint outside its bound-only scope.
+free-set solve. MPRGP does not enter this comparison at all: the budget $\mathbf{1}^\top w = 1$
+is an equality constraint outside its bound-only scope, reachable only by wrapping it in an
+outer augmented-Lagrangian loop~\cite{dostal2006smalbe}, whereas the active-set loop absorbs it
+directly through the Schur-complement elimination of Section~\ref{sec:reduction}. The long-only
+frontier is thus not a problem on which the two methods compete---it is one the feasible-point
+family cannot pose.
 
 \begin{figure}[ht]
 \centering
