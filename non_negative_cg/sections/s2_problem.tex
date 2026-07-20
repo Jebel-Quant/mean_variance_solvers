@@ -55,15 +55,20 @@ free set.
 
 \paragraph{The $P$-matrix property.}
 Since $A \succ 0$, every principal submatrix $A_{\mathcal{F}} = A_{\mathcal{F},\mathcal{F}}$
-is itself SPD and hence invertible with $\det A_{\mathcal{F}} > 0$; a matrix all of whose
-principal minors are positive is a $P$-matrix~\cite{murty1988}. Two consequences follow, both
-used later. First, the linear system $A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}}$
-solved on any candidate free set is well posed, so CG applies at every outer step
-(Section~\ref{sec:reduction}). Second, $\mathrm{LCP}(A,\,{-b})$ with a $P$-matrix has a unique
-solution reachable by principal pivoting~\cite{murty1988,judice1994}, which is the backbone of
-the finite-termination guarantee in Section~\ref{sec:nonneg}. When $A$ is only positive
-semidefinite (as in a rank-deficient least-squares problem, $m < n$), the regularisation of
-Section~\ref{sec:conditioning} restores $A \succ 0$ and with it the $P$-matrix property.
+is itself SPD: $x_{\mathcal{F}}^\top A_{\mathcal{F}}\,x_{\mathcal{F}} = x^\top A x > 0$ for any
+nonzero $x$ supported on $\mathcal{F}$. It is therefore invertible with
+$\det A_{\mathcal{F}} > 0$, so the linear system
+$A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}}$ solved on any candidate free set is well
+posed and CG applies at every outer step (Section~\ref{sec:reduction}). This much is
+elementary and needs nothing beyond the SPD of a principal submatrix.
+
+The $P$-matrix label enters for one further purpose. A matrix all of whose principal minors
+are positive is a $P$-matrix~\cite{murty1988}, and $A \succ 0$ is one; the point of the label
+is that $\mathrm{LCP}(A,\,{-b})$ with a $P$-matrix has a unique solution reachable by principal
+pivoting~\cite{murty1988,judice1994}, the backbone of the finite-termination guarantee in
+Section~\ref{sec:nonneg}. When $A$ is only positive semidefinite (as in a rank-deficient
+least-squares problem, $m < n$), the regularisation of Section~\ref{sec:conditioning} restores
+$A \succ 0$ and with it the $P$-matrix property.
 
 The complementarity structure~\eqref{eq:lcp} reduces the search for $x$ to a search over free
 sets $\mathcal{F}$. Once $\mathcal{F}$ is fixed, the sign constraints drop out, and what
