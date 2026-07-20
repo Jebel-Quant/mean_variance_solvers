@@ -91,7 +91,7 @@ import scipy.sparse as sp
 from cvx.linalg import DenseOperator
 from common.util.runner import SMOKE, output_dirs
 
-from nncg import CG, ActiveSetSolver
+from nncg import CG, ActiveSetConfig, ActiveSetSolver
 
 HERE = Path(__file__).resolve().parents[1]  # experiment/ root (data, graphs, tables)
 GRAPHS, TABLES = output_dirs(HERE)
@@ -134,20 +134,22 @@ def prune_bands(cube):
 # Data: a local Cuprite cube if available, else a spatially-coherent proxy
 # ---------------------------------------------------------------------------
 
-def find_band_axis(shape, target_pixels=N_ROWS * N_COLS):
+def find_band_axis(shape, candidate_bands=(224, 188)):
     """Identify the band axis of a 3-D cube of unknown orientation.
 
-    Picks whichever axis, when excluded, leaves the other two multiplying
-    closest to the known 250x191 = 47,750 pixel count of this sub-scene --
-    unambiguous for the canonical shape, where a naive "largest axis" or
-    "closest to 200" guess mis-fires (250 > 224, and |224-200| > |191-200|).
+    Picks whichever axis has length closest to a known AVIRIS band count --
+    224 for the raw sensor, 188 after the water-absorption bands in
+    BAD_BANDS_1INDEXED are already pruned -- since spatial extents (hundreds
+    to thousands of pixels) are never that close to either. Robust across
+    the canonical 250x191x224 sub-scene, its already-pruned 250x191x188
+    variant, and a full flight line of a different pixel count -- unlike an
+    earlier version of this heuristic that back-solved for a fixed
+    47,750-pixel total and silently mis-identified the band axis on any
+    other scene size.
     """
     shape = list(shape)
-    products = []
-    for i in range(3):
-        others = [shape[j] for j in range(3) if j != i]
-        products.append(abs(others[0] * others[1] - target_pixels))
-    return int(np.argmin(products))
+    dist = [min(abs(s - b) for b in candidate_bands) for s in shape]
+    return int(np.argmin(dist))
 
 
 def load_local_cuprite(path):
@@ -360,7 +362,18 @@ def snake_order(n_rows, n_cols):
     return np.array(order)
 
 
-def unmix_image(Y, A_op, B, c, order, warm_start):
+#: Outer-step cap per pixel: generous relative to anything seen on the
+#: synthetic scene (single digits to low tens of outer steps), but bounded so
+#: one pathological real pixel can't hang the whole raster scan. A pixel that
+#: hits this returns Result.converged=False rather than looping forever.
+PIXEL_MAX_OUTER = 5_000
+#: Per-pixel wall-clock threshold (seconds) above which a pixel is logged as
+#: slow -- flags outliers worth a closer look even when they stay under the
+#: outer-step cap.
+SLOW_PIXEL_SECONDS = 0.5
+
+
+def unmix_image(Y, A_op, B, c, order, warm_start, label=""):
     """Solve the FCLS QP for every pixel in `order`; optionally warm-start
     each solve's free set and iterate from the previous pixel's solution
     (Prop. 5.2), via the nncg package's `warm=(free_mask, x_prev)` argument."""
@@ -369,17 +382,33 @@ def unmix_image(Y, A_op, B, c, order, warm_start):
     X = np.zeros((n_end, n_pix))
     outer = np.zeros(n_pix, dtype=int)
     inner = np.zeros(n_pix, dtype=int)
+    solver = ActiveSetSolver(CG(), config=ActiveSetConfig(max_outer=PIXEL_MAX_OUTER))
     warm = None
     t0 = time.perf_counter()
-    for i in order:
-        res = ActiveSetSolver(CG()).solve_eq(
+    heartbeat = max(1, n_pix // 20)
+    n_unconverged = 0
+    for done, i in enumerate(order, start=1):
+        t_pixel = time.perf_counter()
+        res = solver.solve_eq(
             A_op, Y[:, i], B, c, warm=warm if warm_start else None
         )
+        pixel_elapsed = time.perf_counter() - t_pixel
         X[:, i] = res.x
         outer[i] = res.outer
         inner[i] = res.inner
         if warm_start:
             warm = (res.free, res.x)
+        if not res.converged:
+            n_unconverged += 1
+            print(f"  [{label}] pixel {i}: hit max_outer={PIXEL_MAX_OUTER} "
+                  f"without KKT convergence ({pixel_elapsed:.2f}s)", flush=True)
+        elif pixel_elapsed > SLOW_PIXEL_SECONDS:
+            print(f"  [{label}] pixel {i}: slow, {res.outer} outer / {res.inner} inner "
+                  f"iters in {pixel_elapsed:.2f}s", flush=True)
+        if done % heartbeat == 0 or done == n_pix:
+            elapsed = time.perf_counter() - t0
+            print(f"  [{label}] {done}/{n_pix} pixels, {elapsed:.1f}s "
+                  f"({done / elapsed:.0f} px/s, {n_unconverged} unconverged)", flush=True)
     elapsed = time.perf_counter() - t0
     return X, outer, inner, elapsed
 
@@ -415,11 +444,11 @@ def main():
     order = snake_order(rows, cols)
 
     print("Unmixing (cold start: every pixel from scratch)...")
-    X_cold, outer_cold, inner_cold, t_cold = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=False)
+    X_cold, outer_cold, inner_cold, t_cold = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=False, label="cold")
     print(f"  {t_cold:.2f}s, total outer iters = {outer_cold.sum()}")
 
     print("Unmixing (warm start: free set carried along the raster scan)...")
-    X_warm, outer_warm, inner_warm, t_warm = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=True)
+    X_warm, outer_warm, inner_warm, t_warm = unmix_image(Bpix, A_op, Bmat, c, order, warm_start=True, label="warm")
     print(f"  {t_warm:.2f}s, total outer iters = {outer_warm.sum()}")
 
     agree = float(np.max(np.abs(X_cold - X_warm)))

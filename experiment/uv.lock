@@ -1038,7 +1038,7 @@ requires-dist = [
     { name = "cvxpy" },
     { name = "lxml" },
     { name = "matplotlib" },
-    { name = "nncg", specifier = "==0.4.1" },
+    { name = "nncg", git = "https://github.com/Jebel-Quant/nncg?rev=52346e12b4ec9f18f4ad497827867bbbaefccec9" },
     { name = "numpy" },
     { name = "osqp" },
     { name = "pandas" },
@@ -1075,16 +1075,12 @@ wheels = [
 
 [[package]]
 name = "nncg"
-version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
+version = "0.5.0"
+source = { git = "https://github.com/Jebel-Quant/nncg?rev=52346e12b4ec9f18f4ad497827867bbbaefccec9#52346e12b4ec9f18f4ad497827867bbbaefccec9" }
 dependencies = [
     { name = "cvx-linalg" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/81/623d79e1ca73bf3475f3e68b2139d9c591af18a2281fd2b92d7ac797fbe6/nncg-0.4.1.tar.gz", hash = "sha256:610363dcf69aba5260b5ad871dafdfed67d2430a9e7987ce6cb258b9f10d8a65", size = 268114, upload-time = "2026-07-06T11:25:59.106Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/7e/1c674a7a793e5495cb6ec8e6b10682e964636a9a414f2dbe1e3286965984/nncg-0.4.1-py3-none-any.whl", hash = "sha256:d6356792b69606b56e549ee0520ee4456cf6e9fd126c72f8e03abf97e6db933d", size = 17980, upload-time = "2026-07-06T11:25:57.708Z" },
 ]
 
 [[package]]
