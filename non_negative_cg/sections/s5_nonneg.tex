@@ -130,6 +130,19 @@ iterations, and Step~2 certifies the returned $x$ as the unique global minimiser
 ceiling is the number of complementary bases, $2^n$.
 \end{proof}
 
+\begin{corollary}[Fast-path outer bound]\label{cor:outerbound}
+On generic data, where the Bland fallback is never entered, Step~4 alone bounds the outer
+count. The progress branch ($N < \bar N$) fires at most $n+1$ times, and at most $p_{\max}$
+patience-draining fast-path steps follow each progress event, giving
+\begin{equation}\label{eq:outerbound}
+  s \;\leq\; (n+1)(1 + p_{\max}).
+\end{equation}
+For the default budget $p_{\max}=3$ this is $s \leq 4(n+1)$, a linear bound that replaces the
+$2^n$ ceiling whenever the fallback is dormant. The fallback steps add at most $n+2$ further
+runs of Murty's method (Step~3), each visiting distinct complementary bases, but these are
+short in practice and absent on generic data (Section~\ref{ssec:synthetic}).
+\end{corollary}
+
 The $2^n$ ceiling establishes \emph{finiteness} only; it is not an efficiency estimate. The
 guarantee is unconditional. The least-index fallback removes the non-degeneracy hypothesis
 that earlier active-set arguments need, and it is the fallback, not the batch exchange, that

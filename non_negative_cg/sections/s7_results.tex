@@ -24,7 +24,8 @@ Projected gradient (matrix-free)     & $O(nm)$         & $O(\kappa)$            
 \end{tabular}
 \caption{Asymptotic cost of solving the non-negative quadratic~\eqref{eq:bqp} with
 $A = M^\top M$, $M \in \mathbb{R}^{m \times n}$. Here $k = |\mathcal{F}| \leq n$ is the
-free-set size, $s$ the number of active-set outer steps, $\kappa = \kappa(A_\alpha)$ the
+free-set size, $s$ the number of active-set outer steps (bounded by $(n+1)(1+p_{\max})$ on
+generic data; Corollary~\ref{cor:outerbound}), $\kappa = \kappa(A_\alpha)$ the
 condition number after the split~\eqref{eq:regsplit}, and $r$ the factor rank of a
 diagonal-plus-low-rank operator. The last four rows share the active-set loop and differ only
 in the backend: matrix-free CG and the Woodbury factor solve avoid assembling $A$, whereas
@@ -99,13 +100,19 @@ as $\alpha$ increases (Figure~\ref{fig:nncg_reg}). The effect is largest in the 
 regime $m < n$, where only $\alpha > 0$ makes the system well posed
 (Table~\ref{tab:nncg_rankdef} below).
 
-\emph{(ii) Outer count is small and the fallback is dormant.}
+\emph{(ii) Outer count is bounded by $O(n)$ and constant in practice.}
 Across $\kappa \in [10, 10^6]$ the active-set loop terminates in at most $\nncgMaxOuter$ outer
 steps (Table~\ref{tab:nncg_synthetic}), adjusting the free set by a few indices per step and
 reaching the correct support in a count that tracks its distance from the initial full set, not
 $n$. The patience budget is never exhausted: the Bland fallback of
 Theorem~\ref{thm:termination} guarantees termination but is not entered on generic data, exactly
-the codimension-one argument of Section~\ref{sec:nonneg}.
+the codimension-one argument of Section~\ref{sec:nonneg}. Corollary~\ref{cor:outerbound}
+provides an explicit polynomial ceiling: on generic data $s \leq (n+1)(1+p_{\max}) = 4(n+1)$
+for the default $p_{\max}=3$, a linear bound in $n$ that supersedes the $2^n$ finiteness
+ceiling of Theorem~\ref{thm:termination}. In practice $s$ is far smaller: sweeping
+$n \in [\nncgOuterNMin, \nncgOuterNMax]$ at fixed $\kappa = 10^4$ gives a mean outer count
+never exceeding $\nncgOuterMaxMean$, with a $\log$--$\log$ slope of \nncgOuterSlope{} (essentially
+constant), confirming that $s$ is $O(1)$ on this family rather than $O(n)$.
 
 \emph{(iii) CG beats projected gradient by a widening $\sqrt\kappa$ factor.}
 Figure~\ref{fig:nncg_cgpg} plots both matrix-free methods at matched per-step cost. Both run

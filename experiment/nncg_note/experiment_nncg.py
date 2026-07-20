@@ -42,7 +42,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from cvx.linalg import DenseOperator
-from common.util.runner import output_dirs
+from common.util.runner import SMOKE, output_dirs
 
 from nncg import (
     CG,
@@ -543,6 +543,35 @@ figW.savefig(GRAPHS / "nncg_warm.png", bbox_inches="tight", dpi=150)
 print(f"Saved {GRAPHS / 'nncg_warm.pdf'}")
 
 
+# ===========================================================================
+# Panel J: outer-step count vs. problem size n  -- empirical s vs n scaling
+# ===========================================================================
+
+print()
+print("=" * 72)
+print("Outer steps vs. n   (kappa=1e4, support 50%, mean over 5 seeds)")
+print("=" * 72)
+
+OUTER_NS = [50, 100] if SMOKE else [50, 100, 200, 400, 800]
+KAPPA_OUTER = 1e4
+outer_by_n_vals = []
+print(f"{'n':>6}  {'outer (mean)':>13}  {'outer (max)':>12}")
+for n_o in OUTER_NS:
+    outers_n = []
+    for sd in SEEDS:
+        A_o, b_o, _, _ = make_problem(n_o, KAPPA_OUTER, seed=sd)
+        res_o = ActiveSetSolver(CG()).solve(DenseOperator(A_o), b_o)
+        outers_n.append(res_o.outer)
+    outer_by_n_vals.append(float(np.mean(outers_n)))
+    print(f"{n_o:>6}  {np.mean(outers_n):>13.1f}  {max(outers_n):>12d}")
+
+outer_slope, outer_r2 = fit_slope(OUTER_NS, outer_by_n_vals)
+print(
+    f"\nOuter-step scaling vs n: slope={outer_slope:.3f}, R^2={outer_r2:.4f}  "
+    f"(theory fast-path ceiling: s <= (n+1)(1+p_max) = 4(n+1) for default p_max=3)"
+)
+
+
 # ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
@@ -702,5 +731,10 @@ with open(TABLES / "nncg_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgWarmDrift}}{{{dr.mean():.1f}}}\n")
     fh.write(f"\\newcommand{{\\nncgWarmStable}}{{{int(np.sum((dr == 0) & (wo == 1)))}}}\n")
     fh.write(f"\\newcommand{{\\nncgWarmStableTot}}{{{int(np.sum(dr == 0))}}}\n")
+    fh.write(f"\\newcommand{{\\nncgOuterSlope}}{{{outer_slope:.2f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgOuterRtwo}}{{{outer_r2:.3f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgOuterNMin}}{{{OUTER_NS[0]}}}\n")
+    fh.write(f"\\newcommand{{\\nncgOuterNMax}}{{{OUTER_NS[-1]}}}\n")
+    fh.write(f"\\newcommand{{\\nncgOuterMaxMean}}{{{max(outer_by_n_vals):.1f}}}\n")
 print(f"Saved {TABLES / 'nncg_defs.tex'}")
 print("\nDone.")
