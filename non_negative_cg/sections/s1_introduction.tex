@@ -103,8 +103,10 @@ extra level of iteration and of the exact certificate. The loop developed here i
 \emph{complementary-basis} method. Its iterates are infeasible between outer steps, the free
 set changes by principal pivots driven by signs alone with no line search or decrease test, and
 it takes $Bx = c$ directly through the Schur-complement elimination of
-Section~\ref{sec:reduction}---a strictly larger problem class than the bound-constrained one the
-feasible-point family addresses. Termination is combinatorial: it rests on Murty's least-index rule, which is what
+Section~\ref{sec:reduction}. The trade cuts both ways: this loop adds the equality $Bx = c$ but
+treats only the non-negative orthant $x \geq 0$ (equivalently a single lower bound per
+variable), whereas the feasible-point family handles general two-sided box constraints
+$\ell \leq x \leq u$ that our two-state complementary basis does not express. Termination is combinatorial: it rests on Murty's least-index rule, which is what
 removes the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast
 NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations
 cross-products, but it still assembles $M^\top M$ and solves each working-set system by dense
