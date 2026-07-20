@@ -80,14 +80,34 @@ def gaussian_blur(nside, sigma):
 
 
 def test_image(nside):
-    """A non-negative test scene: two squares of different intensity and a disk."""
+    """The Shepp--Logan phantom: a standard, recognisable non-negative test image.
+
+    A sum of ellipses (the modified-contrast coefficients), non-negative after
+    clipping, hence a genuine non-negative deconvolution target with a large
+    black background that the non-negativity constraints recover.
+    """
+    # (intensity, semi-axis a, semi-axis b, centre x0, centre y0, angle deg)
+    ellipses = [
+        (1.00, .69, .92, 0.0, 0.0, 0.0),
+        (-.80, .6624, .8740, 0.0, -.0184, 0.0),
+        (-.20, .1100, .3100, .22, 0.0, -18.0),
+        (-.20, .1600, .4100, -.22, 0.0, 18.0),
+        (.10, .2100, .2500, 0.0, .35, 0.0),
+        (.10, .0460, .0460, 0.0, .10, 0.0),
+        (.10, .0460, .0460, 0.0, -.10, 0.0),
+        (.10, .0460, .0230, -.08, -.605, 0.0),
+        (.10, .0230, .0230, 0.0, -.606, 0.0),
+        (.10, .0230, .0460, .06, -.605, 0.0),
+    ]
+    axis = np.linspace(-1.0, 1.0, nside)
+    xx, yy = np.meshgrid(axis, -axis)
     X = np.zeros((nside, nside))
-    q = nside // 8
-    X[q:3 * q, q:3 * q] = 1.0
-    X[5 * q:7 * q, 5 * q:7 * q] = 0.6
-    ii, jj = np.mgrid[0:nside, 0:nside]
-    X[(ii - nside // 2) ** 2 + (jj - 3 * nside // 4) ** 2 < (nside // 10) ** 2] = 0.8
-    return X
+    for intensity, a, b, x0, y0, phi in ellipses:
+        t = np.deg2rad(phi)
+        xr = (xx - x0) * np.cos(t) + (yy - y0) * np.sin(t)
+        yr = -(xx - x0) * np.sin(t) + (yy - y0) * np.cos(t)
+        X[(xr / a) ** 2 + (yr / b) ** 2 <= 1.0] += intensity
+    return np.clip(X, 0.0, None)
 
 
 class BlurOperator(SymmetricOperator):
@@ -265,10 +285,21 @@ for nside in NSIDES:
 
 nside = RECON_NSIDE
 X_hat = recon["x"].reshape(nside, nside)
-panels = [("True $x^\\star$", recon["X_true"]),
-          ("Blurred $+$ noise", recon["D_noisy"]),
-          ("Reconstructed (NNCG)", X_hat)]
-vmax = float(recon["X_true"].max())
+X_true = recon["X_true"]
+vmax = float(X_true.max())
+
+
+def psnr(est, ref, peak):
+    """Peak signal-to-noise ratio (dB) of ``est`` against ``ref``."""
+    mse = float(np.mean((est - ref) ** 2))
+    return float("inf") if mse == 0.0 else 10.0 * np.log10(peak ** 2 / mse)
+
+
+psnr_blur = psnr(recon["D_noisy"], X_true, vmax)
+psnr_recon = psnr(X_hat, X_true, vmax)
+panels = [("True $x^\\star$", X_true),
+          (f"Blurred $+$ noise ({psnr_blur:.1f} dB)", recon["D_noisy"]),
+          (f"Reconstructed NNCG ({psnr_recon:.1f} dB)", X_hat)]
 fig, axes = plt.subplots(1, 3, figsize=(6.6, 2.4))
 for ax, (title, img) in zip(axes, panels):
     ax.imshow(img, cmap="gray", vmin=0.0, vmax=vmax, interpolation="nearest")
@@ -354,6 +385,8 @@ with open(TABLES / "nncg_deblur_defs.tex", "w") as fh:
     fh.write(f"\\newcommand{{\\nncgDeblurActive}}{{{active}}}\n")
     fh.write(f"\\newcommand{{\\nncgDeblurDenseGB}}{{{recon_row['dense_gb']:.1f}}}\n")
     fh.write(f"\\newcommand{{\\nncgDeblurRecov}}{{{recov:.1e}}}\n")
+    fh.write(f"\\newcommand{{\\nncgDeblurPSNRblur}}{{{psnr_blur:.1f}}}\n")
+    fh.write(f"\\newcommand{{\\nncgDeblurPSNR}}{{{psnr_recon:.1f}}}\n")
     # Largest matrix-free size and its (never-formed) dense footprint.
     fh.write(f"\\newcommand{{\\nncgDeblurMaxNside}}{{{big['nside']}}}\n")
     fh.write(f"\\newcommand{{\\nncgDeblurMaxDim}}{{{big['n']}}}\n")

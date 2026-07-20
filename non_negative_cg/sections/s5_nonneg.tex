@@ -79,8 +79,7 @@ principal pivoting~\cite{judice1994}.
 \begin{theorem}[Finite convergence of Algorithm~\ref{alg:elim}]\label{thm:termination}
 Let $f(x) = \tfrac{1}{2}x^\top A x - b^\top x$ with $A \succ 0$. Then for any patience budget
 $p_{\max} \in \mathbb{N}$, Algorithm~\ref{alg:elim} terminates in finitely many outer
-iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$. No
-non-degeneracy assumption is required. The same holds for the equality-augmented
+iterations and returns the unique global minimiser of $\min_{x \geq 0} f(x)$, even under degeneracy. The same holds for the equality-augmented
 problem~\eqref{eq:eqp} with the reduced gradient of line~5 adjusted by $B^\top\lambda$,
 provided $B_{\mathcal{F}}$ retains full row rank on every free set the loop visits (automatic
 for $p=1$; generic once $|\mathcal{F}| \geq p$).
@@ -146,7 +145,7 @@ fallback terminates.
 For exact inner solves, the guarded loop above \emph{is} the block-principal-pivoting
 algorithm of Júdice and Pires~\cite{judice1994}: a batch exchange safeguarded by Murty's
 least-index single pivot~\cite{murty1988}, already finite on the strictly monotone
-($A \succ 0$) LCP with no non-degeneracy assumption. We claim no novelty for that
+($A \succ 0$) LCP, even under degeneracy. We claim no novelty for that
 construction; Theorem~\ref{thm:termination} restates it in active-set language for
 self-containedness. The contribution is what Table~\ref{tab:novelty} isolates, and its crux is
 the first row: classical block-pivoting termination assumes each principal-block system is
@@ -242,7 +241,7 @@ entries being zero in both.
 \begin{remark}[Reading the margin condition]\label{rem:inexact}
 Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
 excluded. The threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
-lemma, like the theorem it protects, needs no non-degeneracy assumption. Moreover, since
+lemma, like the theorem it protects, holds even under degeneracy. Moreover, since
 $\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
 with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
 algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a

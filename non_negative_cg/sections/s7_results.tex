@@ -237,8 +237,6 @@ with a KKT certificate, matching Lawson--Hanson on the regularised operator.}
 
 \subsection{Matrix-free operation at scale}\label{ssec:matrixfree}
 
-\subsubsection{Deblurring beyond a dense operator}
-
 The problems so far are small enough to store $A$ densely. The
 method's reason for existing is the regime where that is impossible. A separable Gaussian blur
 $B = K \otimes K$ on an $N \times N$ image, applied as $X \mapsto K X K^\top$, gives a
@@ -255,65 +253,15 @@ changes.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\linewidth]{graphs/nncg_deblur}
-\caption{Matrix-free non-negative deblurring at $N = \nncgDeblurNside{}$
-($n = \nncgDeblurDim{}$ unknowns): the true scene, its Gaussian blur with additive noise, and
-the reconstruction from the matrix-free active-set loop (Algorithm~\ref{alg:elim} with
-\texttt{solve\_nnqp\_op}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
-never forms it, a dense $A$ being $\nncgDeblurDenseGB{}$\,GB. The black background is recovered
-by the $\nncgDeblurActive{}$ active non-negativity constraints.}
+\caption{Matrix-free non-negative deblurring of the Shepp--Logan phantom at
+$N = \nncgDeblurNside{}$ ($n = \nncgDeblurDim{}$ unknowns): the true image, its Gaussian blur
+with additive noise, and the reconstruction from the matrix-free active-set loop
+(Algorithm~\ref{alg:elim}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
+never forms it---a dense $A$ would be $\nncgDeblurDenseGB{}$\,GB. The solve lifts the image from
+$\nncgDeblurPSNRblur{}$ to $\nncgDeblurPSNR{}$\,dB PSNR and pins the $\nncgDeblurActive{}$
+black-background pixels exactly at the non-negativity bound.}
 \label{fig:nncg_deblur}
 \end{figure}
-
-\subsubsection{Timing against dense baselines}
-
-The same family places the method against four external
-solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
-OSQP~\cite{osqp} need the explicit Gram operator $A = B^\top B$, available here in
-closed form as $A_\alpha = (1-\alpha)(G \otimes G) + \alpha I$ with $G = K^\top K$, so they pay
-$O(n^2)$ storage and an $O(n^3)$ factorisation. MPRGP~\cite{dostalschoberl2005}, the
-feasible-point competitor of Section~\ref{sec:nonneg}, is matrix-free like the active-set loop
-and pays neither. Table~\ref{tab:nncg_deblur} and Figure~\ref{fig:nncg_deblur_bench} report
-wall-clock against $n$. At $n = \nncgDeblurHeadDim{}$ ($N = \nncgDeblurHeadNside{}$), the
-largest size the dense solvers still handle, the active-set loop finishes in
-$\nncgDeblurHeadMFTime{}$\,s against $\nncgDeblurHeadLHTime{}$\,s for Lawson--Hanson and
-$\nncgDeblurHeadIPTime{}$\,s for Clarabel, a $\nncgDeblurHeadLHx{}\times$ and
-$\nncgDeblurHeadIPx{}\times$ margin. Past that size the dense operator is the binding
-constraint: at $N = \nncgDeblurMaxNside{}$ ($n = \nncgDeblurMaxDim{}$) it would occupy
-$\nncgDeblurMaxDenseGB{}$\,GB, so none of the three dense solvers can even be instantiated,
-whereas the active-set loop solves the problem in $\nncgDeblurMaxTime{}$\,s in $O(n)$ working
-memory. This is the regime the method is built for. The win is not a constant factor on
-assembled problems but a solver that runs at all once $A$ cannot be formed. The comparison also
-makes the enabling property explicit rather than proprietary: MPRGP is matrix-free too, clears
-the same wall, and on this well-conditioned blur is in fact the faster of the two ($O(n)$
-memory, $\nncgDeblurMaxMPRGPTime{}$\,s at the largest size). What the family isolates is
-matrix-free operation, which the active-set loop shares; the choice between it and MPRGP then
-turns on the properties of Section~\ref{sec:nonneg} (an exact KKT certificate at termination,
-and a free-set structure that carries a direct inner solve and warm starts) rather than on raw
-speed here.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.55\textwidth]{graphs/nncg_deblur_bench}
-\caption{Wall-clock time against problem size $n = N^2$ on the matrix-free deblurring family:
-the two matrix-free methods (the active-set CG loop and MPRGP) against dense Lawson--Hanson,
-Clarabel, and OSQP. The dense baselines stop where the Gram matrix $A = B^\top B$ ceases to be
-practical to form and factorise; the matrix-free methods continue to $n = \nncgDeblurMaxDim{}$
-(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory.}
-\label{fig:nncg_deblur_bench}
-\end{figure}
-
-\begin{table}[ht]
-\centering
-\footnotesize
-\input{tables/nncg_deblur}
-\caption{Matrix-free deblurring: wall-clock (s) against problem size $n = N^2$, the two
-matrix-free methods (MPRGP and the active-set CG loop) versus the dense Lawson--Hanson,
-Clarabel, and OSQP (Gaussian blur $\sigma = 2$, ridge $\alpha = 10^{-3}$). ``dense $A$ (GB)''
-is the storage the dense solvers would need for the Gram operator, which the matrix-free
-methods never form; ``---'' marks sizes where that operator exceeds the benchmark's storage
-budget and the dense solvers are not run.}
-\label{tab:nncg_deblur}
-\end{table}
 
 \subsection{Preconditioning}\label{ssec:precond_results}
 
@@ -449,7 +397,7 @@ sizes.}
 
 \subsection{Comparison with external solvers}\label{ssec:external}
 
-\subsubsection{A planted benchmark}
+\subsubsection{Dense, assembled problems}
 
 The comparisons so far are internal: active-set variants against
 one another and against projected gradient. We close the section by placing
@@ -505,36 +453,93 @@ duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
 
-\subsubsection{A real, non-synthetic check}
+\subsubsection{Matrix-free at scale}
 
-\textcolor{blue}{
-The external-baseline comparison above is on a planted
-family designed to be fair to Lawson--Hanson and Clarabel alike; a genuine hyperspectral
-unmixing problem confirms the same ordering on real data. The Urban scene (HYDICE sensor,
-$\nncgHsUrbPixels{}$ pixels, $\nncgHsUrbBands{}$ clean bands, $\nncgHsUrbMaterials{}$ named
-materials: Asphalt, Grass, Tree, Roof, Metal, Dirt) poses the fully-constrained least-squares
-abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$, $\mathbf{1}^\top x
-= 1$, $A = M^\top M$, independently at every pixel, with $M$ the per-material mean reference
-spectrum. At $n = \nncgHsUrbMaterials{}$ material classes the loop and Clarabel are essentially
-matched ($\nncgHsUrbSpeedupWall{}\times$) --- consistent with Table~\ref{tab:complexity}'s
-per-step costs crossing over only once $n$ grows enough for Clarabel's $O(n^3)$ factorisation
-to outweigh the active-set loop's $O(km)$ mat-vecs, which a handful of material classes is far
-too small to exercise; FISTA is not competitive at any $n$
-($\nncgHsUrbSpeedupFista{}\times$ slower, needing a mean of $\nncgHsUrbFistaIters{}$ and up to
-$\nncgHsUrbFistaItersMax{}$ iterations to the same fixed-point-residual tolerance). Raster-order
-warm starting cuts total outer steps by $\nncgHsUrbSpeedupOuter{}\times$
-($\nncgHsUrbFracSingle{}\%$ of pixels certify in a single warm-started outer step), and cold and
-warm starts agree to $\nncgHsUrbAgree{}$. Figure~\ref{fig:nncg_hyperspectral_urban} shows the
-recovered dominant-material map: the recovered abundances trace out the scene's roads,
-rooftops, and running track, rather than a speckled, uninterpretable field.
-}
+The matrix-free deblurring family of Section~\ref{ssec:matrixfree} places the method against
+four external solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
+OSQP~\cite{osqp} need the explicit Gram operator $A = B^\top B$, available here in
+closed form as $A_\alpha = (1-\alpha)(G \otimes G) + \alpha I$ with $G = K^\top K$, so they pay
+$O(n^2)$ storage and an $O(n^3)$ factorisation. MPRGP~\cite{dostalschoberl2005}, the
+feasible-point competitor of Section~\ref{sec:nonneg}, is matrix-free like the active-set loop
+and pays neither. Table~\ref{tab:nncg_deblur} and Figure~\ref{fig:nncg_deblur_bench} report
+wall-clock against $n$. At $n = \nncgDeblurHeadDim{}$ ($N = \nncgDeblurHeadNside{}$), the
+largest size the dense solvers still handle, the active-set loop finishes in
+$\nncgDeblurHeadMFTime{}$\,s against $\nncgDeblurHeadLHTime{}$\,s for Lawson--Hanson and
+$\nncgDeblurHeadIPTime{}$\,s for Clarabel, a $\nncgDeblurHeadLHx{}\times$ and
+$\nncgDeblurHeadIPx{}\times$ margin. Past that size the dense operator is the binding
+constraint: at $N = \nncgDeblurMaxNside{}$ ($n = \nncgDeblurMaxDim{}$) it would occupy
+$\nncgDeblurMaxDenseGB{}$\,GB, so none of the three dense solvers can even be instantiated,
+whereas the active-set loop solves the problem in $\nncgDeblurMaxTime{}$\,s in $O(n)$ working
+memory. This is the regime the method is built for. The win is not a constant factor on
+assembled problems but a solver that runs at all once $A$ cannot be formed. The comparison also
+makes the enabling property explicit rather than proprietary: MPRGP is matrix-free too, clears
+the same wall, and on this well-conditioned blur is in fact the faster of the two ($O(n)$
+memory, $\nncgDeblurMaxMPRGPTime{}$\,s at the largest size). What the family isolates is
+matrix-free operation, which the active-set loop shares; the choice between it and MPRGP then
+turns on the properties of Section~\ref{sec:nonneg} (an exact KKT certificate at termination,
+and a free-set structure that carries a direct inner solve and warm starts) rather than on raw
+speed here.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.75\textwidth]{graphs/nncg_hyperspectral_urban}
-\caption{\textcolor{blue}{Urban hyperspectral scene ($\nncgHsUrbPixels{}$ pixels,
-$\nncgHsUrbBands{}$ bands, $\nncgHsUrbMaterials{}$ materials): dominant recovered material per
-pixel (left) and the outer-iteration count of the active-set loop, cold versus warm-started
-(right).}}
-\label{fig:nncg_hyperspectral_urban}
+\includegraphics[width=0.55\textwidth]{graphs/nncg_deblur_bench}
+\caption{Wall-clock time against problem size $n = N^2$ on the matrix-free deblurring family:
+the two matrix-free methods (the active-set CG loop and MPRGP) against dense Lawson--Hanson,
+Clarabel, and OSQP. The dense baselines stop where the Gram matrix $A = B^\top B$ ceases to be
+practical to form and factorise; the matrix-free methods continue to $n = \nncgDeblurMaxDim{}$
+(a dense $A$ would be $\nncgDeblurMaxDenseGB{}$\,GB) in $O(n)$ working memory.}
+\label{fig:nncg_deblur_bench}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\input{tables/nncg_deblur}
+\caption{Matrix-free deblurring: wall-clock (s) against problem size $n = N^2$, the two
+matrix-free methods (MPRGP and the active-set CG loop) versus the dense Lawson--Hanson,
+Clarabel, and OSQP (Gaussian blur $\sigma = 2$, ridge $\alpha = 10^{-3}$). ``dense $A$ (GB)''
+is the storage the dense solvers would need for the Gram operator, which the matrix-free
+methods never form; ``---'' marks sizes where that operator exceeds the benchmark's storage
+budget and the dense solvers are not run.}
+\label{tab:nncg_deblur}
+\end{table}
+
+\subsubsection{A real, non-synthetic check at scale}
+
+The external-baseline comparison above is on a planted family designed to be fair to
+Lawson--Hanson and Clarabel alike; a genuine, over-complete hyperspectral unmixing problem
+confirms the same ordering on real data at a scale where the matrix-free argument bites. We
+unmix the Cuprite scene against the full USGS spectral library~\cite{clark2007}---the standard
+over-complete dictionary of the sparse-unmixing literature~\cite{iordache2011}---so each pixel
+poses the fully-constrained
+least-squares abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$,
+$\mathbf{1}^\top x = 1$, $A = M^\top M$, now with $M$ holding $n = \nncgHsLibSignatures{}$
+candidate mineral signatures over $\nncgHsLibBands{}$ bands. The Gram operator is
+$\nncgHsLibSignatures{} \times \nncgHsLibSignatures{}$ of rank only $\nncgHsLibRank{}$, hence
+rank-deficient; a ridge of $\nncgHsLibRidgeFrac{}$ restores the $P$-matrix premise
+(Section~\ref{sec:conditioning}). At this $n$ Clarabel's per-pixel $O(n^3)$ factorisation is
+the binding cost, exactly the regime Table~\ref{tab:complexity} anticipates and the one the
+$n = 6$ Urban scene is far too small to exercise, so the active-set loop's matrix-free $O(km)$
+step wins; FISTA is $\nncgHsLibSpeedupFista{}\times$ slower. Because neighbouring pixels share
+their active dictionary members, raster-order warm starting cuts total outer steps from
+$\nncgHsLibOuterCold{}$ to $\nncgHsLibOuterWarm{}$ ($\nncgHsLibSpeedupOuter{}\times$), a
+$\nncgHsLibSpeedupWall{}\times$ wall-clock speedup, with $\nncgHsLibFracSingle{}\%$ of pixels
+certified in a single warm-started outer step and cold and warm agreeing to $\nncgHsLibAgree{}$.
+Most tellingly for the certificate, from an over-complete dictionary of
+$\nncgHsLibSignatures{}$ candidates the loop identifies a mean of $\nncgHsLibSupportMean{}$
+active signature per pixel (at most $\nncgHsLibSupportMax{}$): it recovers the exact,
+single-mineral support with a KKT certificate, where a feasible-point method returns only an
+approximate abundance vector left to be thresholded
+(Figure~\ref{fig:nncg_hyperspectral_library}).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/nncg_hyperspectral_library}
+\caption{Library-scale FCLS unmixing of the Cuprite scene against the USGS spectral library
+($n = \nncgHsLibSignatures{}$ signatures, $\nncgHsLibBands{}$ bands, $\nncgHsLibPixels{}$
+pixels). \emph{Left}: per-pixel active-set outer-iteration counts, cold versus warm-started;
+warm starting collapses them, with $\nncgHsLibFracSingle{}\%$ of pixels solved in a single
+outer step. \emph{Right}: active library members per pixel---the loop certifies a mean of
+$\nncgHsLibSupportMean{}$, the exact single-mineral support the sparse-unmixing model expects.}
+\label{fig:nncg_hyperspectral_library}
 \end{figure}

@@ -6,16 +6,16 @@ The conjugate gradient method (CG) solves a symmetric positive definite (SPD) sy
   \quad\text{subject to}\quad x \geq 0,\;\; Bx = c,
   \qquad A \succ 0,
 \]
-where the equality system $Bx = c$ is present only in the equality-augmented variant. 
-The solver wraps CG in a primal-dual active-set loop: each step solves the unconstrained system 
-over a set of \emph{free} variables, drops any that turn negative, re-admits 
-any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the 
-principal pivots of the linear complementarity problem $(A,\,{-b})$, and because $A$ is a $P$-matrix, 
-every pivot is well defined. For termination we use the block-principal-pivoting 
-construction of Júdice and Pires---a fast block-pivot path safeguarded by a least-index Bland fallback---which 
-reaches the unique global minimiser in finitely many outer steps on the strictly monotone problem, 
-with \emph{no} non-degeneracy assumption. Our contribution carries that guarantee to the inexact, 
-matrix-free regime the Krylov inner solve requires: once CG's residual is tied to the decision margin, 
+where the equality system $Bx = c$ is present only in the equality-augmented variant.
+The solver wraps CG in a primal-dual active-set loop: each step solves the unconstrained system
+over a set of \emph{free} variables, drops any that turn negative, re-admits
+any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the
+principal pivots of the linear complementarity problem $(A,\,{-b})$, and because $A$ is a $P$-matrix,
+every pivot is well defined. For termination we use the block-principal-pivoting
+construction of Júdice and Pires---a fast block-pivot path safeguarded by a least-index Bland fallback---which
+reaches the unique global minimiser in finitely many outer steps on the strictly monotone problem,
+even under degeneracy. Our contribution carries that guarantee to the inexact,
+matrix-free regime the Krylov inner solve requires: once CG's residual is tied to the decision margin,
 the approximate loop provably makes the same primal and dual sign decisions as the exact one, so finite termination transfers decision-for-decision. The guarantee attaches to the outer loop, so a direct factorisation may replace CG unchanged.
 
 Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$
