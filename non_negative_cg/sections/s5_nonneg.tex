@@ -88,9 +88,10 @@ for $p=1$; generic once $|\mathcal{F}| \geq p$).
 
 \begin{proof}
 \emph{Step 1 (each inner solve is well posed).}
-Because $A \succ 0$, every principal submatrix $A_{\mathcal{F}}$ is SPD, so $A$ is a
-$P$-matrix~\cite{murty1988}, and the system $A_{\mathcal{F}}x_{\mathcal{F}} = b_{\mathcal{F}}$
-has a unique solution to which CG converges (Proposition~\ref{prop:cg}). In the
+Because $A \succ 0$, every principal submatrix $A_{\mathcal{F}}$ is SPD (hence $A$ is a
+$P$-matrix~\cite{murty1988}, used in Step~3), so the system
+$A_{\mathcal{F}}x_{\mathcal{F}} = b_{\mathcal{F}}$ has a unique solution to which CG converges
+(Proposition~\ref{prop:cg}). In the
 equality-augmented case the free-set solve is the saddle system~\eqref{eq:saddle}; with
 $A_{\mathcal{F}} \succ 0$ and $B_{\mathcal{F}}$ of full row rank its Schur complement $S$ is
 SPD, so~\eqref{eq:saddle} has the unique solution recovered by the $p+1$ SPD solves of
