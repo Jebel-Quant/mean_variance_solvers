@@ -6,7 +6,7 @@ see, e.g., Golub and Van Loan~\cite{golub2013}, Greenbaum~\cite{greenbaum1997}, 
 and Bau~\cite{trefethenbau1997}. It builds its iterates in the Krylov subspace
 $\mathcal{K}_k(A, b)$ and converges at the $O(\sqrt\kappa)$ rate, where $\kappa = \kappa(A)$
 is the spectral condition number (Proposition~\ref{prop:cg}). CG solves linear systems; it is
-\emph{not} designed for inequalities, that is, for constrained programs. This note applies CG
+\emph{not} designed for inequalities, that is, for constrained programs. This paper applies CG
 to the bound-constrained quadratic
 \begin{equation}\label{eq:bqp}
   \min_{x \in \mathbb{R}^n}\; f(x) = \tfrac{1}{2}\,x^\top A x - b^\top x
@@ -28,7 +28,7 @@ normalisation $\mathbf{1}^\top x = \beta$ being the case $p=1$. Its multipliers
 $\lambda \in \mathbb{R}^p$ can be eliminated analytically through a $p\times p$ Schur
 complement (cf.\ Section~\ref{sec:reduction}).
 
-This note studies the constraint-handling layer directly, and its central contribution is a
+This paper studies the constraint-handling layer directly, and its central contribution is a
 \emph{termination guarantee}. The vehicle is a \emph{primal-dual active-set} outer
 loop~\cite{nocedal2006} that wraps CG. It solves the unconstrained system over a working set
 of \emph{free} variables, releases any variable that returns negative (the primal step),

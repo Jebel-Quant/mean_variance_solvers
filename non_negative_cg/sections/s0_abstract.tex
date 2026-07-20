@@ -11,7 +11,7 @@ where the equality system $Bx = c$ is present only in the equality-augmented var
 Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$ needs two products with $M$ and no $O(n^2)$ storage, and it retains CG's $O(\sqrt\kappa)$ Krylov rate, where $\kappa = \kappa(A)$. Any regularisation or preconditioner that compresses the spectrum lowers the iteration count; a ridge/Tikhonov split $A \mapsto (1-\alpha)A + \alpha R^\top R$ also secures the $P$-matrix property. A loop-free projected-gradient reference method, analysed alongside, forgoes the Krylov subspace and converges at the slower $O(\kappa)$ rate. On synthetic SPD problems the loop reaches the planted optimum in at most $\nncgMaxOuter{}$ outer steps, and with a direct free-set solve it outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on dense instances.
 
 % The conjugate gradient method (CG) solves a symmetric positive definite (SPD) linear
-% system $A x = b$. On its own it does not respect the inequality $x \geq 0$. This note
+% system $A x = b$. On its own it does not respect the inequality $x \geq 0$. This paper
 % develops \emph{non-negative conjugate gradients}, a solver for the bound-constrained
 % quadratic
 % \[
