@@ -6,55 +6,26 @@ The conjugate gradient method (CG) solves a symmetric positive definite (SPD) sy
   \quad\text{subject to}\quad x \geq 0,\;\; Bx = c,
   \qquad A \succ 0,
 \]
-where the equality system $Bx = c$ is present only in the equality-augmented variant. The solver wraps CG in a primal-dual active-set loop: each step solves the unconstrained system over a set of \emph{free} variables, drops any that turn negative, re-admits any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the principal pivots of the linear complementarity problem $(A,\,{-b})$, and because $A$ is a $P$-matrix, every pivot is well defined. For termination we use the block-principal-pivoting construction of Júdice and Pires---a fast block-pivot path safeguarded by a least-index Bland fallback---which reaches the unique global minimiser in finitely many outer steps on the strictly monotone problem, with \emph{no} non-degeneracy assumption. Our contribution carries that guarantee to the inexact, matrix-free regime the Krylov inner solve requires: once CG's residual is tied to the decision margin, the approximate loop provably makes the same primal and dual sign decisions as the exact one, so finite termination transfers decision-for-decision. The guarantee attaches to the outer loop, so a direct factorisation may replace CG unchanged.
+where the equality system $Bx = c$ is present only in the equality-augmented variant. 
+The solver wraps CG in a primal-dual active-set loop: each step solves the unconstrained system 
+over a set of \emph{free} variables, drops any that turn negative, re-admits 
+any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the 
+principal pivots of the linear complementarity problem $(A,\,{-b})$, and because $A$ is a $P$-matrix, 
+every pivot is well defined. For termination we use the block-principal-pivoting 
+construction of Júdice and Pires---a fast block-pivot path safeguarded by a least-index Bland fallback---which 
+reaches the unique global minimiser in finitely many outer steps on the strictly monotone problem, 
+with \emph{no} non-degeneracy assumption. Our contribution carries that guarantee to the inexact, 
+matrix-free regime the Krylov inner solve requires: once CG's residual is tied to the decision margin, 
+the approximate loop provably makes the same primal and dual sign decisions as the exact one, so finite termination transfers decision-for-decision. The guarantee attaches to the outer loop, so a direct factorisation may replace CG unchanged.
 
-Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$ needs two products with $M$ and no $O(n^2)$ storage, and it retains CG's $O(\sqrt\kappa)$ Krylov rate, where $\kappa = \kappa(A)$. Any regularisation or preconditioner that compresses the spectrum lowers the iteration count; a ridge/Tikhonov split $A \mapsto (1-\alpha)A + \alpha R^\top R$ also secures the $P$-matrix property. A loop-free projected-gradient reference method, analysed alongside, forgoes the Krylov subspace and converges at the slower $O(\kappa)$ rate. On synthetic SPD problems the loop reaches the planted optimum in at most $\nncgMaxOuter{}$ outer steps, and with a direct free-set solve it outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on dense instances.
-
-% The conjugate gradient method (CG) solves a symmetric positive definite (SPD) linear
-% system $A x = b$. On its own it does not respect the inequality $x \geq 0$. This note
-% develops \emph{non-negative conjugate gradients}, a solver for the bound-constrained
-% quadratic
-% \[
-%   \min_{x}\; \tfrac{1}{2}\,x^\top A x - b^\top x
-%   \quad\text{subject to}\quad x \geq 0,\;\; Bx = c,
-%   \qquad A \succ 0.
-% \]
-% It enforces $x \geq 0$ by wrapping CG in an outer active-set loop, and it retains CG's
-% $O(\sqrt\kappa)$ Krylov convergence, where $\kappa = \kappa(A)$ is the spectral condition
-% number. The equality system $Bx = c$ is present in the equality-augmented variant and absent
-% in the plain bound-constrained and least-squares forms.
-
-% The wrapper is a primal-dual active-set method. It solves the unconstrained system over a
-% working set of \emph{free} variables, releases any that come back negative (the primal
-% step), re-admits any bound variable whose reduced gradient is negative (the dual step), and
-% restarts CG on the modified free set each time. These toggles are exactly the principal
-% pivots of the linear complementarity problem $(A,\,{-b})$. Because $A$ is a $P$-matrix,
-% every principal submatrix is invertible and each pivot is well defined.
-
-% Our central result concerns termination. We guard a fast block-pivot path with a least-index
-% Bland fallback, and we prove that the loop reaches the unique global minimiser in finitely
-% many outer steps. The proof needs \emph{no} non-degeneracy assumption, the hypothesis that
-% classical block-principal-pivoting termination arguments require. A synthetic study shows
-% that the fallback is never entered on generic data, yet it is genuinely necessary. On an
-% adversarial family of anti-correlated designs the unguarded batch path cycles, and the
-% fallback is what terminates it.
-
-% The guarantee is robust to inexactness. Once CG's residual tolerance is tied to the decision
-% threshold, the inexact loop provably visits the same free sets as the exact one. The
-% guarantee attaches to the outer loop rather than the inner solver, so the active-set method
-% stands as an intermediate result in its own right. The same loop, with the same termination
-% proof, accepts a direct factorisation of each free-set system in place of CG. It therefore
-% combines just as readily with direct methods when the reduced blocks are small or structured.
-% We analyse a loop-free projected-gradient reference method alongside it. That method enforces
-% the constraints simultaneously, but it forgoes the Krylov subspace and so converges at the
-% slower $O(\kappa)$ rate.
-
-% Each inner solve is matrix-free. When $A = M^\top M$, the operator $v \mapsto M^\top(M v)$ is
-% applied without ever forming $A$, at two products with $M$ per iteration and no $O(n^2)$
-% storage. Any regularisation or preconditioner that compresses the spectrum lowers the
-% iteration count. This includes a ridge/Tikhonov split $A \mapsto (1-\alpha)A + \alpha R^\top R$
-% that also secures the $P$-matrix property. On synthetic SPD problems the loop reaches
-% the planted optimum in at most $\nncgMaxOuter{}$ outer steps. With a direct free-set solve it
-% outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on
-% dense instances.
+Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$
+needs two products with $M$ and no $O(n^2)$ storage, and it retains CG's $O(\sqrt\kappa)$
+Krylov rate, where $\kappa = \kappa(A)$. Any regularisation or preconditioner that compresses
+the spectrum lowers the iteration count; a ridge/Tikhonov split
+$A \mapsto (1-\alpha)A + \alpha R^\top R$ also secures the $P$-matrix property. A loop-free
+projected-gradient reference method, analysed alongside, forgoes the Krylov subspace and
+converges at the slower $O(\kappa)$ rate. On synthetic SPD problems the loop reaches the
+planted optimum in at most $\nncgMaxOuter{}$ outer steps, and with a direct free-set solve it
+outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on
+dense instances.
 \end{abstract}
