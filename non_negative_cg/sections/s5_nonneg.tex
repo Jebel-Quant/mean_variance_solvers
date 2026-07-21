@@ -239,7 +239,7 @@ by~\eqref{eq:inexactcond}, so $\delta_x, \delta_s \le \delta$.
 
 We now fix $i \in \mathcal{F}_t$ at some step $t$ (writing $\mathcal{F} = \mathcal{F}_t$). If
 $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$ by definition of the margin (the
-zero case is not excluded, cf.\ Remark~\ref{rem:inexact}(i)); either way $\tilde x_i \ge
+zero case is not excluded); either way $\tilde x_i \ge
 -\delta > -\varepsilon$, so the inexact test does not flag $i$, matching the exact test. If
 $\hat x_i < 0$ then $\hat x_i \le -\mu$, so $\tilde x_i \le -\mu + \delta < -\varepsilon$: both
 tests flag $i$. The same argument, with $\hat s_i, \tilde s_i, \delta_s$ in place of
@@ -258,20 +258,6 @@ $\lVert \tilde x - x^\star \rVert_2 = \delta_x \le \rho/\lambda_{\min}(A)$, the 
 entries being zero in both; $\lVert\cdot\rVert_\infty \le \lVert\cdot\rVert_2$ gives the same
 bound in the $\infty$-norm.
 \end{proof}
-
-\begin{remark}[Reading the margin condition]\label{rem:inexact}
-Three comments. (i) Exactly-zero components are not excluded: the threshold $\varepsilon$
-absorbs them on both sides of every test, so the lemma holds even under degeneracy, and the
-$\varepsilon$-thresholded algorithm as implemented matches the exact sign tests of
-Theorem~\ref{thm:termination} as analysed. (ii) When CG is stopped at a relative residual,
-$\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$, condition~\eqref{eq:inexactcond}
-becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone. (iii) The margin $\mu$ is not computable
-a priori, so the lemma is a license, not a recipe: it guarantees that \emph{some} finite
-tolerance reproduces the exact trajectory, and in practice a residual tolerance a couple of
-orders of magnitude below $\varepsilon$ suffices (Section~\ref{sssec:inexact} verifies
-trajectory-for-trajectory agreement at $\varepsilon_{\mathrm{cg}} = 10^{-10}$,
-$\varepsilon = 10^{-8}$).
-\end{remark}
 
 Lemma~\ref{lem:inexact} covers problem~\eqref{eq:bqp}, where the reduced gradient is
 $s = Ax - b$ directly. In the equality-augmented problem~\eqref{eq:eqp}, $s$ carries the
