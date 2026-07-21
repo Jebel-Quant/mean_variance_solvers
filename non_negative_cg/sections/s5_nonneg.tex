@@ -4,7 +4,7 @@ Section~\ref{sec:reduction} reduces each candidate free set to an SPD solve, lea
 $x \geq 0$ as the sole remaining constraint. Two strategies enforce it. The first is an
 active-set loop. It wraps the CG solver unchanged and certifies global optimality through the
 complementarity system~\eqref{eq:lcp}. The second is projected gradient. It handles the
-constraint inside every step but forgoes the Krylov rate.
+constraint inside every step but forgoes the Krylov space convergence rate of CG.
 
 \subsection{Active-set / block-principal-pivoting loop}\label{ssec:activeset}
 
@@ -32,7 +32,7 @@ the fewest seen so far. A batch step is taken whenever it makes progress ($N < \
 patience budget $p$ is unspent. Otherwise the algorithm falls back to a single
 \emph{Bland-style} pivot on the lowest-indexed violator. This least-index single pivot is
 Murty's principal pivoting method, which cannot cycle~\cite{murty1988}. It is what the
-finite-termination guarantee rests on; the batch path serves only to reach the optimum faster
+finite-termination guarantee rests on. The batch path serves only to reach the optimum faster
 when it does not stall. This is the anti-cycling construction of J\'udice and Pires for block
 principal pivoting~\cite{judice1994}.
 
@@ -143,25 +143,27 @@ fallback terminates.
 
 \paragraph{What is new relative to Júdice--Pires.}
 For exact inner solves, the guarded loop above \emph{is} the block-principal-pivoting
-algorithm of Júdice and Pires~\cite{judice1994}: a batch exchange safeguarded by Murty's
+algorithm of Júdice and Pires~\cite{judice1994}, namely a batch exchange safeguarded by Murty's
 least-index single pivot~\cite{murty1988}, already finite on the strictly monotone
 ($A \succ 0$) LCP, even under degeneracy. We claim no novelty for that
-construction; Theorem~\ref{thm:termination} restates it in active-set language for
+construction and point out that Theorem~\ref{thm:termination} restates it in active-set language for
 self-containedness. The contribution is what Table~\ref{tab:novelty} isolates, and its crux is
-the first row: classical block-pivoting termination assumes each principal-block system is
-solved \emph{exactly}, whereas the matrix-free regime solves it only to a tolerance.
-Lemma~\ref{lem:inexact} closes exactly this gap---once the inner residual is tied to the
-decision margin, the inexact loop makes the identical primal and dual sign decisions as the
-exact loop, so the Júdice--Pires count transfers verbatim. Without it, block pivoting and
-Krylov inner solves do not obviously compose: a tolerance-level solve can flip a sign test and
-reintroduce the cycling the fallback exists to prevent.
+the first row where classical block-pivoting termination assumes each principal-block system is
+solved \emph{exactly}, pointing out that the  matrix-free regime solves it to a specified tolerance.
+Lemma~\ref{lem:inexact} closes this gap for the bound-constrained problem~\eqref{eq:bqp}, and
+Corollary~\ref{cor:inexact-eq} extends it through the multiplier recovery of
+Section~\ref{sec:reduction} to the equality-augmented problem~\eqref{eq:eqp}: once the inner
+residual is tied to the decision margin, the inexact loop makes the identical primal and dual
+sign decisions as the exact loop, so the Júdice--Pires count transfers verbatim. Without it,
+block pivoting and Krylov inner solves do not obviously compose: a tolerance-level solve can
+flip a sign test and reintroduce the cycling the fallback exists to prevent.
 
 \begin{table}[ht]\centering\footnotesize
 \begin{tabular}{lll}
 \toprule
  & Júdice--Pires~\cite{judice1994} / Murty~\cite{murty1988} & This paper \\
 \midrule
-Inner solve  & exact principal-block solve & inexact matrix-free CG, guarantee preserved (Lemma~\ref{lem:inexact}) \\
+Inner solve  & exact principal-block solve & inexact matrix-free CG, guarantee preserved (Lemma~\ref{lem:inexact}, Cor.~\ref{cor:inexact-eq}) \\
 Operator     & assembled/dense             & never forms $A$; $O(\sqrt\kappa)$ Krylov rate, $O(n)$ memory \\
 Constraints  & bounds ($x\ge0$)            & bounds \emph{and} equality $Bx=c$ (Schur complement) \\
 SPD premise  & assumed                     & secured for rank-deficient $A=M^\top M$ by the regularising split \\
@@ -178,82 +180,183 @@ Theorem~\ref{thm:termination} assumes each inner call returns the exact minimise
 $f_{\mathcal{F}}$, whereas CG returns an iterate accurate only to its residual tolerance. The
 following lemma closes that gap. Once the residual is tight enough relative to the test
 threshold $\varepsilon$, every primal and dual sign decision of Algorithm~\ref{alg:elim}
-coincides with the decision the exact solve would make. The inexact loop then inherits the
-theorem wholesale.
+coincides with the decision the exact solve would make. The inexact loop then inherits the results of the
+theorem.
 
 \begin{lemma}[Inexact inner solves]\label{lem:inexact}
-For a free set $\mathcal{F}$ let $\hat x(\mathcal{F})$ denote the exact solution
-of~\eqref{eq:innerspd} extended by zeros to $\mathbb{R}^n$, and
-$\hat s(\mathcal{F}) = A\,\hat x(\mathcal{F}) - b$ its reduced gradient. Define the
-\emph{decision margin}
+Fix the bound-constrained problem~\eqref{eq:bqp}. For a free set $\mathcal{F}$ let
+$\hat x(\mathcal{F})$ denote the exact solution of~\eqref{eq:innerspd} extended by zeros to
+$\mathbb{R}^n$, and $\hat s(\mathcal{F}) = A\,\hat x(\mathcal{F}) - b$ its reduced gradient.
+Let $\mathcal{F}_0 = \{1,\dots,n\}, \mathcal{F}_1, \dots, \mathcal{F}_T$ be the free-set
+trajectory of Algorithm~\ref{alg:elim} run with \emph{exact} inner solves, finite by
+Theorem~\ref{thm:termination}. Define the \emph{decision margin}
 \[
-  \mu \;=\; \min_{\mathcal{F} \subseteq \{1,\dots,n\}} \min\Big(
-    \big\{\, |\hat x_i(\mathcal{F})| : i \in \mathcal{F},\ \hat x_i(\mathcal{F}) \neq 0 \,\big\}
+  \mu \;=\; \min_{0 \le t \le T} \min\Big(
+    \big\{\, |\hat x_i(\mathcal{F}_t)| : i \in \mathcal{F}_t,\ \hat x_i(\mathcal{F}_t) \neq 0 \,\big\}
     \,\cup\,
-    \big\{\, |\hat s_i(\mathcal{F})| : i \notin \mathcal{F},\ \hat s_i(\mathcal{F}) \neq 0 \,\big\}
+    \big\{\, |\hat s_i(\mathcal{F}_t)| : i \notin \mathcal{F}_t,\ \hat s_i(\mathcal{F}_t) \neq 0 \,\big\}
   \Big),
 \]
-the smallest nonzero magnitude any primal or dual test can encounter; $\mu > 0$ as a minimum
-of finitely many positive numbers. Suppose the test tolerance satisfies
-$0 < \varepsilon < \mu$ and every inner CG call is stopped at a residual
+the smallest nonzero magnitude any primal or dual test encounters along the exact
+trajectory; $\mu > 0$ as a minimum of finitely many positive numbers. Suppose the test
+tolerance satisfies $0 < \varepsilon < \mu$ and every inner CG call is stopped at a residual
 $\rho = \lVert b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}} \rVert_2$ obeying
 \begin{equation}\label{eq:inexactcond}
-  \rho\;\frac{1 + \lambda_{\max}(A)}{\lambda_{\min}(A)}
+  \rho
+  \left(\frac{1 + \lambda_{\max}(A)}{\lambda_{\min}(A)}\right)
   \;<\; \min\big(\varepsilon,\ \mu - \varepsilon\big).
 \end{equation}
 Then at every outer step the violator sets $\mathcal{D}, \mathcal{V}$ of
 Algorithm~\ref{alg:elim} computed from the CG iterate coincide with those computed from the
 exact solve on the same free set. The inexact loop therefore traverses exactly the free-set
-sequence of the exact loop, Theorem~\ref{thm:termination} applies verbatim, and the returned
-iterate satisfies $\lVert \tilde x - x^\star \rVert_\infty \le \rho/\lambda_{\min}(A)$.
+trajectory $\mathcal{F}_0,\dots,\mathcal{F}_T$ of the exact loop, Theorem~\ref{thm:termination}
+applies verbatim, and the returned iterate satisfies
+$\lVert \tilde x - x^\star \rVert_2 \le \rho/\lambda_{\min}(A)$, hence also
+$\lVert \tilde x - x^\star \rVert_\infty \le \rho/\lambda_{\min}(A)$.
 \end{lemma}
 
 \begin{proof}
 We write $r = b_{\mathcal{F}} - A_{\mathcal{F}}\tilde x_{\mathcal{F}}$, so
-$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. From the Cauchy interlacing theorem we know that $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence
+$\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = -A_{\mathcal{F}}^{-1} r$. From the Cauchy
+interlacing theorem, $\lambda_{\min}(A_{\mathcal{F}}) \ge \lambda_{\min}(A)$, hence, in the
+$2$-norm throughout,
 \[
-  \delta_x \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_\infty
+  \delta_x \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_2
   \;\le\; \lVert A_{\mathcal{F}}^{-1} r \rVert_2
   \;\le\; \rho/\lambda_{\min}(A).
 \]
+Since $|\tilde x_i - \hat x_i| \le \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}}
+\rVert_2$ for every coordinate $i$, $\delta_x$ also bounds each individual primal test below.
 For a bound index $i \notin \mathcal{F}$ the reduced gradients differ by
-$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$, where $ A_{i,\mathcal{F}}$ is the $i$th row of $A$ restricted to the free set. By Cauchy--Schwarz
-and $\lVert A_{i,\mathcal{F}} \rVert_2 \le \lVert A \rVert_2 = \lambda_{\max}(A)$,
-$\delta_s := \max_i |\tilde s_i - \hat s_i| \le \lambda_{\max}(A)\,\rho/\lambda_{\min}(A)$.
-Both perturbations are bounded by
+$\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}})$,
+where $A_{i,\mathcal{F}}$ is the $i$th row of $A$ restricted to the free set. By
+Cauchy--Schwarz and $\lVert A_{i,\mathcal{F}} \rVert_2 \le \lVert A \rVert_2 =
+\lambda_{\max}(A)$, $\delta_s := \max_{i \notin \mathcal{F}} |\tilde s_i - \hat s_i| \le
+\lambda_{\max}(A)\,\delta_x \le \lambda_{\max}(A)\,\rho/\lambda_{\min}(A)$. Both
+perturbations are bounded by
 $\delta := \rho\,(1+\lambda_{\max}(A))/\lambda_{\min}(A) < \min(\varepsilon, \mu-\varepsilon)$
-by~\eqref{eq:inexactcond}.
+by~\eqref{eq:inexactcond}, so $\delta_x, \delta_s \le \delta$.
 
-We now fix $i \in \mathcal{F}$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$; either
-way $\tilde x_i \ge -\delta > -\varepsilon$, so the inexact test does not flag $i$, matching
-the exact test. If $\hat x_i < 0$ then $\hat x_i \le -\mu$ by the definition of $\mu$, so
-$\tilde x_i \le -\mu + \delta < -\varepsilon$: both tests flag $i$. The identical case split
-with $\hat s_i$ and $\delta_s$ handles the dual test. Hence
-$\tilde{\mathcal{D}} = \hat{\mathcal{D}}$ and $\tilde{\mathcal{V}} = \hat{\mathcal{V}}$ at
-this step; since both loops start from $\mathcal{F} = \{1,\dots,n\}$ and the counters
-$\bar N, p$ are functions of the violator sequence, induction gives the same free-set
-trajectory and the same stopping step. At termination the exact iterate is $x^\star$
-(Theorem~\ref{thm:termination}), so
-$\lVert \tilde x - x^\star \rVert_\infty = \delta_x \le \rho/\lambda_{\min}(A)$, the off-set
-entries being zero in both.
+We now fix $i \in \mathcal{F}_t$ at some step $t$ (writing $\mathcal{F} = \mathcal{F}_t$). If
+$\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$ by definition of the margin (the
+zero case is not excluded, cf.\ Remark~\ref{rem:inexact}(i)); either way $\tilde x_i \ge
+-\delta > -\varepsilon$, so the inexact test does not flag $i$, matching the exact test. If
+$\hat x_i < 0$ then $\hat x_i \le -\mu$, so $\tilde x_i \le -\mu + \delta < -\varepsilon$: both
+tests flag $i$. The same argument, with $\hat s_i, \tilde s_i, \delta_s$ in place of
+$\hat x_i, \tilde x_i, \delta_x$, shows $\tilde s_i \ge -\varepsilon$ whenever $\hat s_i \ge 0$
+and $\tilde s_i < -\varepsilon$ whenever $\hat s_i < 0$, for every bound index $i \notin
+\mathcal{F}$ --- the only comparison the dual test performs, since line~6 of
+Algorithm~\ref{alg:elim} tests $s_i$ only off the free set, where the exact reduced gradient
+need not vanish. (On $\mathcal{F}$ itself $\hat s_i = 0$ by stationarity and $\tilde s_i$ is
+never tested, so no parallel case arises there.) Hence $\tilde{\mathcal{D}} =
+\hat{\mathcal{D}}$ and $\tilde{\mathcal{V}} = \hat{\mathcal{V}}$ at step $t$; since both loops
+start from $\mathcal{F}_0 = \{1,\dots,n\}$ and the counters $\bar N, p$ are deterministic
+functions of the violator sequence, induction on $t$ gives the same free-set trajectory
+$\mathcal{F}_0,\dots,\mathcal{F}_T$ and the same stopping step. At termination the exact
+iterate is $x^\star$ (Theorem~\ref{thm:termination}), so
+$\lVert \tilde x - x^\star \rVert_2 = \delta_x \le \rho/\lambda_{\min}(A)$, the off-set
+entries being zero in both; $\lVert\cdot\rVert_\infty \le \lVert\cdot\rVert_2$ gives the same
+bound in the $\infty$-norm.
 \end{proof}
 
 \begin{remark}[Reading the margin condition]\label{rem:inexact}
-Three comments. (i) Components that are exactly zero at an exact solve are \emph{not}
-excluded. The threshold $\varepsilon$ absorbs them on both sides of the comparison, so the
-lemma, like the theorem it protects, holds even under degeneracy. Moreover, since
-$\mu > \varepsilon$, the $\varepsilon$-thresholded tests of Algorithm~\ref{alg:elim} agree
-with the exact sign tests of the pivot argument in Theorem~\ref{thm:termination}, so the
-algorithm as implemented is the algorithm as analysed. (ii) When CG is stopped at a
-\emph{relative} residual $\varepsilon_{\mathrm{cg}}$, then
-$\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$ and
-condition~\eqref{eq:inexactcond} becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone.
-(iii) The margin $\mu$ is not computable a priori, so the lemma is a license, not a recipe. It
-guarantees that \emph{some} finite tolerance reproduces the exact trajectory, and in practice
-a residual tolerance a couple of orders of magnitude below $\varepsilon$ suffices
-(Section~\ref{sssec:inexact} verifies trajectory-for-trajectory agreement at
-$\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$).
+Three comments. (i) Exactly-zero components are not excluded: the threshold $\varepsilon$
+absorbs them on both sides of every test, so the lemma holds even under degeneracy, and the
+$\varepsilon$-thresholded algorithm as implemented matches the exact sign tests of
+Theorem~\ref{thm:termination} as analysed. (ii) When CG is stopped at a relative residual,
+$\rho \le \varepsilon_{\mathrm{cg}} \lVert b \rVert_2$, condition~\eqref{eq:inexactcond}
+becomes a bound on $\varepsilon_{\mathrm{cg}}$ alone. (iii) The margin $\mu$ is not computable
+a priori, so the lemma is a license, not a recipe: it guarantees that \emph{some} finite
+tolerance reproduces the exact trajectory, and in practice a residual tolerance a couple of
+orders of magnitude below $\varepsilon$ suffices (Section~\ref{sssec:inexact} verifies
+trajectory-for-trajectory agreement at $\varepsilon_{\mathrm{cg}} = 10^{-10}$,
+$\varepsilon = 10^{-8}$).
 \end{remark}
+
+Lemma~\ref{lem:inexact} covers problem~\eqref{eq:bqp}, where the reduced gradient is
+$s = Ax - b$ directly. In the equality-augmented problem~\eqref{eq:eqp}, $s$ carries the
+multiplier term $-B^\top\lambda$, and $\lambda$ is itself recovered from the $p+1$ inexact CG
+solves of Section~\ref{sec:reduction} rather than read off a single residual; the next result
+propagates that second channel of inexactness through the Schur-complement recovery of
+$\lambda$ before repeating the sign-test argument above.
+
+\begin{corollary}[Inexact inner solves, equality-augmented case]\label{cor:inexact-eq}
+Fix a free set $\mathcal{F}$ with $B_{\mathcal{F}}$ of full row rank, and let $v_0, V_1, S,
+\lambda$ be as in Section~\ref{sec:reduction}, so $\hat x_{\mathcal{F}} = v_0 + V_1\lambda$.
+Suppose the $p+1$ inner CG solves return $\tilde v_0, \tilde V_1$ at residuals
+\[
+  \rho_0 = \lVert b_{\mathcal{F}} - A_{\mathcal{F}}\tilde v_0 \rVert_2, \qquad
+  \rho_1 = \lVert B_{\mathcal{F}}^\top - A_{\mathcal{F}}\tilde V_1 \rVert_2
+\]
+(the second the spectral norm of the residual matrix stacked over the $p$ column solves), that
+the multiplier is recovered as $\tilde\lambda = \tilde S^{-1}(c - B_{\mathcal{F}}\tilde v_0)$
+with $\tilde S = B_{\mathcal{F}}\tilde V_1$, and that
+\begin{equation}\label{eq:eqresid}
+  \rho_1\,\lVert B_{\mathcal{F}} \rVert_2 \;\le\; \tfrac{1}{2}\,\lambda_{\min}(A)\,\lambda_{\min}(S).
+\end{equation}
+Then
+\[
+  \delta_\lambda \;:=\; \lVert \tilde\lambda - \lambda \rVert_2 \;\le\;
+  \frac{2\lVert B_{\mathcal{F}} \rVert_2}{\lambda_{\min}(S)\,\lambda_{\min}(A)}
+  \big(\rho_0 + \rho_1 \lVert \lambda \rVert_2\big),
+\]
+and the recovered iterate $\tilde x_{\mathcal{F}} = \tilde v_0 + \tilde V_1\tilde\lambda$
+satisfies
+\[
+  \delta_x^{\mathrm{eq}} \;:=\; \lVert \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} \rVert_2
+  \;\le\; \frac{\rho_0 + \rho_1\lVert\lambda\rVert_2}{\lambda_{\min}(A)}
+  \;+\; \frac{\lVert B_{\mathcal{F}} \rVert_2 + \rho_1}{\lambda_{\min}(A)}\,\delta_\lambda.
+\]
+For a bound index $i \notin \mathcal{F}$, the reduced gradient $s_i = (Ax)_i - b_i -
+(B^\top\lambda)_i$ perturbs by
+\[
+  \delta_s^{\mathrm{eq}} \;:=\; \max_{i \notin \mathcal{F}} |\tilde s_i - \hat s_i| \;\le\;
+  \lambda_{\max}(A)\,\delta_x^{\mathrm{eq}} + \lVert B \rVert_2\,\delta_\lambda.
+\]
+If $\mu$ is redefined as in Lemma~\ref{lem:inexact} but along the exact free-set trajectory of
+the \emph{equality-augmented} loop (Theorem~\ref{thm:termination}'s second clause), and
+$\max(\delta_x^{\mathrm{eq}}, \delta_s^{\mathrm{eq}}) < \min(\varepsilon, \mu - \varepsilon)$ at
+every outer step, then the sign-test argument in the proof of Lemma~\ref{lem:inexact} applies
+verbatim with $\delta_x, \delta_s$ replaced by $\delta_x^{\mathrm{eq}}, \delta_s^{\mathrm{eq}}$:
+the inexact equality-augmented loop traverses the same free-set trajectory as the exact one,
+and Theorem~\ref{thm:termination}'s equality-augmented guarantee transfers verbatim.
+\end{corollary}
+
+\begin{proof}
+Write $R_1 = B_{\mathcal{F}}^\top - A_{\mathcal{F}}\tilde V_1$, so $\tilde V_1 - V_1 =
+-A_{\mathcal{F}}^{-1}R_1$ and, exactly as in Lemma~\ref{lem:inexact}'s proof,
+$\lVert \tilde v_0 - v_0 \rVert_2 \le \rho_0/\lambda_{\min}(A)$ and
+$\lVert \tilde V_1 - V_1 \rVert_2 \le \rho_1/\lambda_{\min}(A)$. Let
+$\Delta S = \tilde S - S = B_{\mathcal{F}}(\tilde V_1 - V_1)$ and $\Delta d = \tilde d - d$
+where $d = c - B_{\mathcal{F}}v_0$; then
+$\lVert \Delta S \rVert_2 \le \lVert B_{\mathcal{F}} \rVert_2\,\rho_1/\lambda_{\min}(A)$ and
+$\lVert \Delta d \rVert_2 \le \lVert B_{\mathcal{F}} \rVert_2\,\rho_0/\lambda_{\min}(A)$.
+Condition~\eqref{eq:eqresid} gives $\lVert S^{-1}\rVert_2 \lVert\Delta S\rVert_2 \le 1/2$, so
+the Neumann series for $\tilde S^{-1} = S^{-1}(I + \Delta S\,S^{-1})^{-1}$ gives
+$\lVert \tilde S^{-1} \rVert_2 \le 2\lVert S^{-1} \rVert_2 = 2/\lambda_{\min}(S)$. Since
+$\tilde S^{-1} - S^{-1} = -\tilde S^{-1}\Delta S\,S^{-1}$ and $S^{-1}d = \lambda$,
+\[
+  \tilde\lambda - \lambda = \tilde S^{-1}\tilde d - S^{-1}d
+  = \tilde S^{-1}\Delta d + (\tilde S^{-1}-S^{-1})d
+  = \tilde S^{-1}\big(\Delta d - \Delta S\,\lambda\big),
+\]
+and taking norms gives $\delta_\lambda$. For $\delta_x^{\mathrm{eq}}$,
+\[
+  \tilde x_{\mathcal{F}} - \hat x_{\mathcal{F}} = (\tilde v_0 - v_0) +
+  \tilde V_1(\tilde\lambda - \lambda) + (\tilde V_1 - V_1)\lambda,
+\]
+and, using $\lVert V_1 \rVert_2 = \lVert A_{\mathcal{F}}^{-1}B_{\mathcal{F}}^\top \rVert_2 \le
+\lVert B_{\mathcal{F}} \rVert_2/\lambda_{\min}(A)$,
+$\lVert \tilde V_1 \rVert_2 \le \lVert V_1 \rVert_2 + \rho_1/\lambda_{\min}(A) \le
+(\lVert B_{\mathcal{F}} \rVert_2 + \rho_1)/\lambda_{\min}(A)$; the triangle inequality gives
+the stated bound. Finally $\tilde s_i - \hat s_i = A_{i,\mathcal{F}}(\tilde x_{\mathcal{F}} -
+\hat x_{\mathcal{F}}) - B_{:,i}^\top(\tilde\lambda - \lambda)$, where $B_{:,i}$ is the $i$th
+column of $B$ (so $B_{:,i}^\top\lambda = (B^\top\lambda)_i$), bounded as in
+Lemma~\ref{lem:inexact}'s proof by $\lambda_{\max}(A)\,\delta_x^{\mathrm{eq}} + \lVert B
+\rVert_2\,\delta_\lambda$. The sign-test agreement and trajectory transfer then follow exactly
+as in the proof of Lemma~\ref{lem:inexact}, with $\delta_x^{\mathrm{eq}},
+\delta_s^{\mathrm{eq}}$ in place of $\delta_x, \delta_s$.
+\end{proof}
 
 \subsection{Projected-gradient reference method}\label{ssec:proj}
 
@@ -268,7 +371,7 @@ $x\geq0$ it is the simplex slice $\Delta_\beta$, projected onto in $O(n\log n)$ 
 sort-and-threshold pass~\cite{duchi2008,condat2016}. For a general equality system $Bx=c$,
 however, the projection onto $\mathcal{P} = \{x\geq0: Bx=c\}$ is itself a non-negative
 quadratic program with no closed form, so projected gradient loses its per-step simplicity.
-This is one reason the active-set loop is the method of choice once $p>1$: its cost rises only
+This is one reason the active-set loop is the method of choice once $p>1$ as its cost rises only
 by the $p$ extra right-hand sides of Section~\ref{sec:reduction}. The step size is $\tau = 1/L$ with
 $L = \lambda_{\max}(A)$, estimated once by power iteration on the same (matrix-free) operator.
 There is no outer loop and no linear solve: each step is one gradient evaluation (two products
@@ -325,7 +428,7 @@ the previous solution $x_{\mathcal{F}}$, reaches energy-norm accuracy $\tau$ in 
 \[
   k \;\leq\; \left\lceil \frac{\sqrt{\kappa}+1}{2}\,
   \ln\!\frac{2\,\lVert \delta \rVert_2}{\tau\sqrt{\lambda_{\min}(A)}} \right\rceil
-  \quad\text{iterations:}
+  \quad\text{iterations},
 \]
 the inner count scales with the logarithm of the \emph{parameter step} $\lVert\delta\rVert$,
 not of the solution norm.
@@ -347,7 +450,7 @@ $\ln(1/\rho) \geq 2/(\sqrt\kappa + 1)$; solving $2\rho^k\lVert e_0\rVert \leq \t
 yields the bound.
 \end{proof}
 
-When the support does drift, no comparable a-priori bound is available; the loop is not
+When the support drifts, no comparable a-priori bound is available. The loop is not
 monotone in the free set, as the adversarial family of Section~\ref{sssec:fallback} makes
 plain. The empirical picture is nonetheless simple: the warm-started outer count tracks the
 support drift $|\mathcal{F} \,\triangle\, \mathcal{F}'|$ and collapses to one whenever the

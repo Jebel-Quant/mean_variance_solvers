@@ -13,13 +13,13 @@ whose stationarity condition is the SPD linear system
 \end{equation}
 The active-set loop of Section~\ref{sec:nonneg} solves a sequence of such systems, one per
 outer step, and the inequality $x \geq 0$ is imposed by which indices $\mathcal{F}$ contains,
-never inside the linear solve. The inner solver is the proposed CG method.
+never inside the linear system solve. The inner solver is the proposed CG method.
 
 \paragraph{Matrix-free operator.}
-CG needs only the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never the explicit matrix. For
+It is well known that CG needs only the mat-vec $v \mapsto A_{\mathcal{F}}\,v$, never the explicit matrix. For
 $A = M^\top M$ this is $M_{\mathcal{F}}^\top(M_{\mathcal{F}}\,v)$ with
 $M_{\mathcal{F}} = M_{:,\mathcal{F}}$, two products at $O(m\,|\mathcal{F}|)$ and no $O(n^2)$
-storage---the standard CG-on-the-normal-equations
+storage, the standard CG-on-the-normal-equations
 arrangement~\cite{golub2013,paige1975,choi2006} on a column subset that changes between outer
 steps.
 
@@ -29,8 +29,7 @@ solve~\eqref{eq:innerspd}. The \emph{cross product}
 $x_{\mathcal{F}} \mapsto A_{\mathcal{B},\mathcal{F}}\,x_{\mathcal{F}}$ supplies the reduced
 gradient $s_i = (Ax)_i - b_i$ at the bound indices $i \in \mathcal{B}$, which the
 dual-feasibility test of Section~\ref{sec:nonneg} uses (since $x_{\mathcal{B}} = 0$). A full
-product $x \mapsto Ax$ is convenient for a residual check but not otherwise needed. Any
-backend realising these two operations runs the loop, its termination proof, and its
+product $x \mapsto Ax$ is convenient for a residual check but not otherwise needed. Any implementation realising these two operations runs the loop, its termination proof, and its
 convergence analysis unchanged. A dense $A$ slices them directly. The Gram operator
 $A = M^\top M$ evaluates them from $M$ without ever forming $A$, as above. A
 diagonal-plus-low-rank operator $A = \operatorname{diag}(d) + U\Delta U^\top$ inverts the free
@@ -55,16 +54,16 @@ for CG.
 \end{proposition}
 
 Reaching a fixed relative energy-norm tolerance thus takes
-$O(\sqrt\kappa\,\log\varepsilon^{-1})$ iterations, and clustered spectra do better---the
+$O(\sqrt\kappa)$ iterations, and clustered spectra, with a minimal condition number do better, the
 superlinear phase the synthetic study of Section~\ref{sec:results} measures. Because
 $A \succ 0$ forces every $A_{\mathcal{F}} \succ 0$, the bound applies at every outer step, and
 the regularising split of Section~\ref{sec:conditioning} lowers $\kappa$. This $\sqrt\kappa$
-dependence is the whole reason to keep a Krylov inner solver: the projected-gradient reference
+dependence is the whole reason to keep a Krylov inner solver, while the projected-gradient reference
 of Section~\ref{sec:nonneg} pays $O(\kappa)$ at the same per-step cost.
 
 \paragraph{Eliminating the equality multipliers.}
 For the equality-augmented problem~\eqref{eq:eqp}, stationarity and feasibility on the free
-set are the $(|\mathcal{F}|+p)\times(|\mathcal{F}|+p)$ saddle-point system~\cite{benzi2005}
+set are the $(|\mathcal{F}|+p)\times(|\mathcal{F}|+p)$ saddle-point system (cf.~\cite{benzi2005})
 \begin{equation}\label{eq:saddle}
   \begin{pmatrix} A_{\mathcal{F}} & -B_{\mathcal{F}}^\top \\ B_{\mathcal{F}} & 0 \end{pmatrix}
   \begin{pmatrix} x_{\mathcal{F}} \\ \lambda \end{pmatrix}

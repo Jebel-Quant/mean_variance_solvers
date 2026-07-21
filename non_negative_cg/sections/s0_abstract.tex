@@ -7,25 +7,18 @@ The conjugate gradient method (CG) solves a symmetric positive definite (SPD) sy
   \qquad A \succ 0,
 \]
 where the equality system $Bx = c$ is present only in the equality-augmented variant.
-The solver wraps CG in a primal-dual active-set loop: each step solves the unconstrained system
-over a set of \emph{free} variables, drops any that turn negative, re-admits
-any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the
+The solver wraps the CG method in a primal-dual active-set loop where each step solves the unconstrained system
+over a set of \emph{free} variables, drops any variables that turn negative, re-admits any bound variable whose reduced gradient is negative, and restarts CG. These toggles are the
 principal pivots of the linear complementarity problem $(A,\,{-b})$, and because $A$ is a $P$-matrix,
 every pivot is well defined. For termination we use the block-principal-pivoting
-construction of Júdice and Pires---a fast block-pivot path safeguarded by a least-index Bland fallback---which
+construction of Júdice and Pires, a fast block-pivot path safeguarded by a least-index Bland fallback, which
 reaches the unique global minimiser in finitely many outer steps on the strictly monotone problem,
 even under degeneracy. Our contribution carries that guarantee to the inexact,
-matrix-free regime the Krylov inner solve requires: once CG's residual is tied to the decision margin,
+matrix-free regime the Krylov inner solve requires. Meaning that once the CG algorithm's residual is tied to the decision margin,
 the approximate loop provably makes the same primal and dual sign decisions as the exact one, so finite termination transfers decision-for-decision. The guarantee attaches to the outer loop, so a direct factorisation may replace CG unchanged.
 
-Each inner solve is matrix-free: when $A = M^\top M$, the operator $v \mapsto M^\top(M v)$
-needs two products with $M$ and no $O(n^2)$ storage, and it retains CG's $O(\sqrt\kappa)$
-Krylov rate, where $\kappa = \kappa(A)$. Any regularisation or preconditioner that compresses
-the spectrum lowers the iteration count; a ridge/Tikhonov split
-$A \mapsto (1-\alpha)A + \alpha R^\top R$ also secures the $P$-matrix property. A loop-free
-projected-gradient reference method, analysed alongside, forgoes the Krylov subspace and
-converges at the slower $O(\kappa)$ rate. On synthetic SPD problems the loop reaches the
-planted optimum in at most $\nncgMaxOuter{}$ outer steps, and with a direct free-set solve it
-outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on
-dense instances.
+Each inner solve is matrix-free in the sense that when matrix vector products with $A = M^\top M$ are required, the operator $v \mapsto M^\top(M v)$
+needs two products with $M$ and no $O(n^2)$ storage, and it retains CG's $O(\sqrt\kappa)$ convergence rate, where $\kappa = \kappa(A)$. In order to improve the convergence behvaihour we show that any regularisation or preconditioner, which compresses the spectrum lowers the iteration count. A ridge/Tikhonov split of the form
+$A \mapsto (1-\alpha)A + \alpha R^\top R$ also secures the needed $P$-matrix property. A loop-free projected-gradient reference method, analysed alongside, forgoes the Krylov subspace and converges at the slower $O(\kappa)$ rate. On synthetic SPD problems the loop reaches the planted optimum in at most $\nncgMaxOuter{}$ outer steps, and with a direct free-set solve it
+outpaces Lawson--Hanson and an interior-point solver by more than an order of magnitude on dense instances.
 \end{abstract}
