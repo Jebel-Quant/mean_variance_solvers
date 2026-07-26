@@ -5,9 +5,7 @@ canonical Krylov solver for a symmetric positive definite (SPD) linear system $A
 see, e.g., Golub and Van Loan~\cite{golub2013}, Greenbaum~\cite{greenbaum1997}, or Trefethen
 and Bau~\cite{trefethenbau1997}. It builds its iterates in the Krylov subspace
 $\mathcal{K}_k(A, b)$ and converges at the $O(\sqrt\kappa)$ rate, where $\kappa = \kappa(A)$
-is the spectral condition number (Proposition~\ref{prop:cg}). CG solves linear systems; it is
-\emph{not} designed for inequalities, that is, for constrained programs. This note applies CG
-to the bound-constrained quadratic
+is the spectral condition number (Proposition~\ref{prop:cg}). CG solves linear systems; it is \emph{not} designed for inequalities, that is, for constrained programs considered here. This paper applies CG within the context of solving the bound-constrained quadratic
 \begin{equation}\label{eq:bqp}
   \min_{x \in \mathbb{R}^n}\; f(x) = \tfrac{1}{2}\,x^\top A x - b^\top x
   \quad\text{subject to}\quad x \geq 0,
@@ -16,11 +14,8 @@ to the bound-constrained quadratic
 without giving up its per-iteration cost or its Krylov convergence rate.
 
 Problem~\eqref{eq:bqp} is the strictly convex non-negative quadratic program. When
-$A = M^\top M$ is the Gram matrix of $M \in \mathbb{R}^{m\times n}$ and $b = M^\top d$, its
-minimiser solves the non-negative least-squares (NNLS) problem
-$\min_{x\geq 0}\|Mx - d\|_2^2$, the setting of Lawson and Hanson~\cite{lawson1974}. Without
-the constraint, the minimiser is simply $x = A^{-1}b$, which is exactly what CG computes; the
-constraint $x \geq 0$ is what stands between that clean solve and the answer. We also treat
+$A = M^\top M$ is the Gram matrix of $M \in \mathbb{R}^{m\times n}$ and $b = M^\top d$, its minimiser solves the non-negative least-squares (NNLS) problem
+$\min_{x\geq 0}\|Mx - d\|_2^2$, the setting consider in Lawson and Hanson~\cite{lawson1974}. Without the constraint, the minimiser is simply $x = A^{-1}b$, which is exactly what CG computes. The constraint $x \geq 0$ is what stands between that clean single solve and the answer to our problem. We also treat
 the \emph{equality-augmented} variant, in which a linear equality system $Bx = c$ (with
 $B \in \mathbb{R}^{p\times n}$ of full row rank) is imposed alongside $x \geq 0$. This variant
 arises whenever the solution must satisfy a family of linear balance conditions, the single
@@ -28,9 +23,8 @@ normalisation $\mathbf{1}^\top x = \beta$ being the case $p=1$. Its multipliers
 $\lambda \in \mathbb{R}^p$ can be eliminated analytically through a $p\times p$ Schur
 complement (cf.\ Section~\ref{sec:reduction}).
 
-This note studies the constraint-handling layer directly, and its central contribution is a
-\emph{termination guarantee}. The vehicle is a \emph{primal-dual active-set} outer
-loop~\cite{nocedal2006} that wraps CG. It solves the unconstrained system over a working set
+This paper studies the constraint-handling layer directly, and its central contribution is a finite \emph{termination guarantee}. The method of our choice is a \emph{primal-dual active-set} outer
+loop~\cite{nocedal2006} that wraps around CG. It solves the unconstrained system over a working set
 of \emph{free} variables, releases any variable that returns negative (the primal step),
 re-admits any bound variable whose reduced gradient is negative (the dual step), and restarts
 CG on the modified free set each time. The variable toggles are precisely the \emph{principal
@@ -38,21 +32,16 @@ pivots} of the linear complementarity problem (LCP) $(A,\,{-b})$. Since $A \succ
 $P$-matrix, every principal submatrix is invertible and each pivot is well
 defined~\cite{murty1988,judice1994,kim2011}. Guarding a fast block-pivot path with a
 least-index Bland-style fallback yields finite termination at the unique global minimiser
-even under degeneracy---the block-principal-pivoting construction of Júdice and
+even under degeneracy, the block-principal-pivoting construction of Júdice and
 Pires~\cite{judice1994} (Theorem~\ref{thm:termination}). What we add is its transfer to the
 inexact CG solves the loop actually performs: a perturbation lemma shows that
 once the residual is small against the problem's decision margin, the inexact loop visits
-exactly the free sets of the exact one (Lemma~\ref{lem:inexact}). Combining this guarantee
-with a Krylov inner solver on a changing free set turns it into a fast solver in practice. In
-concrete terms, CG restarts on each reduced system and warm-starts across a parametric family
-of problems.
+exactly the free sets of the exact one (Lemma~\ref{lem:inexact}). Combining this guarantee with a Krylov inner solver on a changing free set turns it into a fast solver in practice. In concrete terms, CG restarts on each reduced system and warm-starts across a parametric family of nearby problems.
 
-The inner solve preserves two properties that matter for speed. First, it is
-\emph{matrix-free}: when $A = M^\top M$, the action
-$v \mapsto A_{\mathcal{F}}v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}v)$ on the free set
-$\mathcal{F}$ is evaluated as two products with $M_{\mathcal{F}}$, so $A$ is \emph{never}
-assembled and no $O(n^2)$ storage is incurred. Second, its iteration count is governed by the
-condition number $\kappa$, so any preconditioner that compresses the spectrum accelerates
+The inner solve preserves two properties that matter for computational efficiency. First, it is
+\emph{matrix-free}, i.e. when $A = M^\top M$ is applied, the action
+$v \mapsto A_{\mathcal{F}}v = M_{\mathcal{F}}^\top(M_{\mathcal{F}}v)$ on the free set $\mathcal{F}$ is evaluated as two products with $M_{\mathcal{F}}$, so $A$ is \emph{never}
+assembled and no $O(n^2)$ storage is required. Second, its iteration count is governed by the condition number $\kappa$, so any preconditioner that compresses the spectrum accelerates
 convergence. A ridge/Tikhonov splitting $A \mapsto A_\alpha = (1-\alpha)A + \alpha R^\top R$
 with $R^\top R \succ 0$ does both. It lowers $\kappa$ (Proposition~\ref{prop:regcond}), and,
 by keeping every principal submatrix strictly positive definite, it secures the $P$-matrix
@@ -64,31 +53,22 @@ feasible set. The feasible set is the non-negative orthant for~\eqref{eq:bqp}, o
 slice $\Delta_\beta = \{x : \mathbf{1}^\top x = \beta,\, x \geq 0\}$ for the
 single-normalisation case, projected onto in $O(n\log n)$ by a sort-and-threshold pass
 (cf.\ \cite{duchi2008,condat2016}). The method is single-stage and simple. It is not a Krylov
-subspace method, however: it does not orthogonalise residuals against prior search directions,
-and it converges at the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop
-(Section~\ref{sec:nonneg}).
+subspace method, it does not orthogonalise residuals against prior search directions, and it converges at the $O(\kappa)$ rate, a factor $\sqrt\kappa$ slower than the CG inner loop (Section~\ref{sec:nonneg}).
 
-Both building blocks are individually classical. One is an active-set method and a
-block-principal-pivoting method for the non-negative and complementarity
-problems~\cite{lawson1974,judice1994,kim2011,murty1988,nocedal2006}. The other is CG with
-preconditioning for SPD systems~\cite{hestenes1952,golub2013,greenbaum1997,trefethenbau1997,%
-benzi2005}. What is \emph{not} classical is carrying that termination guarantee to inexact,
-matrix-free inner solves. Pure block principal pivoting terminates only under a non-degeneracy
-assumption; Júdice and Pires' least-index fallback already removes that for exact
-solves~\cite{judice1994}, and Lemma~\ref{lem:inexact} shows the guarantee survives the inexact
-CG solves the matrix-free regime requires (Theorem~\ref{thm:termination}). The synthetic study of
-Section~\ref{sec:results} then shows this unconditional guarantee to be dormant on generic
-data yet genuinely necessary: on an adversarial family of anti-correlated designs the
+Both building blocks are individually classical. One is an active-set method and a block-principal-pivoting method for the non-negative and complementarity
+problems~\cite{lawson1974,judice1994,kim2011,murty1988,nocedal2006}. The other is CG with preconditioning for SPD systems~\cite{hestenes1952,golub2013,greenbaum1997,trefethenbau1997,%
+benzi2005}. What is \emph{not} classical is carrying that termination guarantee to inexact, matrix-free inner solves. Pure block principal pivoting terminates only under a non-degeneracy
+assumption; Júdice and Pires' least-index fallback already removes that requirement for exact solves~\cite{judice1994}, and Lemma~\ref{lem:inexact} shows the guarantee survives the inexact CG solves the matrix-free regime requires (Theorem~\ref{thm:termination}). The synthetic study of
+Section~\ref{sec:results} then shows this unconditional guarantee to be dormant on generic data yet genuinely necessary meaning that on an adversarial family of anti-correlated designs the
 unguarded batch path cycles, and only the fallback terminates it. Wrapping this guaranteed
 loop around a matrix-free Krylov inner solver, warm-started across a parametric sweep, is the
-engineering that makes the guaranteed method a fast one as well. We develop and analyse it
+approach that makes the guaranteed method a fast one as well. We develop and analyse it
 here on its own, independent of any application.\footnote{A reference implementation is
 released as the open-source package \texttt{nncg}:
 \url{https://github.com/Jebel-Quant/nncg}. Its continuous-integration test suite is the
 synthetic study of Section~\ref{sec:results}.}
 
-Driving CG through a changing set of free variables has a lineage of its own, and the
-distinction from it is worth drawing precisely. Bertsekas' projected Newton
+Applying CG through a changing set of free variables has a lineage of its own, and the distinction from it is worth drawing precisely. Bertsekas' projected Newton
 method~\cite{bertsekas1982}, Mor\'e and Toraldo's GPCG~\cite{moretoraldo1991}, and Dost\'al's
 proportioning and MPRGP algorithms~\cite{dostal1997,dostalschoberl2005} are
 \emph{feasible-point} methods. Every iterate satisfies the bounds, and the working face
@@ -96,24 +76,19 @@ changes through gradient projections. The switches between projection and CG pha
 governed by sufficient-decrease or proportioning tests. Their convergence rates are stated in
 terms of $\kappa$, and they identify the optimal face finitely under a non-degeneracy
 (strict-complementarity) assumption. They are moreover \emph{bound-constrained} solvers: a
-general equality $Bx = c$---a budget or factor-neutrality condition in the portfolio
-application---breaks the closed-form orthant projection they rely on, and is reached only by
+general equality $Bx = c,$ a budget or factor-neutrality condition in the portfolio
+application, breaks the closed-form orthant projection they rely on, and is reached only by
 wrapping them in an outer augmented-Lagrangian loop~\cite{dostal2006smalbe}, at the price of an
 extra level of iteration and of the exact certificate. The loop developed here is instead a
 \emph{complementary-basis} method. Its iterates are infeasible between outer steps, the free
 set changes by principal pivots driven by signs alone with no line search or decrease test, and
 it takes $Bx = c$ directly through the Schur-complement elimination of
-Section~\ref{sec:reduction}. The trade cuts both ways: this loop adds the equality $Bx = c$ but
-treats only the non-negative orthant $x \geq 0$ (equivalently a single lower bound per
-variable), whereas the feasible-point family handles general two-sided box constraints
-$\ell \leq x \leq u$ that our two-state complementary basis does not express. Termination is combinatorial: it rests on Murty's least-index rule, which is what
-removes the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast
-NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations
-cross-products, but it still assembles $M^\top M$ and solves each working-set system by dense
-factorisation. The present method forms neither, reaching $A$ only through the two operator
+Section~\ref{sec:reduction}. This loop adds the equality $Bx = c$ but
+treats only the non-negative orthant $x \geq 0$ (equivalently a single lower bound per variable), whereas the feasible-point family handles general two-sided box constraints
+$\ell \leq x \leq u$ that our two-state complementary basis does not express. The termination is of combinatorial nature as it rests on Murty's least-index rule, which is what removes the non-degeneracy hypothesis. On the NNLS side, Bro and De Jong's fast NNLS~\cite{brodejong1997} accelerates Lawson--Hanson by caching normal-equations cross-products, but it still assembles $M^\top M$ and solves each working-set system by dense factorisation. The present method forms neither, reaching $A$ only through the two operator
 applications of Section~\ref{sec:reduction}.
 
-Section~\ref{sec:problem} states the problem and its KKT/complementarity structure.
+We briefly summarise the main structure of this paper. Section~\ref{sec:problem} states the problem and its KKT/complementarity structure.
 Section~\ref{sec:reduction} reduces it to a sequence of unconstrained SPD solves, records the
 matrix-free CG operator and its convergence rate, and eliminates the equality multipliers
 analytically. Section~\ref{sec:nonneg} develops the active-set loop and the projected-gradient

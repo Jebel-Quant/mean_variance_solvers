@@ -25,7 +25,7 @@ at the same cost structure.
 \paragraph{Optimality and complementarity.}
 Because $f$ is strictly convex and the feasible set of~\eqref{eq:bqp} is a non-empty closed
 convex cone, a unique minimiser exists and the Karush-Kuhn-Tucker (KKT) conditions are
-necessary and sufficient. Introduce a multiplier $s \geq 0$ for $x \geq 0$. Stationarity of
+necessary and sufficient. We introduce a multiplier $s \geq 0$ for $x \geq 0$. Stationarity of
 the Lagrangian $\tfrac{1}{2}x^\top A x - b^\top x - s^\top x$ gives the reduced gradient
 $s = \nabla f(x) = A x - b$, and the KKT system is the linear complementarity problem
 $\mathrm{LCP}(A,\,{-b})$:
@@ -35,7 +35,7 @@ $\mathrm{LCP}(A,\,{-b})$:
 Complementary slackness partitions the indices into a \emph{free} set
 $\mathcal{F} = \{i : x_i > 0\}$, on which $s_i = 0$ and hence $(Ax)_i = b_i$, and a
 \emph{bound} set $\mathcal{B} = \{i : x_i = 0\}$, on which $s_i = (Ax)_i - b_i \geq 0$. A
-bound variable with $s_i < 0$ would lower $f$ if released to a small positive value; a free
+bound variable with $s_i < 0$ would lower $f$ if released to a small positive value. We point out that a free
 variable with $x_i < 0$ is infeasible and must be pushed to the bound. These two violations
 drive the primal and dual steps of Section~\ref{sec:nonneg}.
 
@@ -44,23 +44,23 @@ $-\lambda^\top(Bx - c)$ with a multiplier $\lambda \in \mathbb{R}^p$. The reduce
 becomes $s = A x - b - B^\top\lambda$, and the free-set stationarity reads
 $(Ax)_i = b_i + (B^\top\lambda)_i$ for $i \in \mathcal{F}$. On the free set the gradient is
 thus pinned to the row space of $B$, with $\lambda$ the vector of shadow prices of the $p$
-balance conditions. The KKT system is now a \emph{mixed} complementarity problem: the free
+balance conditions. The KKT system is now a \emph{mixed} complementarity problem, i.e. the free
 block carries the equality $B_{\mathcal{F}}x_{\mathcal{F}} = c$ alongside the sign conditions.
 Section~\ref{sec:reduction} shows that $\lambda$ need not be carried as an unknown in the
-linear solve; it is recovered in closed form from $p+1$ SPD solves and a $p\times p$ Schur
+linear solve. It is recovered in closed form from $p+1$ SPD solves and a $p\times p$ Schur
 system (for $p=1$, the two solves of the single-normalisation case). This requires
 $B_{\mathcal{F}}$ to have full row rank. That holds whenever the free set is large enough,
 $|\mathcal{F}| \geq p$, and generically thereafter; for $p=1$ it holds for every non-empty
 free set.
 
 \paragraph{The $P$-matrix property.}
-Since $A \succ 0$, every principal submatrix $A_{\mathcal{F}} = A_{\mathcal{F},\mathcal{F}}$
-is itself SPD: $x_{\mathcal{F}}^\top A_{\mathcal{F}}\,x_{\mathcal{F}} = x^\top A x > 0$ for any
+Since $A \succ 0$, every principal submatrix denoted by $A_{\mathcal{F}} := A_{\mathcal{F},\mathcal{F}},$ where $\mathcal{F}$ is any index set, 
+is itself SPD as $x_{\mathcal{F}}^\top A_{\mathcal{F}}\,x_{\mathcal{F}} = x^\top A x > 0$ for any
 nonzero $x$ supported on $\mathcal{F}$. It is therefore invertible with
 $\det A_{\mathcal{F}} > 0$, so the linear system
 $A_{\mathcal{F}}\,x_{\mathcal{F}} = b_{\mathcal{F}}$ solved on any candidate free set is well
 posed and CG applies at every outer step (Section~\ref{sec:reduction}). This much is
-elementary and needs nothing beyond the SPD of a principal submatrix.
+elementary and needs nothing but symmetry and definiteness of a principal submatrix.
 
 The $P$-matrix label enters for one further purpose. A matrix all of whose principal minors
 are positive is a $P$-matrix~\cite{murty1988}, and $A \succ 0$ is one; the point of the label

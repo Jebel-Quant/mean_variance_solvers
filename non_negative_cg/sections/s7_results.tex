@@ -89,7 +89,7 @@ $\nncgMaxErr$.}
 \label{tab:nncg_synthetic}
 \end{table}
 
-Three predictions of the analysis are borne out.
+Three previous observations are now confirmed.
 
 \emph{(i) Inner count is bounded by $\sqrt\kappa$; regularisation lowers it.}
 Figure~\ref{fig:nncg_kappa} shows the total CG inner iterations rising with $\kappa$ but
@@ -144,7 +144,7 @@ regularisation.
 
 That the fallback lies dormant on generic data raises the
 question of whether it is needed at all. The following family answers it. Let the columns of
-$M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$, with small $\xi$ and a
+$M$ arrive in near-anti-parallel pairs, $M = [\,M_0,\ -M_0 + \xi E\,]$, with small $\xi,$ random perturbation $E$, and a
 ridge to keep $A = M^\top M + \lambda I$ a $P$-matrix. Pushing a variable to the bound flips
 the sign of its partner's entry, so a batch drop systematically over-shoots and a later batch
 add restores it. This is the codimension-one near-tie event of Section~\ref{sec:nonneg} made
@@ -176,8 +176,7 @@ certificate is ever available, and the loop converges on \nncgRankConvHigh{} of 
 Any $\alpha > 0$ restores the $P$-matrix premise of Theorem~\ref{thm:termination}, and with
 it both reliability and speed: every run converges, recovering the planted optimum to
 $\nncgRankOkErr$. The partial successes at $\alpha = 0$ sharpen the point rather than soften
-it. What regularisation buys is not merely conditioning but the \emph{guarantee}; without it,
-termination is luck.
+it. What regularisation buys is not simply conditioning but the \emph{guarantee} as without it termination of the algorithm is luck.
 
 \begin{table}[ht]
 \centering
@@ -257,7 +256,7 @@ changes.
 $N = \nncgDeblurNside{}$ ($n = \nncgDeblurDim{}$ unknowns): the true image, its Gaussian blur
 with additive noise, and the reconstruction from the matrix-free active-set loop
 (Algorithm~\ref{alg:elim}), which reaches $A = B^\top B$ only through $v \mapsto B^\top(Bv)$ and
-never forms it---a dense $A$ would be $\nncgDeblurDenseGB{}$\,GB. The solve lifts the image from
+never forms it, a dense $A$ would be $\nncgDeblurDenseGB{}$\,GB. The solve lifts the image from
 $\nncgDeblurPSNRblur{}$ to $\nncgDeblurPSNR{}$\,dB PSNR and pins the $\nncgDeblurActive{}$
 black-background pixels exactly at the non-negativity bound.}
 \label{fig:nncg_deblur}
@@ -265,7 +264,7 @@ black-background pixels exactly at the non-negativity bound.}
 
 \subsection{Inexactness and general equality constraints}\label{ssec:robustness}
 
-\subsubsection{Inexact inner solves}\label{sssec:inexact}
+%\subsubsection{Inexact inner solves}\label{sssec:inexact}
 
 In line with Lemma~\ref{lem:inexact}, running the loop with its
 CG inner solver ($\varepsilon_{\mathrm{cg}} = 10^{-10}$, $\varepsilon = 10^{-8}$) against a
@@ -275,7 +274,7 @@ trajectories on all \nncgTrajTotal{} planted instances
 Theorem~\ref{thm:termination} survives the inexact solves it is implemented with, not merely
 in principle but decision-for-decision.
 
-\subsubsection{The general equality constraint}
+%\subsubsection{The general equality constraint}
 
 The same loop with the Schur-complement elimination of
 Section~\ref{sec:reduction} solves the equality-augmented problem~\eqref{eq:eqp} for a general
@@ -287,7 +286,7 @@ solve exactly.
 
 \subsection{Warm-starting a parametric sweep}\label{ssec:frontier}
 
-\subsubsection{The long-only efficient frontier}
+%\subsubsection{The long-only efficient frontier}
 
 The parametric sweep a practitioner
 actually runs is the long-only efficient frontier itself. On the S\&P~500 (\nncgFrontN{}
@@ -329,7 +328,7 @@ independent of the inner solver; the warm run pays only for the support drift
 \label{fig:nncg_frontier}
 \end{figure}
 
-\subsubsection{Matrix-free at portfolio scale}
+%\subsubsection{Matrix-free at portfolio scale}
 
 Because the factor operator is never assembled, the
 sweep runs in $O(nK)$ memory where a dense $\Sigma$ cannot be formed. Calibrating the fitted
@@ -355,10 +354,9 @@ sizes.}
 \end{table}
 
 \subsection{Comparison with external solvers}\label{ssec:external}
+\paragraph{Dense, assembled problems}
 
-\subsubsection{Dense, assembled problems}
-
-The comparisons so far are internal: active-set variants against
+The comparisons so far are internal, i.e. active-set variants against
 one another and against projected gradient. We close the section by placing
 Algorithm~\ref{alg:elim} among the external solvers a practitioner would actually reach for.
 This dense, explicitly assembled family is chosen to make that placement fair to the
@@ -412,7 +410,7 @@ duality-gap tolerance.}
 \label{tab:nncg_bench}
 \end{table}
 
-\subsubsection{Matrix-free at scale}
+\paragraph{Matrix-free at scale}
 
 The matrix-free deblurring family of Section~\ref{ssec:matrixfree} places the method against
 four external solvers, split by what each needs of the operator. Lawson--Hanson, Clarabel, and
@@ -465,12 +463,12 @@ preconditioner, as is MPRGP.}
 \label{tab:nncg_deblur}
 \end{table}
 
-\subsubsection{What a feasible-point method cannot certify}
+\paragraph{What a feasible-point method cannot certify}
 
 The timing above conceded that MPRGP can be the faster matrix-free solver on a well-conditioned
 operator. Speed, however, is not what separates the two methods. The active-set loop returns an
-\emph{exact} KKT certificate---it identifies the optimal active set combinatorially and returns
-a dual-feasible, complementary $(x, s)$ pair to machine precision---whereas MPRGP, a
+\emph{exact} KKT certificate, it identifies the optimal active set combinatorially and returns
+a dual-feasible, complementary $(x, s)$ pair to machine precision, whereas MPRGP, a
 feasible-point method, only drives the KKT residual below a requested tolerance and never
 certifies the active set. On near-degenerate problems the gap is stark. We plant a
 bound-constrained quadratic ($n = \nncgCertN{}$, $\nncgCertSeeds{}$ seeds) whose optimum
@@ -482,7 +480,7 @@ $\nncgCertMPtolHi{}$, mislabels $\nncgCertMPerrHi{}$ of the $\nncgCertN{}$ varia
 dual-infeasible (most-negative reduced gradient $\nncgCertMPdualHi{}$); its support error and
 dual infeasibility fall only as fast as the tolerance it is asked for
 (Figure~\ref{fig:nncg_certificate}), matching the active-set support only near
-$\nncgCertMPtolZero{}$ ($\nncgCertMPitZero{}$ iterations)---and even there it emits no
+$\nncgCertMPtolZero{}$ ($\nncgCertMPitZero{}$ iterations), and even there it emits no
 certificate. This is the structural payoff of the complementary-basis loop, compounded by the
 equality constraint of Section~\ref{ssec:frontier}: the budget $\mathbf{1}^\top x = c$ is
 outside MPRGP's bound-only scope entirely.
@@ -494,19 +492,19 @@ outside MPRGP's bound-only scope entirely.
 bound-constrained QP ($n = \nncgCertN{}$, margins down to $\nncgCertMinMargin{}$,
 $\nncgCertSeeds{}$ seeds). \emph{Left}: support-identification errors against the planted
 optimum. \emph{Right}: the KKT natural residual $\|\min(x,s)\|_\infty$. The active-set loop
-(dashed) is exact---zero support errors, residual $\nncgCertASresid{}$---in a fixed
+(dashed) is exact, zero support errors, residual $\nncgCertASresid{}$, in a fixed
 $\nncgCertASouter{}$ outer steps; MPRGP's error and residual track its stopping tolerance, and
 it never returns a dual-feasible certificate.}
 \label{fig:nncg_certificate}
 \end{figure}
 
-\subsubsection{A real, non-synthetic check at scale}
+\paragraph{A real, non-synthetic check at scale}
 
 The external-baseline comparison above is on a planted family designed to be fair to
 Lawson--Hanson and Clarabel alike; a genuine, over-complete hyperspectral unmixing problem
 confirms the same ordering on real data at a scale where the matrix-free argument bites. We
-unmix the Cuprite scene against the full USGS spectral library~\cite{clark2007}---the standard
-over-complete dictionary of the sparse-unmixing literature~\cite{iordache2011}---so each pixel
+unmix the Cuprite scene against the full USGS spectral library~\cite{clark2007},the standard
+over-complete dictionary of the sparse-unmixing literature~\cite{iordache2011}, so each pixel
 poses the fully-constrained
 least-squares abundance problem $\min_x \tfrac12 x^\top A x - b_i^\top x$ s.t.\ $x \geq 0$,
 $\mathbf{1}^\top x = 1$, $A = M^\top M$, now with $M$ holding $n = \nncgHsLibSignatures{}$
@@ -535,7 +533,7 @@ approximate abundance vector left to be thresholded
 ($n = \nncgHsLibSignatures{}$ signatures, $\nncgHsLibBands{}$ bands, $\nncgHsLibPixels{}$
 pixels). \emph{Left}: per-pixel active-set outer-iteration counts, cold versus warm-started;
 warm starting collapses them, with $\nncgHsLibFracSingle{}\%$ of pixels solved in a single
-outer step. \emph{Right}: active library members per pixel---the loop certifies a mean of
+outer step. \emph{Right}: active library members per pixel, the loop certifies a mean of
 $\nncgHsLibSupportMean{}$, the exact single-mineral support the sparse-unmixing model expects.}
 \label{fig:nncg_hyperspectral_library}
 \end{figure}
