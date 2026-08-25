@@ -1,0 +1,101 @@
+\section{Introduction}
+\label{sec:intro}
+
+The strictly convex quadratic program
+\begin{equation}
+  \min_{x \in \R^n} \; \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad C\T x \ge b,
+  \label{eq:qp}
+\end{equation}
+with $G \in \R^{n \times n}$ symmetric positive definite, $C \in \R^{n \times m}$
+and the first $m_{\mathrm{eq}}$ of the $m$ constraints understood as equalities,
+is solved a great many times a day. Mean-variance portfolio
+selection~\cite{markowitz1952} is exactly~\eqref{eq:qp}; so is every step of a
+sequential quadratic programming method and every horizon of a linear model
+predictive controller. For dense instances of small to moderate size --- $n$ from
+a handful to a few thousand --- the method of choice has for forty years been the
+dual active-set algorithm of Goldfarb and Idnani~\cite{goldfarb1982,goldfarb1983},
+whose distinguishing property is that it needs no phase-one problem: the
+unconstrained minimiser $G^{-1}a$ is dual feasible for free, so the iteration can
+start there and drive primal infeasibility to zero.
+
+This note is a derivation of that method in the form the \texttt{cvx-quadprog}
+package implements it,\footnote{\url{https://github.com/Jebel-Quant/quadprog}}
+together with the two extensions that package adds. It is written because the
+companion paper accompanying the package is about something else. That paper asks
+which of the reference implementation's decisions are essential to the algorithm
+and which are artefacts of Fortran, and answers with measurements; it states the
+mathematics compactly and moves on. What follows is the part it moves past: every
+identity the solver depends on, derived, with the degenerate cases named.
+
+\subsection{Why the dual method}
+
+A primal active-set method maintains a feasible iterate and works towards
+stationarity. It must therefore begin at a feasible point, and finding one is a
+linear program in its own right --- the phase-one problem. The dual method
+reverses the roles. It maintains stationarity and the sign conditions on the
+multipliers throughout, and works towards feasibility. Its starting point is
+free, because with no constraint active the stationarity condition reads
+$Gx = a$ and the multiplier vector is empty, so $x = G^{-1}a$ satisfies
+everything the method asks of an iterate. One Cholesky factorisation and one
+triangular solve replace the phase-one problem entirely.
+
+The price is that the iterate is infeasible until the last step, so the method
+cannot be stopped early for an approximate answer. In exchange it terminates at
+an exactly feasible point of the active-set lattice rather than approaching one
+asymptotically as an interior-point method does, and it warm-starts almost
+perfectly, which is why parametric solvers are built on active-set
+methods~\cite{nocedal2006}. Section~\ref{sec:sweep} exploits that.
+
+\subsection{What is derived here}
+
+Section~\ref{sec:problem} fixes notation, records the optimality conditions, and
+establishes the two facts the rest of the note leans on: that~\eqref{eq:qp} has at
+most one solution, and that its Karush--Kuhn--Tucker conditions are sufficient
+and not merely necessary. The second is what makes a certificate possible, and
+both of the extensions in Sections~\ref{sec:pdas} and~\ref{sec:sweep} are built
+on certificates.
+
+Section~\ref{sec:factorisation} introduces the single matrix the solver carries
+and the two invariants that define it. This is the heart of the method and the
+part most easily mistaken for an implementation detail. The matrix is not a
+factor of $G$, nor an orthogonal factor of the constraint normals; it is the
+product of both, and the reason to fold them together is that it makes the search
+directions matrix--vector products of fixed cost rather than solves whose cost
+grows with the active set. We give the geometric reading --- the columns are a
+$G$-orthonormal basis of $\R^n$ split so that the trailing block spans the
+working set's feasible subspace --- and then show, in
+Proposition~\ref{prop:invariance}, that the two quantities the iteration consumes
+depend on the invariants alone and not on which of the many matrices satisfying
+them is held. That is the licence for the implementation's choice of orthogonal
+reduction.
+
+Section~\ref{sec:iteration} derives the iteration: the two search directions and
+their closed forms, the fact that the multipliers move affinely along $-r$ while
+the entering multiplier rises with the step, the two competing step lengths, and
+the exact objective increment. Section~\ref{sec:termination} collects what can be
+proved about stopping --- strict monotonicity, termination of the inner loop in at
+most one pass per active constraint, and the Farkas certificate that turns a stuck
+iteration into a proof of infeasibility. Section~\ref{sec:updates} derives the two
+factorisation updates.
+
+Sections~\ref{sec:pdas} and~\ref{sec:sweep} treat the package's two departures
+from the classical method, and Section~\ref{sec:arithmetic} the finite-precision
+questions: how the constraint-selection rule is made invariant to how each
+constraint happens to be scaled, and why a violation the size of the rounding in
+the iterate must be set aside rather than either enforced or taken as evidence of
+infeasibility.
+
+\subsection{Notation}
+
+Vectors are columns. For an index set $\Active \subseteq \{1,\dots,m\}$ of size
+$k$ we write $A = C_{\cdot\Active} \in \R^{n \times k}$ for the matrix of the
+corresponding constraint normals, $b_\Active$ for the corresponding right-hand
+sides, and $c_i$ for the $i$-th column of $C$. Throughout, $\Active$ is the
+solver's \emph{working set}: the constraints it is currently holding as
+equalities. At a solution the working set is a subset of the constraints active
+there, and the two coincide except in the degenerate case treated in
+Remark~\ref{rem:degeneracy}. The entering constraint's normal is $n_*$ and its
+right-hand side $b_*$. We reserve $u$ for multipliers of working-set constraints,
+$u_*$ for the entering constraint's own multiplier, and $\lambda$ for a full
+length-$m$ multiplier vector with zeros off the working set.

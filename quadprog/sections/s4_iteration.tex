@@ -1,0 +1,281 @@
+\section{One iteration}
+\label{sec:iteration}
+
+The state at the top of an outer iteration is a working set $\Active$ of size
+$k$, the factors $(J,R)$ satisfying~\eqref{eq:inv1}--\eqref{eq:inv2}, the
+subproblem solution $x$ and multipliers $u$ of Proposition~\ref{prop:sub}, and
+the running objective $f(x)$. The invariant maintained throughout is
+\begin{equation}
+  \text{$(x,u)$ solves the subproblem~\eqref{eq:sub}, and}
+  \quad u_i \ge 0 \ \text{ for every inequality } i \in \Active,
+  \label{eq:invariant}
+\end{equation}
+which by the discussion after Proposition~\ref{prop:sub} is stationarity,
+complementarity and dual feasibility together. Only primal feasibility is
+missing, and the iteration exists to obtain it.
+
+\subsection{Choosing the entering constraint}
+
+Compute the slacks $s_i = c_i\T x - b_i$ for every $i$. If $s_i \ge 0$ for all
+inequalities and $s_i = 0$ for all equalities, then~\eqref{eq:pfeas} holds,
+\eqref{eq:invariant} supplies the rest, and $x$ is the solution by
+Proposition~\ref{prop:sufficient}. Otherwise a violated constraint is selected as
+the entering constraint. The rule is the most violated one, measured relative to
+the norm of its own normal:
+\begin{equation}
+  v_i = \begin{cases} |s_i|, & i \le m_{\mathrm{eq}},\\ -s_i, & i > m_{\mathrm{eq}},\end{cases}
+  \qquad
+  i_* \in \argmax_i \; \frac{v_i}{\norm{c_i}},
+  \qquad\text{terminating when } \max_i \frac{v_i}{\norm{c_i}} \le 0,
+  \label{eq:select}
+\end{equation}
+so that an equality counts as violated in either direction while an inequality
+counts only when its slack is negative. The scaling is not cosmetic.
+
+\begin{proposition}[Selection is scale invariant]\label{prop:scale}
+Replacing $(c_i, b_i)$ by $(\gamma c_i, \gamma b_i)$ for some $\gamma > 0$ leaves
+the feasible set, the solution, and the choice made by~\eqref{eq:select}
+unchanged.
+\end{proposition}
+
+\begin{proof}
+The constraint $\gamma c_i\T x \ge \gamma b_i$ has the same solution set as
+$c_i\T x \ge b_i$. Its slack scales as $s_i \mapsto \gamma s_i$ and its normal as
+$\norm{c_i} \mapsto \gamma\norm{c_i}$, so the ratio in~\eqref{eq:select} is
+unchanged, as are the other constraints' ratios.
+\end{proof}
+
+Without the division, a constraint written in basis points rather than in units
+would be selected first merely for having been written differently, and the
+solver's trajectory --- though not its answer --- would depend on the caller's
+choice of units. Note that the multiplier of the rescaled constraint scales as
+$\lambda_i \mapsto \lambda_i/\gamma$, so the sign conditions are unaffected too.
+
+\subsection{The two directions}
+
+Write $n_* = c_{i_*}$ and $b_* = b_{i_*}$, and form $d$, $z$ and $r$
+as in~\eqref{eq:dzr}. The following lemma is the computational core of the
+method; everything in the rest of this section is a corollary of it.
+
+\begin{lemma}[Properties of the directions]\label{lem:directions}
+With $d$, $z$, $r$ as in~\eqref{eq:dzr},
+\begin{enumerate}
+  \item[(i)] $A\T z = 0$: moving along $z$ preserves the working-set equalities;
+  \item[(ii)] $n_*\T z = \norm{d_2}^2 = z\T G z \ge 0$, with equality iff $z = 0$;
+  \item[(iii)] $G z = n_* - A r$;
+  \item[(iv)] $z = 0$ if and only if $n_* = A r$, i.e.\ iff $n_*$ lies in the span of
+        the working-set normals, in which case $r$ holds its coordinates there.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(i) $A\T z = A\T J_2 d_2 = (J_2\T A)\T d_2 = 0$ by~\eqref{eq:inv2}.
+
+(ii) $n_*\T z = n_*\T J_2 d_2 = (J_2\T n_*)\T d_2 = d_2\T d_2$. For the second
+equality, $z\T G z = d_2\T (J_2\T G J_2) d_2 = d_2\T d_2$ by the trailing block
+of~\eqref{eq:inv1}. Since $J_2$ has full column rank, $z = 0$ iff $d_2 = 0$.
+
+(iii) By~\eqref{eq:reduced}, $Gz = GJ_2J_2\T n_* = n_* - A(A\T G^{-1}A)^{-1}A\T
+G^{-1}n_*$, and the second term is $Ar$ by~\eqref{eq:rclosed}.
+
+(iv) If $d_2 = 0$ then $J\T n_* = (d_1,0) = [R;0]R^{-1}d_1 = (J\T A) r$, and $J$
+is nonsingular, so $n_* = Ar$. Conversely $n_* = Ar$ gives
+$Gz = n_* - Ar = 0$ by (iii), hence $z = 0$.
+\end{proof}
+
+Part (ii) identifies $z$ as an ascent direction for the entering constraint's
+slack: the slack $n_*\T x - b_*$ grows at rate $n_*\T z > 0$ per unit step. Part
+(i) says the step costs nothing in working-set feasibility. Together with the
+closed forms~\eqref{eq:zclosed} and~\eqref{eq:rclosed} the reading is:
+\begin{itemize}
+  \item $z$ is the $G$-orthogonal projection of the unconstrained direction
+        $G^{-1}n_*$ onto the working set's feasible subspace $\nullsp(A\T)$.
+        Indeed $\Pi := J_2 J_2\T G$ is idempotent with range $\nullsp(A\T)$ and is
+        self-adjoint for $\langle\cdot,\cdot\rangle_G$, and
+        $z = \Pi\, G^{-1}n_*$.
+  \item $r$ solves a least-squares problem in the $G^{-1}$ metric. By
+        \eqref{eq:rclosed},
+        \begin{equation}
+          r = \argmin_{y \in \R^k} \; \norm{J\T A y - J\T n_*}_2
+            = \argmin_{y \in \R^k} \; (Ay - n_*)\T G^{-1} (A y - n_*),
+          \label{eq:lsq}
+        \end{equation}
+        the best approximation of the entering normal by the working-set normals.
+        Its residual, mapped through $G^{-1}$, is $z$: from
+        Lemma~\ref{lem:directions}(iii), $z = G^{-1}(n_* - Ar)$.
+\end{itemize}
+
+\begin{remark}[Why not call a least-squares routine]
+Equation~\eqref{eq:lsq} is a genuine least-squares problem and it is tempting to
+hand it to a library. The temptation should be resisted: the factor $R$ of its
+normal equations is already held, so~\eqref{eq:dzr} costs one triangular solve,
+where a library call would refactorise $J\T A$ from scratch at $O(nk^2)$ every
+iteration. The same remark applies to~\eqref{eq:subsol}: the closed form is the
+specification, not the implementation.
+\end{remark}
+
+\subsection{The affine path}
+
+Fix the directions and consider moving along them. Let $u_*$ denote the entering
+constraint's own multiplier, which starts at $0$.
+
+\begin{proposition}[Dual feasibility along the path]\label{prop:path}
+For $t \in \R$ define
+\begin{equation}
+  x(t) = x + t z, \qquad u(t) = u - t r, \qquad u_*(t) = u_* + t .
+  \label{eq:path}
+\end{equation}
+Then for all $t$: $A\T x(t) = b_\Active$, and stationarity holds for the working
+set augmented by the entering constraint,
+\begin{equation}
+  G x(t) - a = A\, u(t) + u_*(t)\, n_* .
+  \label{eq:pathstat}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The first claim is Lemma~\ref{lem:directions}(i). For the second, stationarity at
+$t = 0$ reads $Gx - a = Au + u_* n_*$, and by Lemma~\ref{lem:directions}(iii),
+\[
+  Gx(t) - a = (Gx - a) + t\,Gz
+  = A u + u_* n_* + t(n_* - Ar)
+  = A(u - tr) + (u_* + t) n_* . \qedhere
+\]
+\end{proof}
+
+So the entire path is stationary, with the entering multiplier rising at unit rate
+and the working-set multipliers falling linearly along $-r$. Complementarity holds
+for every constraint except the entering one, whose slack is still nonzero while
+its multiplier is positive; that single violation is what the step is taken to
+remove. Two limits on $t$ follow immediately.
+
+\paragraph{The dual limit $t_1$.} Dual feasibility requires $u_i(t) \ge 0$ for
+every inequality $i \in \Active$. Since $u_i(t) = u_i - t r_i$ and $u_i \ge 0$, the
+binding indices are those with $r_i > 0$, and
+\begin{equation}
+  t_1 = \min\Bigl\{\, \frac{u_i}{r_i} \;:\; i \in \Active,\ i > m_{\mathrm{eq}},\
+  r_i > 0 \,\Bigr\},
+  \qquad
+  i_{\mathrm{del}} = \text{an index attaining it},
+  \label{eq:t1}
+\end{equation}
+with $t_1 = +\infty$ when the set is empty. Equality constraints are excluded:
+their multipliers are unrestricted in sign, so no step in $t$ can make them
+infeasible. This is the classical ratio test, and $t_1$ is the largest step that
+preserves~\eqref{eq:invariant}.
+
+\paragraph{The primal limit $t_2$.} The entering constraint's slack is
+$n_*\T x(t) - b_* = s_{i_*} + t\, n_*\T z$ with $s_{i_*} < 0$, so it reaches zero
+at
+\begin{equation}
+  t_2 = \frac{|s_{i_*}|}{n_*\T z} = \frac{|s_{i_*}|}{\norm{d_2}^2},
+  \label{eq:t2}
+\end{equation}
+finite and positive whenever $z \neq 0$, and $t_2 = +\infty$ when $z = 0$ by
+Lemma~\ref{lem:directions}(ii) --- in which case the primal iterate cannot move at
+all and only the multipliers change.
+
+\paragraph{The step.} Take $t = \min(t_1,t_2)$.
+\begin{itemize}
+  \item If $t_2 \le t_1$ (a \emph{full step}), the entering constraint now holds
+        with equality. Append it to the working set with multiplier
+        $u_* + t_2$, update the factorisation
+        (Section~\ref{sec:updates}), and return to the top of the outer loop.
+        The new state satisfies~\eqref{eq:invariant}: stationarity and
+        complementarity by Proposition~\ref{prop:path} together with the slack
+        now being zero, and the sign conditions because $t_2 \le t_1$.
+  \item If $t_1 < t_2$ (a \emph{partial step}), the multiplier of
+        $i_{\mathrm{del}}$ reaches zero first. Take the step, drop
+        $i_{\mathrm{del}}$ from the working set, downdate the factorisation, and
+        \emph{recompute $z$ and $r$} --- both change, because $J$ and $R$ have ---
+        keeping the same entering constraint and its accumulated $u_*$. This is
+        the inner loop.
+  \item If both limits are infinite the problem is infeasible; see
+        Proposition~\ref{prop:farkas}.
+\end{itemize}
+
+\begin{remark}[Equalities violated from above]\label{rem:reverse}
+An equality constraint may be violated in either direction. When $s_{i_*} > 0$
+the slack must be \emph{decreased}, so the step is taken along $-z$: formally
+$t$ ranges over the negative reals, $t_2 = -|s_{i_*}|/n_*\T z$, the ratio test in
+\eqref{eq:t1} runs against $-r$ rather than $r$, and the entering multiplier
+accumulates negatively. Nothing else changes; in particular
+Proposition~\ref{prop:path} was stated for all $t \in \R$ precisely so that this
+case needs no separate treatment, and Proposition~\ref{prop:increment} below
+covers it too.
+\end{remark}
+
+\subsection{The objective, in closed form}
+
+The running objective is not re-evaluated from $x$; it is advanced by an exact
+increment.
+
+\begin{proposition}[Objective increment]\label{prop:increment}
+Along the path~\eqref{eq:path},
+\begin{equation}
+  f(x(t)) - f(x) = t\Bigl(\frac{t}{2} + u_*\Bigr)\, n_*\T z ,
+  \label{eq:increment}
+\end{equation}
+which is strictly positive whenever $z \neq 0$ and $t \neq 0$ and $t$, $u_*$ have
+the same sign (in particular whenever $t > 0$ and $u_* \ge 0$).
+\end{proposition}
+
+\begin{proof}
+Expanding the quadratic,
+$f(x + tz) = f(x) + t\, z\T(Gx - a) + \tfrac12 t^2\, z\T G z$. For the linear
+term, stationarity at $t = 0$ and Lemma~\ref{lem:directions}(i) give
+$z\T(Gx - a) = z\T A u + u_*\, z\T n_* = u_*\, n_*\T z$. For the quadratic term,
+Lemma~\ref{lem:directions}(ii) gives $z\T G z = n_*\T z$. Hence
+$f(x+tz) - f(x) = t u_* n_*\T z + \tfrac12 t^2 n_*\T z$, which
+is~\eqref{eq:increment}. Positivity: $n_*\T z > 0$ by
+Lemma~\ref{lem:directions}(ii), and $t(t/2 + u_*) > 0$ when $t$ and $u_*$ share a
+sign and $t \neq 0$.
+\end{proof}
+
+Three things are worth noting about~\eqref{eq:increment}. It is exact, so the
+objective can be carried as a running total at the cost of one multiplication per
+step instead of an $O(n^2)$ re-evaluation of the quadratic. It is expressed in
+quantities the iteration already holds --- $n_*\T z$ is needed for $t_2$
+anyway. And it handles the reversed step of Remark~\ref{rem:reverse} without a
+special case: there $t < 0$ and $u_*$ accumulates negatively, so
+$t/2 + u_* < 0$ and the product with $t$ is again positive. The value therefore
+increases on every nonzero step, in both directions, which is the monotonicity
+Section~\ref{sec:termination} needs.
+
+\begin{algorithm}[ht]
+\caption{The Goldfarb--Idnani dual active-set method}\label{alg:gi}
+\begin{algorithmic}[1]
+\Require $G \succ 0$, $a$, $C$, $b$, $m_{\mathrm{eq}}$
+\Ensure The solution of~\eqref{eq:qp2}, or a verdict of infeasibility
+\State $R_G \leftarrow \mathrm{chol}(G)$; \ $J \leftarrow R_G^{-1}$; \
+       $x \leftarrow G^{-1}a$; \ $f \leftarrow -\tfrac12 a\T x$
+\State $\Active \leftarrow \emptyset$; \ $k \leftarrow 0$; \ $u \leftarrow ()$
+\Loop \Comment{outer loop}
+  \State $s \leftarrow C\T x - b$; \ $s_i \leftarrow 0$ for $i \in \Active$
+  \State choose $i_*$ by~\eqref{eq:select}; \textbf{if} none \textbf{then}
+         \Return $(x, f, u)$ \Comment{optimal, by Prop.~\ref{prop:sufficient}}
+  \State $n_* \leftarrow c_{i_*}$; \ $u_* \leftarrow 0$
+  \Loop \Comment{inner loop}
+    \State $d \leftarrow J\T n_*$; \ $z \leftarrow J_2 d_2$; \
+           $r \leftarrow R^{-1} d_1$
+    \State $t_1, i_{\mathrm{del}} \leftarrow$ ratio test~\eqref{eq:t1}; \
+           $t_2 \leftarrow$ primal limit~\eqref{eq:t2}
+    \State \textbf{if} $t_1 = t_2 = \infty$ \textbf{then} \textbf{stop}:
+           infeasible \Comment{Prop.~\ref{prop:farkas}}
+    \State $t \leftarrow \min(t_1,t_2)$
+    \State $x \leftarrow x + t z$; \
+           $f \leftarrow f + t(t/2 + u_*)\, n_*\T z$ \Comment{Prop.~\ref{prop:increment}}
+    \State $u \leftarrow u - t r$; \ $u_* \leftarrow u_* + t$
+    \If{$t_2 \le t_1$} \Comment{full step}
+      \State $\Active \leftarrow \Active \cup \{i_*\}$; \ $u_{k+1} \leftarrow u_*$; \
+             $k \leftarrow k+1$
+      \State insert (Section~\ref{ssec:insert}) and \textbf{break}
+    \Else \Comment{partial step}
+      \State $\Active \leftarrow \Active \setminus \{i_{\mathrm{del}}\}$; \
+             $k \leftarrow k-1$; \ delete (Section~\ref{ssec:delete})
+      \State $s_{i_*} \leftarrow n_*\T x - b_*$
+    \EndIf
+  \EndLoop
+\EndLoop
+\end{algorithmic}
+\end{algorithm}

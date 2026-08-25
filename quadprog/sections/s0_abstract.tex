@@ -1,0 +1,40 @@
+\begin{abstract}
+\noindent
+This note derives the Goldfarb--Idnani dual active-set method for strictly
+convex quadratic programs in the form in which the \texttt{cvx-quadprog} package
+implements it, and proves the identities the implementation relies on. The
+companion paper accompanying that package is an account of what happens when
+forty-year-old Fortran is transcribed into an array language; it takes the
+mathematics as read. This note supplies the mathematics.
+
+Three things are worth stating precisely and are not, in our experience, easy to
+extract from the original paper. First, the solver carries a single matrix $J$
+satisfying two invariants --- $J\T G J = I$ and $J\T A = [R;0]$ --- and every
+quantity it computes is a consequence of those two lines; in particular the
+primal search direction is the $G$-orthogonal projection of $G^{-1}n_*$ onto the
+working set's feasible subspace, and the dual direction is the solution of a
+least-squares problem in the $G^{-1}$ metric. Because both admit
+representation-free closed forms, any pair $(J, R)$ meeting the invariants
+produces the same iterate, which is what licenses replacing the reference's
+chain of Givens rotations by a single Householder reflection. Second, the
+objective increment along a step of length $t$ is
+$t\,(t/2 + u_*)\,z\T G z$ for $u_*$ the entering multiplier accumulated so far,
+an exact closed form rather than a re-evaluation, and it is strictly positive
+even in the reversed-step case that an equality constraint violated from above
+produces. Third, when the primal cannot move and no multiplier can be reduced,
+the vector $r$ the solver already holds is a Farkas certificate of primal
+infeasibility, which we exhibit; the solver's infeasibility verdict is therefore
+a proof and not a failure to converge.
+
+We then treat the two additions the package makes to the classical method: a
+primal--dual active-set fast path, which guesses the whole active set at once and
+is sound only because a strictly convex program makes the KKT conditions
+sufficient, so that every candidate can be certified; and warm starting across a
+family of programs differing only in the linear term, where $J$ and $R$ are
+reusable verbatim and a stale active set can be repaired into a dual-feasible
+state rather than discarded. For the general constraints treated here neither
+addition admits a finite-termination theorem, and we make the reason explicit:
+the working-set system is a principal submatrix of $G^{-1}$ only when the
+constraints are bounds, and it is the loss of that $P$-matrix structure, not the
+absence of an anti-cycling rule, that removes the guarantee.
+\end{abstract}
