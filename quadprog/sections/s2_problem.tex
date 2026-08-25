@@ -1,0 +1,188 @@
+\section{The problem and its optimality conditions}
+\label{sec:problem}
+
+Write the program~\eqref{eq:qp} as
+\begin{equation}
+  \min_{x \in \R^n} \; f(x) := \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad
+  \begin{cases}
+    c_i\T x = b_i, & i \le m_{\mathrm{eq}},\\
+    c_i\T x \ge b_i, & i > m_{\mathrm{eq}},
+  \end{cases}
+  \label{eq:qp2}
+\end{equation}
+with $G \succ 0$. Two conventions are worth flagging because they differ from the
+textbook ones and are inherited from the reference implementation's signature.
+The linear term is \emph{subtracted}, so that the unconstrained minimiser is
+$G^{-1}a$ rather than $-G^{-1}a$; and the constraints are held column-wise in
+$C$, so that $C\T x \ge b$ rather than $Cx \le b$. Neither affects anything
+below beyond signs.
+
+\subsection{Existence, uniqueness, sufficiency}
+
+Let $\Omega = \{x : c_i\T x = b_i \ (i \le m_{\mathrm{eq}}),\ c_i\T x \ge b_i \
+(i > m_{\mathrm{eq}})\}$ denote the feasible set, a closed convex polyhedron.
+
+\begin{proposition}[Existence and uniqueness]\label{prop:unique}
+If $\Omega \neq \emptyset$ then~\eqref{eq:qp2} has exactly one solution.
+\end{proposition}
+
+\begin{proof}
+Since $G \succ 0$, write $G = R_G\T R_G$ and complete the square:
+$f(x) = \tfrac12\norm{R_G(x - G^{-1}a)}^2 - \tfrac12 a\T G^{-1} a$. So $f$ is
+coercive --- $f(x) \to \infty$ as $\norm{x} \to \infty$ --- and continuous, and
+$\Omega$ is closed and nonempty, so a minimiser exists. It is unique because $f$
+is strictly convex: for $x \neq y$ and $\theta \in (0,1)$,
+$f(\theta x + (1-\theta)y) = \theta f(x) + (1-\theta)f(y)
+- \tfrac12\theta(1-\theta)(x-y)\T G (x-y) < \theta f(x) + (1-\theta) f(y)$,
+and $\Omega$ is convex, so two distinct minimisers would produce a feasible point
+of strictly smaller value.
+\end{proof}
+
+The Lagrangian of~\eqref{eq:qp2} is
+$L(x,\lambda) = \tfrac12 x\T G x - a\T x - \lambda\T(C\T x - b)$, and the
+Karush--Kuhn--Tucker conditions are
+\begin{align}
+  G x - a &= C \lambda, \label{eq:stat}\\
+  c_i\T x &= b_i \quad (i \le m_{\mathrm{eq}}), \qquad
+  c_i\T x \ge b_i \quad (i > m_{\mathrm{eq}}), \label{eq:pfeas}\\
+  \lambda_i &\ge 0 \quad (i > m_{\mathrm{eq}}), \label{eq:dfeas}\\
+  \lambda_i\,(c_i\T x - b_i) &= 0 \quad (i > m_{\mathrm{eq}}). \label{eq:comp}
+\end{align}
+Multipliers of equality constraints are unrestricted in sign, which is the one
+asymmetry the algorithm has to carry through every subsequent formula.
+
+\begin{proposition}[Sufficiency]\label{prop:sufficient}
+If $(x,\lambda)$ satisfies \eqref{eq:stat}--\eqref{eq:comp} then $x$ is the
+unique solution of~\eqref{eq:qp2}.
+\end{proposition}
+
+\begin{proof}
+Let $\tilde x \in \Omega$. By strict convexity,
+$f(\tilde x) \ge f(x) + (G x - a)\T(\tilde x - x)$, with equality only if
+$\tilde x = x$. Substituting~\eqref{eq:stat},
+\[
+  (G x - a)\T(\tilde x - x)
+  = \lambda\T\bigl(C\T \tilde x - C\T x\bigr)
+  = \sum_i \lambda_i\bigl[(c_i\T\tilde x - b_i) - (c_i\T x - b_i)\bigr]
+  = \sum_i \lambda_i (c_i\T \tilde x - b_i),
+\]
+the last step by~\eqref{eq:comp} for the inequalities and by $c_i\T x = b_i$ for
+the equalities. Each surviving term is non-negative: for $i \le m_{\mathrm{eq}}$
+the bracket vanishes, and for $i > m_{\mathrm{eq}}$ both factors are
+non-negative by~\eqref{eq:pfeas} and~\eqref{eq:dfeas}. Hence
+$f(\tilde x) \ge f(x)$ with equality only at $\tilde x = x$.
+\end{proof}
+
+Proposition~\ref{prop:sufficient} is the licence for everything in
+Sections~\ref{sec:pdas} and~\ref{sec:sweep}. A point equipped with multipliers
+passing the four conditions is not merely a plausible answer to be checked
+further --- it is \emph{the} answer, and a method that produces candidates may
+therefore be as unprincipled as one likes provided each candidate is tested. The
+sufficiency is what makes an unguaranteed method safe rather than merely
+usually right.
+
+\subsection{The working-set subproblem}
+
+Fix a working set $\Active$ of size $k$ with normals $A = C_{\cdot\Active}$ and
+suppose $A$ has full column rank $k$. The \emph{working-set subproblem} is
+\begin{equation}
+  \min_{x} \; \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad A\T x = b_\Active,
+  \label{eq:sub}
+\end{equation}
+with every constraint in $\Active$ held as an equality regardless of its type in
+the original program, and every constraint outside $\Active$ ignored.
+
+\begin{proposition}[Solution of the subproblem]\label{prop:sub}
+Problem~\eqref{eq:sub} has the unique solution and multipliers
+\begin{equation}
+  u = \bigl(A\T G^{-1} A\bigr)^{-1}\bigl(b_\Active - A\T x_u\bigr),
+  \qquad
+  x = x_u + G^{-1} A\, u,
+  \qquad x_u := G^{-1} a .
+  \label{eq:subsol}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Stationarity for~\eqref{eq:sub} reads $Gx - a = Au$, so
+$x = G^{-1}a + G^{-1}Au = x_u + G^{-1}Au$. Substituting into $A\T x = b_\Active$
+gives $A\T x_u + (A\T G^{-1}A)u = b_\Active$. The matrix $A\T G^{-1}A$ is
+positive definite because $G^{-1} \succ 0$ and $A$ has full column rank, hence
+invertible, which yields~\eqref{eq:subsol}; the point so constructed is the unique
+minimiser by the argument of Proposition~\ref{prop:unique} applied to the affine
+feasible set of~\eqref{eq:sub}.
+\end{proof}
+
+We call $A\T G^{-1} A$ the \emph{dual Hessian} of the working set. It appears
+under three different names in what follows: as the matrix whose Cholesky factor
+the solver carries (Section~\ref{sec:factorisation}), as the coefficient matrix of
+the fast path's linear system (Section~\ref{sec:pdas}), and as the Gram matrix of
+the least-squares problem the dual direction solves
+(Lemma~\ref{lem:directions}). Its invertibility is equivalent to $A$
+having full column rank, and that single fact is where every rank condition in
+this note comes from.
+
+The pair $(x,u)$ of~\eqref{eq:subsol}, extended by zeros off the working set,
+satisfies stationarity~\eqref{eq:stat} and complementarity~\eqref{eq:comp} by
+construction --- the working-set constraints have zero slack and the rest have
+zero multiplier. What it need not satisfy is the sign
+condition~\eqref{eq:dfeas} on $\Active$'s inequalities, or primal
+feasibility~\eqref{eq:pfeas} off $\Active$. The dual method maintains the first
+and works towards the second.
+
+\begin{remark}[Cold start]\label{rem:cold}
+For $\Active = \emptyset$ the subproblem is unconstrained and~\eqref{eq:subsol}
+degenerates to $x = x_u = G^{-1}a$ with an empty multiplier vector. The sign
+condition holds vacuously, so this state satisfies the method's invariant with no
+work beyond one Cholesky factorisation. That is the whole of the phase-one problem
+for a dual method. The objective there is
+$f(x_u) = \tfrac12 x_u\T G x_u - a\T x_u = -\tfrac12 a\T x_u$, which the
+implementation uses as the initial value of the running objective.
+\end{remark}
+
+\subsection{The dual problem}
+
+The method's name is earned by the following, which also explains why the
+objective value can be tracked as a running total and why it increases.
+
+\begin{proposition}[Dual function]\label{prop:dual}
+The Lagrangian dual of~\eqref{eq:qp2} is the concave quadratic program
+\begin{equation}
+  \max_{\lambda_i \ge 0 \ (i > m_{\mathrm{eq}})} \;
+  \psi(\lambda) := -\tfrac12 (a + C\lambda)\T G^{-1} (a + C\lambda)
+   + b\T\lambda .
+  \label{eq:dualfn}
+\end{equation}
+If $(x,\lambda)$ satisfies stationarity~\eqref{eq:stat} and
+complementarity~\eqref{eq:comp}, then $\psi(\lambda) = f(x)$.
+\end{proposition}
+
+\begin{proof}
+For fixed $\lambda$, $L(\cdot,\lambda)$ is a strictly convex quadratic minimised
+where $Gx = a + C\lambda$, i.e.\ at $x(\lambda) = G^{-1}(a + C\lambda)$. Writing
+$s = a + C\lambda$,
+\[
+  \psi(\lambda) = L(x(\lambda),\lambda)
+  = \tfrac12 s\T G^{-1} s - a\T G^{-1} s - \lambda\T C\T G^{-1} s + b\T\lambda
+  = \tfrac12 s\T G^{-1}s - s\T G^{-1} s + b\T\lambda,
+\]
+using $a + C\lambda = s$, which is~\eqref{eq:dualfn}. For the second claim,
+\eqref{eq:stat} says $x = x(\lambda)$, so $s = Gx$ and
+$\psi(\lambda) = -\tfrac12 x\T G x + b\T\lambda$; and \eqref{eq:comp} together
+with $c_i\T x = b_i$ on the equalities gives
+$b\T\lambda = \lambda\T C\T x = (Gx - a)\T x = x\T G x - a\T x$. Adding,
+$\psi(\lambda) = \tfrac12 x\T Gx - a\T x = f(x)$.
+\end{proof}
+
+So along any sequence of states of the form~\eqref{eq:subsol} the tracked
+objective value is simultaneously the primal objective at the subproblem
+minimiser and the dual objective at the current multipliers. The method is a dual
+ascent: Proposition~\ref{prop:increment} will show the value strictly increases,
+and Proposition~\ref{prop:dual} is what makes that a statement about progress
+towards optimality rather than an accident of bookkeeping. It also gives the
+sandwich $\psi(\lambda) \le f(x^\star) \le f(\tilde x)$ for any dual-feasible
+$\lambda$ and primal-feasible $\tilde x$, so the method approaches the optimal
+value from below --- the mirror image of a primal active-set method, which
+approaches it from above.

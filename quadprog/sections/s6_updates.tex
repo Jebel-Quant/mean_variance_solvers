@@ -1,0 +1,154 @@
+\section{Updating the factorisation}
+\label{sec:updates}
+
+Each iteration changes the working set by one column, and the factors must follow.
+Recomputing them from scratch costs a QR factorisation of $J\T A$, $O(nk^2)$; the
+updates below cost $O(n^2)$ and $O(nk)$ respectively. Over the $O(n)$ iterations
+of a run that is the difference between $O(n^3)$ and $O(n^4)$, and it is the whole
+reason the factors are carried rather than rebuilt.
+
+Both updates work the same way. The invariant~\eqref{eq:inv1} is preserved by
+post-multiplying $J$ with any orthogonal $W$, since $(JW)\T G (JW) = W\T W = I$;
+the update's task is to choose $W$ so that~\eqref{eq:inv2} is restored for the new
+working set. Because $J' = JW$ gives ${J'}\T A = W\T(J\T A)$, the same $W\T$ acts on
+the rows of $R$.
+
+\subsection{Insertion}
+\label{ssec:insert}
+
+Let the working set of size $k$ be extended by the entering constraint, so
+$A' = [\,A \ \ n_*\,]$. From~\eqref{eq:inv2} and $d = J\T n_*$,
+\begin{equation}
+  J\T A' = \begin{bmatrix} R & d_1 \\ 0 & d_2 \end{bmatrix},
+  \label{eq:insert1}
+\end{equation}
+which fails to be triangular only in the $n-k$ entries of $d_2$ below its first.
+Choose an orthogonal $W_2 \in \R^{(n-k)\times(n-k)}$ with
+$W_2\T d_2 = \alpha e_1$ and set $W = \mathrm{diag}(I_k, W_2)$. Then
+\begin{equation}
+  (JW)\T A' = \begin{bmatrix} R & d_1 \\ 0 & W_2\T d_2\end{bmatrix}
+  = \begin{bmatrix} R' \\ 0 \end{bmatrix},
+  \qquad
+  R' = \begin{bmatrix} R & d_1 \\ 0 & \alpha \end{bmatrix},
+  \label{eq:insert2}
+\end{equation}
+upper triangular of order $k+1$, and the leading $k$ columns of $J$ are untouched
+because $W$ acts as the identity on them.
+
+\begin{proposition}[Full column rank is maintained]\label{prop:rank}
+The insertion is performed only after a full step, which requires $t_2 < \infty$
+and hence $z \neq 0$. Then $\alpha \neq 0$, so $R'$ is nonsingular and $A'$ has
+full column rank $k+1$.
+\end{proposition}
+
+\begin{proof}
+$|\alpha| = \norm{W_2\T d_2} = \norm{d_2}$, which is nonzero iff $z \neq 0$ by
+Lemma~\ref{lem:directions}(ii). $R'$ is triangular with diagonal that of $R$
+extended by $\alpha$, so it is nonsingular, and ${R'}\T R' = {A'}\T G^{-1}A'$ is then
+positive definite, which forces $A'$ to have full column rank.
+\end{proof}
+
+The proposition is worth pausing on: the algorithm never has to test for
+linear dependence among the working-set normals. The step rules exclude it. A
+constraint whose normal lies in the span of those already held has $z = 0$ by
+Lemma~\ref{lem:directions}(iv), so its step is limited by $t_1$ and it can only
+be added after enough partial steps have removed the dependence. This is the
+structural advantage that Section~\ref{sec:pdas} gives up.
+
+\paragraph{The choice of $W_2$.} Any orthogonal $W_2$ with
+$W_2\T d_2 \in \R e_1$ will do, and by Proposition~\ref{prop:invariance} the
+choice does not affect the iterates. The reference implementation uses a chain of
+$n-k-1$ Givens rotations, one per trailing component. A single Householder
+reflection achieves the same reduction:
+\begin{equation}
+  W_2 = I - \frac{2}{\beta}\, v v\T,
+  \qquad v = d_2 - \alpha e_1,
+  \qquad \beta = v\T v,
+  \qquad \alpha = \pm\norm{d_2}.
+  \label{eq:householder}
+\end{equation}
+That $W_2\T d_2 = W_2 d_2 = \alpha e_1$ follows from
+$v\T d_2 = \norm{d_2}^2 - \alpha (d_2)_1$ and
+$\beta = \norm{d_2}^2 - 2\alpha (d_2)_1 + \alpha^2 = 2\,v\T d_2$, whence
+$W_2 d_2 = d_2 - 2v(v\T d_2)/\beta = d_2 - v = \alpha e_1$. The reflection is
+symmetric, so it applies to the columns of $J$ and to $d_2$ as one operation, and
+its application to a block is a matrix--vector product followed by a rank-one
+update --- two operations of $O(n(n-k))$ each, where the Givens chain is $n-k-1$
+operations of $O(n)$ each. The arithmetic is comparable; the number of operations
+is not.
+
+\begin{remark}[The sign of $\alpha$, and cancellation]\label{rem:sign}
+Numerical analysis prescribes $\alpha = -\mathrm{sign}((d_2)_1)\norm{d_2}$, which
+makes $v_1 = (d_2)_1 - \alpha$ a sum of like-signed terms. The implementation
+takes the opposite sign, $\alpha = \mathrm{sign}((d_2)_1)\norm{d_2}$, so as to
+reproduce the sign convention of the reference's Givens chain --- and thereby walks
+into the cancellation the prescription exists to avoid, severely when $d_2$ is
+already close to a positive multiple of $e_1$. The cure is algebraic rather than a
+change of convention: with $\tau = \norm{(d_2)_{2:}}^2$ and
+$\nu = \norm{d_2} = \sqrt{(d_2)_1^2 + \tau}$,
+\begin{equation}
+  v_1 = (d_2)_1 - \mathrm{sign}((d_2)_1)\,\nu
+      = \frac{(d_2)_1^2 - \nu^2}{(d_2)_1 + \mathrm{sign}((d_2)_1)\nu}
+      = \frac{-\mathrm{sign}((d_2)_1)\,\tau}{|(d_2)_1| + \nu},
+  \label{eq:nocancel}
+\end{equation}
+in which every operation combines like-signed quantities. The remaining entries
+of $v$ are those of $d_2$, and $\beta = \tau + v_1^2$. By
+Proposition~\ref{prop:invariance} the sign convention is anyway immaterial to the
+iterates; \eqref{eq:nocancel} is what makes it immaterial to the accuracy as
+well. See~\cite{golub2013,higham2002} for the standard treatment.
+\end{remark}
+
+\subsection{Deletion}
+\label{ssec:delete}
+
+Let the constraint in position $p$ of the working set be removed. Deleting column
+$p$ of $A$ deletes column $p$ of $R$ and shifts columns $p+1,\dots,k$ one place
+left, each retaining its own entries. The result is upper triangular except for
+one subdiagonal: writing $\tilde R$ for the shifted $k \times (k-1)$ matrix,
+$\tilde R_{ij} = 0$ for $i > j+1$, with the offending entries
+$\tilde R_{j+1,j}$ for $j = p,\dots,k-1$.
+
+These entries lie in distinct columns, and no single reflection annihilates
+components of distinct vectors. What restores the shape is a \emph{chase} of
+$k-p$ plane transformations: for $j = p,\dots,k-1$ in order, a $2\times2$
+orthogonal acting on rows $j$ and $j+1$ annihilates $\tilde R_{j+1,j}$, and the
+same transformation is applied to columns $j$ and $j+1$ of $J$. The chase is
+inherently sequential --- the parameters of each transformation are read from
+entries the previous one wrote --- which is why no batched form of it exists.
+
+The implementation takes the $2 \times 2$ block to be the symmetric reflection
+\begin{equation}
+  W_j^{(2)} = \begin{bmatrix} c & s \\ s & -c \end{bmatrix},
+  \qquad c = \frac{x}{h},\quad s = \frac{y}{h},
+  \qquad h = \mathrm{sign}(x)\sqrt{x^2+y^2},
+  \label{eq:refl2}
+\end{equation}
+where $x = \tilde R_{jj}$ and $y = \tilde R_{j+1,j}$, so that
+$W_j^{(2)}(x,y)\T = (h,0)\T$. Symmetry is the point. The update rule of this
+section applies $W$ to the columns of $J$ and $W\T$ to the rows of $R$; a
+symmetric block makes those the same matrix, so one $2\times2$ serves both sides.
+A Givens rotation, which is what BLAS offers, is not symmetric: it agrees
+with~\eqref{eq:refl2} on the first output and negates the second, so it requires
+its transpose on the $R$ side. By Proposition~\ref{prop:invariance} either choice
+gives the same iterates, the difference being a sign matrix.
+
+\begin{remark}[The degenerate step]
+When $x = 0$ the formula~\eqref{eq:refl2} gives $c = 0$, $s = \pm1$, and the
+transformation reduces to an exchange of the two rows up to sign. The
+implementation performs a plain exchange, $\left[\begin{smallmatrix} 0 & 1 \\ 1 &
+0\end{smallmatrix}\right]$, which is orthogonal and symmetric and annihilates $y$
+just as well; it differs from~\eqref{eq:refl2} by a sign when $y < 0$, and
+Proposition~\ref{prop:invariance} says that is free.
+\end{remark}
+
+\begin{remark}[Where the storage cost lands]
+$R$ is held as packed columns --- entry $(i,j)$ with $i \le j$ at offset
+$j(j+1)/2 + i$ --- so that its leading $k \times k$ block, which the triangular
+solve for $r$ reads once per iteration, is a contiguous run of $k(k+1)/2$ values
+at every $k$. Insertion writes one column, which is contiguous in that layout.
+Deletion mixes two \emph{rows} across a range of columns, and since column offsets
+grow with the column index, a row is a strided gather rather than a slice. The
+asymmetry is deliberate and the companion implementation paper measures it; the
+mathematics is indifferent.
+\end{remark}

@@ -21,9 +21,14 @@ LATEXOPTS := -interaction=nonstopmode -halt-on-error
 BIB       ?= bib/refs.bib
 VENDOR    ?=
 
+# Where `stage` drops this paper's PDF. Overridden by the repository-root
+# `pdfs` target with an absolute path, because make -C has already changed
+# directory by the time this is expanded.
+OUTDIR    ?= ../out
+
 .DEFAULT_GOAL := help
 
-.PHONY: help compile clean arxiv
+.PHONY: help compile stage clean arxiv
 
 # Self-documenting help: lists every target with a `## description` comment.
 help:  ## Show this overview of available commands
@@ -36,6 +41,15 @@ help:  ## Show this overview of available commands
 	@echo ""
 
 compile: $(DOC).pdf  ## Build the paper PDF
+
+# Publish this paper's PDF by name, so that a caller collecting every paper's
+# output does not have to know what the name is. `DOC` is the one place a
+# paper's basename is written down, and this is what lets the CI publish step
+# discover papers instead of carrying a hardcoded list that a new paper silently
+# falls out of -- which is exactly what happened when quadprog/ was added.
+stage: $(DOC).pdf  ## Copy the paper PDF into $(OUTDIR)
+	@mkdir -p $(OUTDIR)
+	cp $(DOC).pdf $(OUTDIR)/
 
 $(DOC).pdf: $(DOC).tex $(wildcard sections/s*.tex) $(BIB) $(wildcard tables/*.tex)
 	$(LATEX) $(LATEXOPTS) $(DOC).tex
