@@ -49,13 +49,15 @@ form of $C_0$ renders the active-set inner solve available in
 closed form via the Woodbury identity, at $O(n_a k^2 + k^3)$ per outer step in
 place of the $O(n_a^2 k + n_a^3)$ assemble-and-factor cost, without forming
 either the $n \times n$ covariance or its $n_a \times n_a$ active-set
-restriction (Section~\ref{sec:algorithm}). The $p$ linear balance constraints
-$Bw=c$ (the budget $\mathbf{1}^\top w=1$ as the leading case) are eliminated
-analytically through a $p \times p$ Schur complement. We derive the exact crossover
+restriction (Section~\ref{sec:algorithm}). It slots into the primal-dual
+active-set loop of~\cite{schmelzer2026nncg}, whose Schur elimination of the $p$
+linear balance constraints $Bw=c$ (the budget $\mathbf{1}^\top w=1$ as the
+leading case) and whose finite-termination guarantee it inherits unchanged. We
+derive the exact crossover
 condition against KKT-Cholesky (Proposition~\ref{prop:crossover}): the Woodbury
 inner solve is cheaper per outer step precisely when $k < n_a$, a condition
-satisfied throughout the long-only equity regime ($k/n_a$ between roughly $0.2$
-and $0.7$ in our experiments), and we account for the total pipeline cost over
+satisfied throughout the long-only equity regime ($k/n_a$ between roughly $0.33$
+and $1$ in our experiments), and we account for the total pipeline cost over
 a sweep of $S$ related solves (Proposition~\ref{prop:pipeline}), under which the
 $O(nTk)$ preprocessing amortises to $O(nTk/S)$ per solve.
 
@@ -103,13 +105,17 @@ and Tropp~\cite{halko2011}. Our contribution is the pairing of RMT-determined
 low-rank structure with the active-set solve, the randomised preprocessing with an
 explicit pipeline complexity, and the measured end-to-end comparison.
 
-This paper is self-contained: Algorithm~\ref{alg:woodbury} gives the complete
-primal-dual active-set solver including the Woodbury inner solve, and
-Section~\ref{sec:preprocessing} develops the rSVD preprocessing independently.
+The division of labour with~\cite{schmelzer2026nncg} is deliberate: that paper
+develops the outer loop, its finite-termination guarantee, and the Schur
+elimination of the balance constraints in domain-neutral generality, and admits
+any direct free-set factorisation as the inner solver. We use it as printed and
+supply that factorisation (Algorithm~\ref{alg:woodbury}) together with the rSVD
+preprocessing that feeds it (Section~\ref{sec:preprocessing}).
 
 \paragraph{Outline}
-Section~\ref{sec:rmt} constructs the cleaned estimator.
-Section~\ref{sec:problem} states the long-only problem.
+Section~\ref{sec:problem} states the long-only problem and reduces it to the
+standardised coordinates. Section~\ref{sec:rmt} constructs the cleaned estimator
+that supplies its system matrix.
 Section~\ref{sec:algorithm} develops the active-set reduction, the Woodbury
 portfolio algorithm, and the crossover analysis. Section~\ref{sec:preprocessing} covers
 randomised SVD preprocessing. Section~\ref{sec:results} reports timing, scaling,

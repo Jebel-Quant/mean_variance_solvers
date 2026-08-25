@@ -2,7 +2,9 @@
 
 The Woodbury solver requires the top-$k$ eigenpairs of the sample correlation
 $C = D^{-1/2}\hat\Sigma\,D^{-1/2}$, equivalently of the standardised returns
-$X_s = X D^{-1/2}$. Two paths are available.
+$X_s = X D^{-1/2}$. Two paths are available. Throughout this section $q$ denotes
+the oversampling parameter of the randomised sketch; the symbol $p$ is reserved
+for the number of balance constraints as elsewhere in the paper.
 
 \paragraph{Dense path}
 Assemble $C$ explicitly ($O(n^2 T)$ FLOPs, $O(n^2)$ storage), then compute a full
@@ -20,14 +22,14 @@ $\mathrm{tr}(C) = n$.
 \begin{algorithm}[ht]
 \caption{Randomised truncated SVD for eigenpairs of the correlation $C$}\label{alg:rsvd}
 \begin{algorithmic}[1]
-\Require Standardised returns $X_s = X D^{-1/2} \in \mathbb{R}^{T \times n}$; target rank $k$; oversampling $p \geq 5$
+\Require Standardised returns $X_s = X D^{-1/2} \in \mathbb{R}^{T \times n}$; target rank $k$; oversampling $q \geq 5$
 \Ensure  Signal eigenvectors $U_k \in \mathbb{R}^{n \times k}$,
          eigenvalues $\Lambda_k \in \mathbb{R}^k$, bulk mean $\bar\mu$
-\State $\Omega \leftarrow \mathcal{N}(0, I_{n \times (k+p)})$ \Comment{random test matrix}
-\State $Y \leftarrow X_s^\top(X_s \Omega)$ \Comment{$n \times (k+p)$; two matrix-vector products with $X_s$, $O(nT(k+p))$}
-\State $Q \leftarrow \mathrm{orth}(Y)$ \Comment{orthonormal basis, $O(n(k+p)^2)$}
-\State $B \leftarrow (X_s Q)^\top(X_s Q) / T$ \Comment{$(k+p) \times (k+p)$ projected correlation; no $X_s^\top X_s$ formed}
-\State $[\hat U, \hat\Lambda, \sim] \leftarrow \mathrm{eigh}(B)$; sort descending
+\State $\Omega \leftarrow \mathcal{N}(0, I_{n \times (k+q)})$ \Comment{random test matrix}
+\State $Y \leftarrow X_s^\top(X_s \Omega)$ \Comment{$n \times (k+q)$; two matrix-vector products with $X_s$, $O(nT(k+q))$}
+\State $Q \leftarrow \mathrm{orth}(Y)$ \Comment{orthonormal basis, $O(n(k+q)^2)$}
+\State $G \leftarrow (X_s Q)^\top(X_s Q) / T$ \Comment{$(k+q) \times (k+q)$ projected correlation; no $X_s^\top X_s$ formed}
+\State $[\hat U, \hat\Lambda, \sim] \leftarrow \mathrm{eigh}(G)$; sort descending
 \State $U_k \leftarrow Q \hat U[:, 1{:}k]$; $\Lambda_k \leftarrow \hat\Lambda[1{:}k]$
 \State $\bar\mu \leftarrow \bigl(n - \textstyle\sum_{j\le k}\hat\Lambda_j\bigr)/(n-k)$; identify $k$ via MP threshold
 \State \Return $(U_k, \Lambda_k, \bar\mu)$
@@ -35,18 +37,18 @@ $\mathrm{tr}(C) = n$.
 \end{algorithm}
 
 \begin{proposition}[Randomised SVD cost and accuracy]\label{prop:rsvd}
-Algorithm~\ref{alg:rsvd} costs $O(nT(k+p))$ FLOPs and $O(n(k+p))$ storage; no
+Algorithm~\ref{alg:rsvd} costs $O(nT(k+q))$ FLOPs and $O(n(k+q))$ storage; no
 $n \times n$ matrix is formed. Let $P = QQ^\top$ denote the orthogonal
 projector onto the computed basis. Since the sketch $Y = T\,\hat\Sigma\,\Omega$
 applies the range finder of~\cite{halko2011} to the symmetric matrix
-$\hat\Sigma$ with Gaussian test matrix $\Omega$ and oversampling $p \geq 2$,
+$\hat\Sigma$ with Gaussian test matrix $\Omega$ and oversampling $q \geq 2$,
 Theorem~10.6 of~\cite{halko2011} gives, in expectation,
 \[
   \mathbb{E}\,\bigl\lVert (I - P)\hat\Sigma \bigr\rVert_2
   \;\leq\;
-  \Bigl(1 + \sqrt{\tfrac{k}{p-1}}\Bigr)\,\lambda_{k+1}
-  \;+\; \frac{e\sqrt{k+p}}{p}\Bigl(\textstyle\sum_{j>k}\lambda_j^2\Bigr)^{1/2}
-  \;=:\; \epsilon_{k,p}\,,
+  \Bigl(1 + \sqrt{\tfrac{k}{q-1}}\Bigr)\,\lambda_{k+1}
+  \;+\; \frac{e\sqrt{k+q}}{q}\Bigl(\textstyle\sum_{j>k}\lambda_j^2\Bigr)^{1/2}
+  \;=:\; \epsilon_{k,q}\,,
 \]
 where $\lambda_j$ are the eigenvalues of $\hat\Sigma$. The returned eigenpairs
 are the exact eigenpairs of the compression $P\hat\Sigma P$, and by Weyl's
@@ -66,7 +68,9 @@ symmetry; Weyl's inequality~\cite{hornjohnson2013} then bounds each eigenvalue
 perturbation by the norm of the difference.
 \end{proof}
 
-The bound $\epsilon_{k,p}$ is governed by the correlation eigenvalues at and below
+The default $q = 10$ used in the experiments comfortably exceeds the $q \geq 2$
+the bound requires. The bound $\epsilon_{k,q}$ is governed by the correlation
+eigenvalues at and below
 the MP edge $\lambda_{k+1} \approx \hat\lambda_+ \approx 2.28$ on S\&P~500 data,
 against a leading signal eigenvalue $\lambda_1 \approx 313\,\bar\mu$ that is two
 orders of magnitude larger. The bound is conservative (the tail-sum term
@@ -75,7 +79,7 @@ accumulates all $n - k$ bulk eigenvalues) and the measured accuracy is far bette
 \paragraph{Memory passes}
 Algorithm~\ref{alg:rsvd} involves four matrix-vector products with $X$ in total:
 two for the sketch $Y = X^\top(X\Omega)$ (line~2) and two for the projection
-$B = Q^\top X^\top XQ$ (line~4, computed as $(XQ)^\top(XQ)/T$). Reading $X$
+$G = Q^\top X^\top XQ$ (line~4, computed as $(XQ)^\top(XQ)/T$). Reading $X$
 from memory is required at two distinct stages: once for the sketch (line~2)
 and once for the projection (line~4). For very large $n$ and $T$ where $X$
 does not fit in memory, a single-pass variant that combines both stages is
@@ -84,9 +88,11 @@ for details. At benchmark size ($n=494$, $T=1213$, approximately $4.6$\,MB
 for double-precision $X$) both stages fit comfortably in L3 cache.
 
 \paragraph{Benchmark}
-On S\&P~500 ($n=494$, $T=1213$, $k=17$, $p=10$) the randomised SVD is $1.9\times$
-faster than the dense path ($0.006$\,s vs $0.011$\,s), needs $29\times$ less
-storage, and aligns the top-$k$ signal subspace to within a Frobenius error
+On S\&P~500 ($n=494$, $T=1213$, $k=17$, $q=10$) the randomised SVD is $1.9\times$
+faster than the dense path ($0.006$\,s vs $0.011$\,s), reduces storage from
+$O(n^2)$ to $O(n(k+q))$ (a factor of $18$, or $29$ counting only the returned
+$O(nk)$ factors that the solver retains), and aligns the top-$k$ signal subspace
+to within a Frobenius error
 $\norm{UU^\top - \hat{U}\hat{U}^\top}_F \approx 2.5 \times 10^{-2}$ (about $0.6\%$
 per eigenvector column), an order of magnitude below the $k \pm 1$ threshold
 uncertainty (Section~\ref{sec:ksensitivity}) that any user of the MP rule already
@@ -99,5 +105,5 @@ For $n \leq 500$ either path is practical; the dense path is simpler to implemen
 and both finish in milliseconds. For $n > 1000$ the randomised SVD is strongly
 preferred: the dense path's $O(n^2)$ storage requirement alone (8\,MB at $n=1000$,
 72\,MB at $n=3000$) begins to stress L3 cache, while the randomised path's
-$O(n(k+p))$ requirement (about $3$\,MB at $n=3000$, $k=125$) stays within
+$O(n(k+q))$ requirement (about $3$\,MB at $n=3000$, $k=125$) stays within
 typical L3.

@@ -6,11 +6,11 @@ $D = \mathrm{diag}(\hat\Sigma)$ the diagonal of asset variances, and
 $C = D^{-1/2}\hat\Sigma\,D^{-1/2}$ the sample correlation. Individual variances are
 well estimated even in the high-dimensional regime; the noise that destabilises
 the portfolio lives in the \emph{correlation} structure. Random-matrix cleaning is
-therefore applied to $C$, whose Marchenko--Pastur bulk is a clean band, and the
-cleaned covariance is rebuilt as $\Sigma_0 = D^{1/2} C_0 D^{1/2}$. The
-minimum-variance problem is solved in the standardised coordinates $y = D^{1/2} w$
-(Section~\ref{sec:algorithm}), which recovers the scalar-identity Woodbury
-structure and its conditioning.
+therefore applied to $C$, whose Marchenko--Pastur bulk is a clean band. This
+section supplies the $C_0$ that the standardised problem of
+Section~\ref{sec:problem} is posed against, and establishes the
+scalar-identity-plus-low-rank structure that makes the solve of
+Section~\ref{sec:algorithm} possible.
 
 \subsection{Marchenko--Pastur spectral separation}
 
@@ -62,18 +62,10 @@ for practitioners by L\'opez de Prado~\cite{lopezdeprado2018}),
 \]
 scalar-identity-plus-low-rank, with $\delta_j = \lambda_j - \bar\mu > 0$.
 
-The cleaned covariance is $\Sigma_0 = D^{1/2} C_0 D^{1/2}$. Because $D^{1/2}$ is
-positive-diagonal, $\Sigma_0 \succ 0$, and the change of variables $y = D^{1/2} w$
-turns the minimum-variance problem $\min_w w^\top \Sigma_0 w$ subject to $Bw = c$,
-$w \geq 0$ into
-\[
-  \min_{y}\; y^\top C_0\, y
-  \quad\text{subject to}\quad
-  B D^{-1/2}\, y = c,\quad y \geq 0\,,
-\]
-exactly (Section~\ref{sec:algorithm}), since $w^\top\Sigma_0 w = y^\top C_0 y$ and
-$w \geq 0 \Leftrightarrow y \geq 0$. The solve therefore runs against the
-scalar-identity-plus-low-rank $C_0$, not the diagonal-plus-low-rank $\Sigma_0$.
+This is the $C_0$ the standardised problem of Section~\ref{sec:problem} requires,
+and it is $C_0$ that the solve runs against: the scalar-identity-plus-low-rank
+form above, not the diagonal-plus-low-rank $\Sigma_0 = D^{1/2}C_0D^{1/2}$
+obtained by rebuilding the covariance.
 
 \begin{proposition}[Spectral properties of $C_0$]\label{prop:rmt_spectrum}
 The cleaned correlation satisfies:
@@ -124,6 +116,20 @@ form~\cite{johnstone2001} that admits the closed-form Woodbury solve of
 Section~\ref{sec:algorithm}; full-rank RIE modifications would require a general
 factorisation. Whether the statistical gap matters for long-only minimum variance
 is an empirical question, and on our data it is small (Section~\ref{ssec:oos}).
+\end{remark}
+
+\begin{remark}[Why not blend with the sample correlation?]\label{rem:blend}
+A shrinkage blend $(1-\alpha)C + \alpha C_0$ with $\alpha \in (0,1)$ would
+re-introduce a fraction of the bulk correlation eigenvalues that the cleaning
+replaces. Our reason for fixing $\alpha = 1$ is algebraic, not statistical: only at
+$\alpha = 1$ does the system matrix retain the scalar-identity-plus-low-rank form
+of $C_0$ that the Woodbury solve of Section~\ref{sec:algorithm} requires. For
+$\alpha \in (0,1)$ the restricted matrix
+$(1-\alpha)C_\mathcal{A} + \alpha C_{0,\mathcal{A}}$ has full-rank residual
+structure (no $k \times k$ correction matrix exists) and the $O(n_a k^2)$ cost
+advantage is lost. The statistical case for CRE cleaning rests on the RMT
+literature cited above; Section~\ref{ssec:oos} reports out-of-sample
+evidence that it is competitive with standard shrinkage on the data used here.
 \end{remark}
 
 \begin{remark}[Externally specified factor models]\label{rem:external_factors}
