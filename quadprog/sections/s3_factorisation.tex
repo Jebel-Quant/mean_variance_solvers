@@ -1,0 +1,168 @@
+\section{The matrix the solver carries}
+\label{sec:factorisation}
+
+Proposition~\ref{prop:sub} gives the subproblem solution in closed form, and one
+could implement the method by evaluating~\eqref{eq:subsol} afresh at every
+iteration. That costs a $k \times k$ factorisation of the dual Hessian per step,
+$O(nk^2 + k^3)$, and over the $O(n)$ steps a dual method takes it comes to
+$O(n^4)$. The whole point of the Goldfarb--Idnani formulation is to replace it
+with $O(n^2)$ per step, and it does so by carrying a single matrix through the
+iteration and updating it.
+
+\subsection{Two invariants}
+
+Let $G = R_G\T R_G$ be the Cholesky factorisation with $R_G$ upper triangular,
+and set $J_0 := R_G^{-1}$, again upper triangular. Then
+$J_0 J_0\T = R_G^{-1} R_G^{-\top} = G^{-1}$ and $J_0\T G J_0 = I$. The solver's
+state is a matrix $J \in \R^{n \times n}$ and an upper triangular
+$R \in \R^{k \times k}$ satisfying
+\begin{align}
+  J\T G J &= I_n, \label{eq:inv1}\\
+  J\T A &= \begin{bmatrix} R \\ 0 \end{bmatrix}. \label{eq:inv2}
+\end{align}
+Everything the iteration computes is a consequence of these two lines, so it is
+worth reading them slowly. Equation~\eqref{eq:inv1} is equivalent to
+$J J\T = G^{-1}$ with $J$ nonsingular, and says that the columns of $J$ form a
+basis of $\R^n$ orthonormal in the inner product $\langle v,w\rangle_G = v\T G w$.
+Equation~\eqref{eq:inv2} says that in that basis the working-set normals are
+triangular: partitioning
+\begin{equation}
+  J = \begin{bmatrix} J_1 & J_2 \end{bmatrix},
+  \qquad J_1 \in \R^{n \times k},\quad J_2 \in \R^{n \times (n-k)},
+  \label{eq:split}
+\end{equation}
+the lower block of~\eqref{eq:inv2} reads $J_2\T A = 0$.
+
+At the cold start $\Active = \emptyset$, so~\eqref{eq:inv2} is vacuous and
+$J = J_0$ serves. The updates of Section~\ref{sec:updates} maintain both
+invariants by post-multiplying $J$ with orthogonal matrices --- which preserves
+\eqref{eq:inv1} exactly because $J\T G J = I$ is invariant under $J \mapsto JW$
+for $W\T W = I$ --- while restoring the triangular shape of~\eqref{eq:inv2}.
+
+\begin{proposition}[What the blocks mean]\label{prop:blocks}
+Suppose \eqref{eq:inv1}--\eqref{eq:inv2} hold with $R$ nonsingular. Then
+\begin{enumerate}
+  \item[(i)] $R\T R = A\T G^{-1} A$, so $R$ is a Cholesky factor of the dual Hessian,
+        unique up to the signs of its rows;
+  \item[(ii)] $\range(J_2) = \nullsp(A\T)$, and the columns of $J_2$ are a
+        $G$-orthonormal basis of it;
+  \item[(iii)] $J_1 = G^{-1} A R^{-1}$ and $\range(J_1) = \range(G^{-1}A)$, the
+        $G$-orthogonal complement of $\nullsp(A\T)$;
+  \item[(iv)] $J_1 J_1\T = G^{-1}A(A\T G^{-1}A)^{-1}A\T G^{-1}$ and consequently
+        \begin{equation}
+          J_2 J_2\T = G^{-1} - G^{-1}A\bigl(A\T G^{-1}A\bigr)^{-1}A\T G^{-1}.
+          \label{eq:reduced}
+        \end{equation}
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(i) From~\eqref{eq:inv2}, $A\T J = [\,R\T\ \ 0\,]$, so
+$A\T G^{-1} A = A\T J J\T A = [\,R\T\ 0\,][\,R\T\ 0\,]\T = R\T R$. Uniqueness of
+the Cholesky factor of a positive definite matrix up to the signs of the diagonal
+entries gives the last clause, since two upper triangular matrices with the same
+Gram matrix differ by a left factor $\mathrm{diag}(\pm1)$.
+
+(ii) $J_2\T A = 0$ places $\range(J_2) \subseteq \nullsp(A\T)$; the inclusion is
+an equality by dimension, $J$ being nonsingular and $A$ of full column rank. The
+basis is $G$-orthonormal because $J_2\T G J_2 = I_{n-k}$ is the trailing block
+of~\eqref{eq:inv1}.
+
+(iii) From~\eqref{eq:inv1}, $J^{-1} = J\T G$ and hence $J^{-\top} = G J$.
+Inverting~\eqref{eq:inv2}, $A = J^{-\top}[R;0] = GJ[R;0] = G J_1 R$, so
+$J_1 = G^{-1}AR^{-1}$, whose range is that of $G^{-1}A$ since $R$ is invertible.
+That range is $G$-orthogonal to $\nullsp(A\T)$: for $v \in \nullsp(A\T)$,
+$\langle G^{-1}Aw, v\rangle_G = w\T A\T v = 0$.
+
+(iv) Substituting $J_1 = G^{-1}AR^{-1}$ and $R\T R = A\T G^{-1}A$,
+\[
+  J_1 J_1\T = G^{-1}A R^{-1} R^{-\top} A\T G^{-1}
+            = G^{-1}A (R\T R)^{-1} A\T G^{-1}
+            = G^{-1}A (A\T G^{-1}A)^{-1} A\T G^{-1},
+\]
+and \eqref{eq:reduced} follows from $J_1J_1\T + J_2J_2\T = JJ\T = G^{-1}$.
+\end{proof}
+
+The matrix in~\eqref{eq:reduced} is the \emph{reduced inverse Hessian} of the
+working set: it inverts $G$ on the feasible subspace $\nullsp(A\T)$ and
+annihilates the complement. Carrying $J$ therefore means carrying that object in
+factored form, at no cost beyond the $n \times n$ array, and it is what turns the
+search directions of Section~\ref{sec:iteration} into single matrix--vector
+products.
+
+\begin{remark}[Why fold the two factorisations together]\label{rem:fold}
+An alternative state is $R_G$ together with an explicit orthogonal factor $Q$ of
+the QR factorisation of $R_G^{-\top} A$. That holds the same information --- $J$
+is $J_0 Q$ --- and stores no more numbers. But every use of $J$ in
+Section~\ref{sec:iteration} would become a triangular solve followed by an
+orthogonal transformation, two operations where the folded form has one, and the
+solve is the shape that does not reach a tuned kernel. The folded form has $J$
+lose its triangularity after the first update, which is exactly the trade: $n^2$
+storage and $2n^2$ flops per matrix--vector product, in exchange for the products
+being $\texttt{gemv}$ at every iteration whatever the working set does.
+\end{remark}
+
+\subsection{The representation is not unique, and does not need to be}
+
+Invariants~\eqref{eq:inv1}--\eqref{eq:inv2} do not determine $J$ and $R$. By
+Proposition~\ref{prop:blocks}, $R$ is pinned only up to a left factor
+$S = \mathrm{diag}(\pm1)$, whereupon $J_1 = G^{-1}AR^{-1}$ follows; and $J_2$ may
+be any $G$-orthonormal basis of $\nullsp(A\T)$, so it is pinned only up to a right
+factor $V$ with $V\T V = I_{n-k}$. The freedom is therefore exactly
+\begin{equation}
+  (J_1, J_2, R) \;\longmapsto\; (J_1 S,\; J_2 V,\; S R),
+  \qquad S = \mathrm{diag}(\pm 1),\quad V\T V = I_{n-k}.
+  \label{eq:freedom}
+\end{equation}
+Different orthogonal reductions realise different points of that family: a chain
+of Givens rotations and a single Householder reflection annihilating the same
+vector produce factors differing in sign, and a differently ordered sequence of
+insertions and deletions produces a different $J_2$ outright. The following says
+this does not matter, and it is the licence for the implementation to choose its
+reduction on grounds of speed alone.
+
+\begin{proposition}[Invariance of the iterates]\label{prop:invariance}
+Let $(J,R)$ and $(\hat J,\hat R)$ both satisfy
+\eqref{eq:inv1}--\eqref{eq:inv2} for the same $G$ and $A$. Then for every
+$n_* \in \R^n$ the quantities
+\begin{equation}
+  d = J\T n_*, \qquad z = J_2 d_2, \qquad r = R^{-1} d_1
+  \label{eq:dzr}
+\end{equation}
+--- with $d = (d_1,d_2)$ split at $k$ --- satisfy $\hat z = z$ and $\hat r = r$.
+Moreover, if the two representations are related by~\eqref{eq:freedom} with
+$V = I$, the equalities hold exactly in IEEE~754 arithmetic.
+\end{proposition}
+
+\begin{proof}
+By Proposition~\ref{prop:blocks}(i) and $A\T J = [R\T\ 0]$ we have
+$A\T G^{-1} n_* = A\T J J\T n_* = R\T d_1$, so
+\begin{equation}
+  r = R^{-1}d_1 = R^{-1}R^{-\top}R\T d_1 = (R\T R)^{-1} A\T G^{-1} n_*
+    = \bigl(A\T G^{-1}A\bigr)^{-1} A\T G^{-1} n_* ,
+  \label{eq:rclosed}
+\end{equation}
+which mentions only $A$, $G$ and $n_*$. Likewise $z = J_2 J_2\T n_*$, since
+$d_2 = J_2\T n_*$, and by~\eqref{eq:reduced}
+\begin{equation}
+  z = \Bigl(G^{-1} - G^{-1}A\bigl(A\T G^{-1}A\bigr)^{-1}A\T G^{-1}\Bigr) n_*,
+  \label{eq:zclosed}
+\end{equation}
+again free of the representation. For the last claim, $\hat R = SR$ gives
+$\hat d_1 = S d_1$ and $\hat r = (SR)^{-1}Sd_1 = R^{-1}S^{-1}Sd_1$, in which the
+only floating-point operations beyond those forming $r$ are multiplications by
+$\pm1$; these are exact, so the computed $\hat r$ and $r$ agree bit for bit. The
+same argument applies to $\hat z = \sum_{j>k}(s_j J_{\cdot j})(s_j d_j)$.
+\end{proof}
+
+\begin{remark}[What the proposition does and does not settle]
+It settles that the substitution is exact in the sense that matters: the
+iteration's decisions --- which constraint is most violated, whether the step is
+full or partial, which constraint is dropped --- are functions of $z$ and $r$
+alone, and those are functions of $(G,A,n_*)$ alone. It does not settle that two
+implementations follow the same trajectory in finite precision, because the
+rounding \emph{within} the reductions differs and the decisions are
+discontinuous functions of the computed values. That is an empirical question,
+and one the companion implementation paper answers by comparing complete
+active-set trajectories rather than only minimisers.
+\end{remark}

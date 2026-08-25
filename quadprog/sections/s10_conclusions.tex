@@ -1,0 +1,46 @@
+\section{Summary}
+\label{sec:conclusions}
+
+The Goldfarb--Idnani method is often presented as a sequence of updates, which
+makes it look more intricate than it is. Read from the invariants it is short.
+
+One matrix $J$ is carried, defined by $J\T G J = I$ and $J\T A = [R;0]$. The first
+invariant says its columns are a $G$-orthonormal basis of $\R^n$; the second says
+that basis is arranged so that the trailing columns span the working set's
+feasible subspace and the leading ones the complement. Every quantity the
+iteration needs is then one matrix--vector product or one triangular solve away,
+and every quantity it \emph{consumes} --- the primal direction $z$, the dual
+direction $r$ --- has a closed form in $(G, A, n_*)$ alone
+(Proposition~\ref{prop:invariance}). That is why the representation may be chosen
+on grounds of speed: two implementations holding different $J$ and $R$ for the same
+working set compute the same step.
+
+The iteration itself is one affine path (Proposition~\ref{prop:path}), along which
+stationarity holds identically while the entering multiplier rises and the
+working-set multipliers fall. Two limits cut it short, and which one binds decides
+whether a constraint is added or dropped. The objective advances by an exact
+closed form (Proposition~\ref{prop:increment}) which is positive in both step
+directions, so the method is a dual ascent and, absent degeneracy, finite
+(Corollary~\ref{cor:finite}). When the path is blocked in both directions the
+vector $r$ is a Farkas certificate (Proposition~\ref{prop:farkas}): the
+infeasibility verdict is a proof, and the solver already holds it.
+
+Two properties of the classical method are easy to overlook and are what the
+extensions of Sections~\ref{sec:pdas} and~\ref{sec:sweep} trade away or exploit.
+The first is that linear dependence among the working-set normals is unreachable:
+the step rules exclude it (Proposition~\ref{prop:rank}), so no rank test is
+needed anywhere. Guessing the active set forfeits exactly that protection, which
+is the real reason a primal--dual active-set fast path admits no
+finite-termination theorem for general constraints --- there is no $P$-matrix
+structure to appeal to once the working-set system stops being a principal
+submatrix. The second is that the factors depend on $G$ and the working set but
+not on the linear term, which is what makes a family of programs differing only in
+$a$ solvable from one factorisation, and a stale active set repairable rather than
+disposable.
+
+Both extensions are unguaranteed and both are safe, for the same reason: strict
+convexity makes the KKT conditions sufficient (Proposition~\ref{prop:sufficient}),
+so a candidate can be certified rather than trusted. A method that may fail, but
+that can recognise its own success, needs no convergence theory to be sound --- it
+needs a fallback. That is the one idea in this note that generalises beyond
+quadratic programming.

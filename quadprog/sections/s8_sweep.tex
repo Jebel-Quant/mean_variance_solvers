@@ -1,0 +1,106 @@
+\section{A family of programs differing only in the linear term}
+\label{sec:sweep}
+
+An efficient frontier, a rolling rebalance and a scenario grid all solve the same
+program repeatedly with a slightly different linear term: $G$, $C$, $b$ and
+$m_{\mathrm{eq}}$ are fixed and only $a$ varies. Solved independently, each
+instance rediscovers an active set it almost always already had.
+
+What makes this exploitable is a reading of the invariants
+\eqref{eq:inv1}--\eqref{eq:inv2}: \emph{neither factor depends on $a$}. $J$
+depends on $G$ alone through $J\T G J = I$ and on the working set through the
+orthogonal transformations accumulated into it; $R$ depends on $G$ and the working
+set. The linear term enters only through $x_u = G^{-1}a$ and the right-hand sides.
+So across such a family both factors are reusable verbatim, and the entire
+solution can be recovered from them.
+
+\subsection{Recovery}
+
+\begin{proposition}[Recovery from cached factors]\label{prop:recover}
+Let $(J,R)$ satisfy \eqref{eq:inv1}--\eqref{eq:inv2} for a working set $\Active$
+of size $k$ with normals $A$. For a new linear term $a$, set
+\begin{equation}
+  x_u = J\,(J\T a),
+  \qquad
+  \rho = b_\Active - A\T x_u,
+  \qquad
+  R\T y = \rho,
+  \qquad
+  x = x_u + J_1 y,
+  \qquad
+  R\,u = y .
+  \label{eq:recover}
+\end{equation}
+Then $(x,u)$ is the solution and multiplier pair of the working-set subproblem
+\eqref{eq:sub}.
+\end{proposition}
+
+\begin{proof}
+$x_u = JJ\T a = G^{-1}a$ by~\eqref{eq:inv1}. By Proposition~\ref{prop:blocks}(i),
+$u = R^{-1}y = R^{-1}R^{-\top}\rho = (R\T R)^{-1}\rho = (A\T G^{-1}A)^{-1}\rho$,
+which is the multiplier of~\eqref{eq:subsol}. For the iterate, $Ru = y$ gives
+$J_1 y = J_1 R u = G^{-1}A u$ by Proposition~\ref{prop:blocks}(iii), so
+$x = x_u + G^{-1}Au$, again as in~\eqref{eq:subsol}.
+\end{proof}
+
+The cost is worth stating exactly, since the recovery is the point. Forming
+$x_u = J(J\T a)$ is two matrix--vector products with an $n \times n$ matrix,
+$O(n^2)$ --- and no cheaper, $J$ having lost its triangularity at the first
+update. Everything after it is $O(nk + k^2)$: one gather or product for
+$A\T x_u$, two triangular solves of order $k$, and one product with $J_1$.
+Against that, re-deriving the factors for the same working set costs $k$
+insertions at $O(n^2)$ each, and a cold solve costs that plus the walk. So the
+saving is a factor of order $k$, and it is largest exactly where it matters ---
+a long-only portfolio optimum is a vertex at which most of the bounds bind, so $k$
+is large.
+
+Whether $(x,u)$ from~\eqref{eq:recover} is the answer to the \emph{full} program
+is then one certificate away, and it is the same certificate as before: the
+multipliers of the working-set inequalities must be non-negative and no constraint
+outside the working set may be violated. By
+Proposition~\ref{prop:sufficient} that is a proof. Note the asymmetry in cost: the
+recovery is $O(n^2)$ but the check must look at every constraint, so it is
+$O(nm)$ for a dense $C$ --- verification, not recovery, is what dominates a
+successful reuse on a dense problem.
+
+\subsection{Repair rather than restart}
+
+When the check fails, the cached working set is stale, but it remains a far better
+starting point than the unconstrained minimum. What blocks resuming from it is
+\eqref{eq:invariant}: the iteration requires dual feasibility, and a stale set
+typically has one or more negative multipliers. Those are precisely the
+constraints that no longer belong.
+
+\begin{proposition}[Repair terminates in a resumable state]\label{prop:repair}
+Iterate the following from the cached set: recover $(x,u)$ by
+\eqref{eq:recover}; if every inequality multiplier is non-negative, stop;
+otherwise drop one constraint with a negative multiplier, downdate $(J,R)$ by
+Section~\ref{ssec:delete}, and repeat. The loop stops after at most $k$ passes, in
+a state satisfying~\eqref{eq:invariant}.
+\end{proposition}
+
+\begin{proof}
+Each pass that does not stop reduces the working-set size by one, so there are at
+most $k$ of them; with an empty working set the multiplier vector is empty and the
+sign condition is vacuous, which is the cold start of Remark~\ref{rem:cold}.
+On exit, $(x,u)$ solves the subproblem for the current set by
+Proposition~\ref{prop:recover} and the sign conditions hold, which
+is~\eqref{eq:invariant}. Full column rank of the remaining normals is inherited:
+a submatrix of a full-column-rank matrix formed by deleting columns has full
+column rank.
+\end{proof}
+
+From such a state the iteration of Section~\ref{sec:iteration} cannot tell a
+resumed solve from a cold one --- the invariant is all it reads --- so the resumed
+walk needs only to drive the remaining primal infeasibility to zero. In the worst
+case everything is dropped and the resumed walk is a cold solve, so the repair is
+never worse than restarting up to the cost of the drops themselves.
+
+\begin{remark}[Why this cannot change the answer]
+Neither the reuse nor the repair introduces an approximation. The reuse returns a
+point only when it carries a certificate, and the repair merely chooses a
+different starting state for an iteration whose output is determined by
+Proposition~\ref{prop:sufficient}. What does change is the reported iteration
+count, which counts the working-set edits actually performed and is therefore not
+comparable with a cold solve's.
+\end{remark}

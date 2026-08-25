@@ -1,0 +1,137 @@
+\section{Termination}
+\label{sec:termination}
+
+Three questions are separate and are best kept so: does the inner loop stop, does
+the outer loop stop, and what does it mean when the iteration gets stuck.
+
+\subsection{The inner loop}
+
+\begin{proposition}[The inner loop terminates]\label{prop:inner}
+For a fixed entering constraint with $n_* \neq 0$, the inner loop performs at
+most $k+1$ passes, where $k$ is the size of the working set on entry.
+\end{proposition}
+
+\begin{proof}
+Every pass that does not exit performs a partial step and removes one constraint
+from the working set, so after at most $k$ of them the working set is empty. With
+$\Active = \emptyset$ we have $J_2 = J$ and hence, by
+Lemma~\ref{lem:directions}(ii) and~\eqref{eq:inv1},
+$n_*\T z = z\T G z$ with $z = J J\T n_* = G^{-1}n_*$, so
+$n_*\T z = n_*\T G^{-1} n_* > 0$ because $G^{-1} \succ 0$ and $n_* \neq 0$. Thus
+$z \neq 0$, $t_2$ is finite by~\eqref{eq:t2}, and $t_1 = +\infty$ because the
+ratio test~\eqref{eq:t1} ranges over an empty set. The step is full and the loop
+exits.
+\end{proof}
+
+The excluded case $n_* = 0$ is a column of $C$ that is identically zero. Such a
+constraint reads $0 \ge b_*$: no $x$ influences it, so it is either vacuous
+($b_* \le 0$) or renders the problem infeasible outright. The implementation
+scores it as infinitely violated when $b_* > 0$, which routes it to the
+infeasibility verdict below rather than to a division by zero
+in~\eqref{eq:select}.
+
+\subsection{The outer loop}
+
+\begin{proposition}[Strict ascent]\label{prop:ascent}
+Every outer iteration that ends in a full step with $t_2 \neq 0$ strictly
+increases the objective, and hence, by Proposition~\ref{prop:dual}, strictly
+increases the dual objective $\psi$.
+\end{proposition}
+
+\begin{proof}
+The outer iteration's total increment is the sum of~\eqref{eq:increment} over its
+inner passes, each term of which is positive by
+Proposition~\ref{prop:increment} --- the accumulated $u_*$ and each step $t$ share
+a sign throughout, by Remark~\ref{rem:reverse} --- and the final term is nonzero
+because $t_2 \neq 0$.
+\end{proof}
+
+\begin{corollary}[Finite termination in the nondegenerate case]\label{cor:finite}
+If every full step has $t_2 > 0$, the method terminates after finitely many outer
+iterations.
+\end{corollary}
+
+\begin{proof}
+A working set determines the pair $(x,u)$ uniquely by
+Proposition~\ref{prop:sub}, and hence determines the objective value. By
+Proposition~\ref{prop:ascent} that value strictly increases from one outer
+iteration to the next, so no working set can recur. There are finitely many
+subsets of $\{1,\dots,m\}$, so the iteration cannot continue indefinitely; and it
+can only stop by the optimality test of~\eqref{eq:select} or by the infeasibility
+verdict.
+\end{proof}
+
+\begin{remark}[Degeneracy]\label{rem:degeneracy}
+The hypothesis of Corollary~\ref{cor:finite} fails exactly when a full step of
+length zero occurs, which requires $s_{i_*} = 0$: a constraint recorded as
+violated whose slack is already zero. In exact arithmetic that means more
+constraints pass through $x$ than the working set holds --- primal degeneracy ---
+and a zero step adds one of them without changing $x$, $u$ or the objective, so the
+ascent argument goes silent and a cycle is not excluded. Goldfarb and
+Idnani~\cite{goldfarb1983} discuss this; the classical remedies are a
+lexicographic or least-index rule of the kind Section~\ref{sec:pdas} uses for a
+different purpose. In finite precision the question changes character, because a
+slack of exactly zero is not what one observes; Section~\ref{sec:arithmetic}
+describes what is done instead.
+\end{remark}
+
+\subsection{Infeasibility is a certificate, not a failure}
+
+The interesting case is a stuck iteration: $z = 0$, so the primal cannot move, and
+$t_1 = \infty$, so no multiplier limits the step. The classical reading is that
+the dual is unbounded --- by Proposition~\ref{prop:path} the whole ray is dual
+feasible, and by~\eqref{eq:increment} with $z = 0$ the value is constant, so the
+argument needs care --- and therefore the primal is infeasible. The cleanest
+statement avoids the dual entirely: the vector $r$ that the solver already holds
+is a Farkas certificate.
+
+\begin{proposition}[Farkas certificate]\label{prop:farkas}
+Suppose the iteration reaches a state in which the entering inequality
+constraint $i_*$ is violated, $s_{i_*} < 0$, and
+\begin{enumerate}
+  \item[(a)] $z = 0$, and
+  \item[(b)] $r_i \le 0$ for every inequality $i \in \Active$.
+\end{enumerate}
+Then the feasible set $\Omega$ is empty.
+\end{proposition}
+
+\begin{proof}
+By (a) and Lemma~\ref{lem:directions}(iv), $n_* = A r = \sum_{i \in \Active} r_i
+c_i$. Let $\tilde x \in \Omega$ be any feasible point. Splitting the working set
+into its equality part $\mathcal{E}$ and inequality part $\mathcal{I}$,
+\[
+  n_*\T \tilde x
+  = \sum_{i \in \mathcal{E}} r_i\, c_i\T \tilde x
+    + \sum_{i \in \mathcal{I}} r_i\, c_i\T \tilde x
+  \;\le\; \sum_{i \in \mathcal{E}} r_i b_i + \sum_{i \in \mathcal{I}} r_i b_i
+  \;=\; r\T b_\Active ,
+\]
+where the equality members contribute $c_i\T\tilde x = b_i$ exactly, and each
+inequality member contributes $r_i c_i\T \tilde x \le r_i b_i$ because
+$c_i\T\tilde x \ge b_i$ and $r_i \le 0$ by (b). On the other hand the current
+iterate $x$ satisfies $A\T x = b_\Active$, so
+\[
+  r\T b_\Active = r\T A\T x = n_*\T x = s_{i_*} + b_* < b_* .
+\]
+Combining, $n_*\T\tilde x < b_*$, contradicting $\tilde x \in \Omega$. Hence
+$\Omega = \emptyset$.
+\end{proof}
+
+The proposition says the solver's infeasibility verdict is a proof rather than an
+exhausted search, and it says what the proof is: the multipliers $r$ of the
+entering normal in terms of the working-set normals, which the solver computed for
+its own purposes, are the Farkas multipliers. The reversed case of
+Remark~\ref{rem:reverse} --- an equality violated from above --- follows by
+applying the proposition to the constraint $-n_*\T x \ge -b_*$, which the equality
+implies.
+
+\begin{remark}[The two hypotheses are exactly the two infinite limits]
+Hypothesis (a) is $t_2 = \infty$ by Lemma~\ref{lem:directions}(ii)
+and~\eqref{eq:t2}; hypothesis (b) is $t_1 = \infty$ by~\eqref{eq:t1}. So the
+condition the implementation tests --- neither step limit is finite --- is
+literally the hypothesis of Proposition~\ref{prop:farkas}, with one caveat: it
+also requires the entering constraint to be genuinely violated. In exact
+arithmetic that is given, since a constraint is only selected when $v_{i_*} > 0$.
+In finite precision it is not, and Section~\ref{sec:arithmetic} takes up the
+difference.
+\end{remark}

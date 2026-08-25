@@ -1,0 +1,53 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{authblk}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\T}{^{\top}}
+\newcommand{\Active}{\mathcal{A}}
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\nullsp}{null}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{remark}{Remark}[section]
+
+\title{The Mathematics of a Dual Active-Set\\Quadratic Programming Solver}
+
+\author[1]{Thomas Schmelzer}
+
+\affil[1]{\small Jebel Quant Research, Abu Dhabi}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{sections/s0_abstract}
+\input{sections/s1_introduction}
+\input{sections/s2_problem}
+\input{sections/s3_factorisation}
+\input{sections/s4_iteration}
+\input{sections/s5_termination}
+\input{sections/s6_updates}
+\input{sections/s7_pdas}
+\input{sections/s8_sweep}
+\input{sections/s9_arithmetic}
+\input{sections/s10_conclusions}
+
+\bibliographystyle{plain}
+\bibliography{../matrix_free/bib/refs}
+
+\end{document}
