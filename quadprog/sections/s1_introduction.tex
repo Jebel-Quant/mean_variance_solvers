@@ -46,6 +46,65 @@ asymptotically as an interior-point method does, and it warm-starts almost
 perfectly, which is why parametric solvers are built on active-set
 methods~\cite{nocedal2006}. Section~\ref{sec:sweep} exploits that.
 
+\subsection{Contributions}
+
+\begin{enumerate}
+\item \textbf{A derivation organised around two invariants.} The solver carries one
+matrix $J$, defined by $J\T G J = I$ and $J\T A = [R;0]$, and every quantity the
+iteration computes follows from those two lines
+(Section~\ref{sec:factorisation}). The reading is geometric: the columns of $J$
+are a $G$-orthonormal basis of $\R^n$, split so that the trailing block spans the
+working set's feasible subspace and $J_2J_2\T$ is the reduced inverse Hessian.
+
+\item \textbf{The iterates do not depend on the representation.} Invariants
+\eqref{eq:inv1}--\eqref{eq:inv2} do not determine $(J,R)$; the freedom is exactly
+$(J_1S, J_2V, SR)$ for a sign matrix $S$ and an orthogonal $V$. Both quantities
+the iteration consumes are invariant under all of it
+(Proposition~\ref{prop:invariance}), and exactly so in IEEE arithmetic in the
+sign case. That is what licenses choosing the orthogonal reduction on grounds of
+speed alone.
+
+\item \textbf{An exact objective increment.} A step of length $t$ changes the
+objective by $t(t/2 + u_*)\,z\T G z$ (Proposition~\ref{prop:increment}), so the
+value is carried rather than re-evaluated, and the increment is positive in both
+step directions --- including the reversed step an equality constraint violated
+from above produces.
+
+\item \textbf{The infeasibility verdict is a certificate.} When the primal cannot
+move and no multiplier can be reduced, the vector $r$ the solver already holds
+exhibits infeasibility in the sense of Farkas
+(Proposition~\ref{prop:farkas}). The method does not fail to converge on an
+infeasible problem; it proves the problem infeasible.
+
+\item \textbf{Linear dependence is unreachable, and that is what guessing gives
+up.} The step rules make the working-set normals full column rank for free, so no
+rank test is needed anywhere (Proposition~\ref{prop:rank}).
+
+\item \textbf{Why finite termination does not survive the general constraint
+class.} For bound constraints the working-set system is a principal submatrix of
+$G^{-1}$, hence positive definite whatever the guess, and that $P$-matrix property
+is the hypothesis under which block principal pivoting terminates
+finitely~\cite{judice1994,murty1988,schmelzer2026nncg}. For general
+$C\T x \ge b$ it is lost, and lost for a structural reason rather than for want of
+an anti-cycling rule (Section~\ref{sec:pdas}). The consequence is measured rather
+than asserted: over $600$ attempts on well-posed random families the failure never
+occurs, and repeating columns of $C$ --- which any programmatically assembled model
+can do --- raises it to $93\%$ (Section~\ref{ssec:pdas}).
+
+\item \textbf{The cost of a warm start, corrected.} Recovery from cached factors
+is $O(n^2)$ and not $O(nk)$, the $n^2$ residing entirely in $x_u = JJ\T a$
+(Section~\ref{sec:sweep}). The distinction is invisible on the family one would
+naturally test, where $k$ grows with $n$; Section~\ref{ssec:sweepcost} separates
+the two by holding $k$ fixed, and separates the arithmetic from the interpreter
+dispatch that dominates below a few hundred variables.
+
+\item \textbf{A way of checking a derivation against the code it describes.}
+Every identity above is evaluated on both sides against the shipped solver's own
+internal state rather than a reimplementation of it
+(Section~\ref{ssec:identities}): \qpIdentCount{} identities, \qpIdentChecks{}
+checks, worst relative residual $\qpIdentWorst$.
+\end{enumerate}
+
 \subsection{What is derived here}
 
 Section~\ref{sec:problem} fixes notation, records the optimality conditions, and

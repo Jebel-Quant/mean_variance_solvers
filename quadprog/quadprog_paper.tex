@@ -1,5 +1,10 @@
 \documentclass[11pt]{article}
 
+% Latin Modern: scalable Type 1 throughout, so microtype's font expansion never
+% meets a bitmap font. Without it, typewriter text at a size with no scalable
+% instance aborts the run with "auto expansion is only possible with scalable
+% fonts" -- which the Reproducibility section's \verb in a \small tabular triggers.
+\usepackage{lmodern}
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -64,6 +69,7 @@
 \input{sections/s9_arithmetic}
 \input{sections/s10_experiments}
 \input{sections/s11_conclusions}
+\input{sections/s12_reproducibility}
 
 \bibliographystyle{plain}
 \bibliography{../matrix_free/bib/refs}

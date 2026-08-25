@@ -1,0 +1,60 @@
+\section*{Reproducibility}
+\addcontentsline{toc}{section}{Reproducibility}
+
+Every number in this paper is produced by a committed script, and no figure or
+table was edited by hand. The four scripts write the files the paper
+\verb|\input|s, so a stale table cannot survive a regeneration unnoticed.
+
+\begin{center}
+\small
+\begin{tabular}{lll}
+\toprule
+Script & Produces & Section \\
+\midrule
+\verb|experiment_qp_identities.py| & \verb|quadprog_identities*.tex|
+  & \S\ref{ssec:identities} \\
+\verb|experiment_qp_pdas.py| & \verb|quadprog_pdas.pdf|, \verb|_defs.tex|
+  & \S\ref{ssec:pdas} \\
+\verb|experiment_qp_sweep.py| & \verb|quadprog_sweep.pdf|, \verb|_defs.tex|
+  & \S\ref{ssec:sweepcost} \\
+\verb|experiment_qp_compare.py| & \verb|quadprog_compare*.tex|, \verb|.pdf|
+  & \S\ref{ssec:compare} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Software under study.} \texttt{cvx-quadprog}, version
+$0.4.1$~\cite{cvxquadprog}, archived with a DOI. The measurements are tied to that
+version rather than to the latest release, so that the reference keeps pointing at
+the code that produced them. The experiments import the package's private modules
+where the claims are about private state --- $J$, the packed $R$, and the vectors
+$d$, $z$, $r$ --- and instrument the shipped routines by wrapping them rather than
+reimplementing them, so what is measured is what runs.
+
+\paragraph{Regenerating everything.} From the paper's source tree, \verb|make figures|
+runs all four scripts and rewrites every generated file; \verb|make compile| then
+rebuilds this document. Each script also runs standalone as a module. Setting
+\verb|EXPERIMENT_SMOKE=1| shrinks every sweep so that the whole set completes in
+seconds, which is how the continuous-integration suite exercises each code path
+without reproducing the full runs, and \verb|EXPERIMENT_OUT| redirects the outputs
+so that a reduced run cannot overwrite the committed ones.
+
+\paragraph{Determinism.} Every random problem is drawn from a seed derived
+arithmetically from the family, size and instance index, so the tables reproduce
+across runs and across machines. Timings do not, and are not claimed to. The
+figures in \S\ref{ssec:sweepcost} and \S\ref{ssec:compare} were taken on one
+machine, against NumPy built on Apple Accelerate, with no thread count set. That
+last detail is not incidental: this solver pushes its work into BLAS calls, so its
+timings inherit whatever threading decision the installed library makes by
+default, and those defaults differ between libraries by more than the effects
+being measured here. Accelerate exposes no thread control, so there was nothing to
+fix; on a library that does, the same experiment can read very differently. The
+timings should be re-measured rather than quoted. The residuals in \S\ref{ssec:identities} and the counts in
+\S\ref{ssec:pdas} are machine-independent up to the last digit or two of
+floating-point rounding, and are the numbers this paper actually rests on.
+
+\paragraph{Optional dependency.} The comparison in \S\ref{ssec:compare} includes
+the reference C implementation of the same algorithm where a wheel for it is
+installed. Building it needs the C toolchain that the package under study exists
+to avoid, so the script treats the import as optional and omits that row, with a
+printed note, on a host that lacks it. Every other row is unconditional.
