@@ -33,6 +33,15 @@ dependencies = [
     "scipy",
     # CVXPY reference solver (ground-truth; measures modeling-layer overhead)
     "cvxpy",
+    # cvx-quadprog: the dual active-set solver the quadprog note derives. Its
+    # experiments verify that note's identities against the running code, so
+    # the version matters -- see quadprog_note/ and the paper's Section 10.
+    "cvx-quadprog>=0.4.1",
+    # The reference C implementation the quadprog comparison measures against.
+    # Needs a wheel or a C toolchain, which is exactly what cvx-quadprog exists
+    # to avoid, so experiment_qp_compare.py treats it as optional and omits its
+    # row with a printed note when the import fails.
+    "quadprog",
     # fetch_sp500.py / fetch_ftse100.py (raw data download)
     "yfinance",
     "lxml",
