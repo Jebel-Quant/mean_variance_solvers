@@ -1,0 +1,226 @@
+\section{Numerical experiments}
+\label{sec:experiments}
+
+Everything above this section is a proof, and proofs leave two things open that
+only measurement closes.
+
+The first is whether the code satisfies the identities. A proof establishes them in
+exact arithmetic; the implementation reaches them through machinery the derivation
+does not mention --- a triangular factor held as packed columns addressed by hand,
+orthogonal updates applied by library calls that write in place into a view of
+$J$'s own buffer, correct only while that view stays contiguous. A sign error in
+the packed indexing, or a rank-one update handed a strided view and quietly given a
+copy to modify, would leave every proposition above true and the running solver
+wrong. Nothing in the derivation can detect that, and the invariants are exactly
+the kind of property that decays quietly: they are maintained across a run rather
+than recomputed, so an error does not announce itself but accumulates, and a solver
+that has drifted from $J\T G J = I$ still returns a vector that is very nearly
+right.
+
+The second is the set of quantities this paper reasons about but cannot predict.
+Section~\ref{sec:pdas} argues that guessing the active set is unguaranteed but
+sound; how often the guess is certifiable, and how many repairs it takes, are
+questions about behaviour. Section~\ref{sec:sweep} derives a cost;
+what a warm-started solve costs is not the same claim.
+
+All measurements below are on the implementation~\cite{cvxquadprog} at the version
+recorded there, and are produced by scripts distributed with this paper's sources.
+Where a claim in an earlier section rests on one of them, it points here.
+
+\subsection{The identities hold in the running code}
+\label{ssec:identities}
+
+Every identity stated in this paper is evaluated on both sides against the shipped
+implementation, on the internal state that implementation actually holds --- its
+$J$, its packed $R$, and the $d$, $z$ and $r$ its own routine returns --- rather
+than against a reimplementation written for the purpose. Reaching into the private
+interior is the point: the claims are about objects that are internal by design,
+and a check written against the public surface could not see them.
+
+Residuals are reported in the scaled sup-norm
+\begin{equation}
+  \mathrm{rel}(P,Q) = \frac{\norm{P - Q}_\infty}{\max(1, \norm{Q}_\infty)},
+  \label{eq:relresid}
+\end{equation}
+so that figures are comparable across identities of different magnitudes. The
+sweep runs over problems of size $n \in \{\qpIdentSizes\}$, several seeds each,
+driving the factorisation into every intermediate working set reached by inserting
+columns one at a time: \qpIdentStates{} distinct factorisation states over
+\qpIdentProblems{} problems, and \qpIdentChecks{} individual checks.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Worst relative residual~\eqref{eq:relresid} for each of the
+\qpIdentCount{} identities, over \qpIdentChecks{} checks on \qpIdentStates{}
+factorisation states. Two rows are exactly zero; see the text.}
+\label{tab:identities}
+\begin{tabular}{llrr}
+\toprule
+Result & Identity & Worst residual & Checks \\
+\midrule
+\quadprogIdentityRows
+\bottomrule
+\end{tabular}
+\end{table}
+
+The worst residual anywhere in Table~\ref{tab:identities} is $\qpIdentWorst$. That
+is the scale to expect: these are exact-arithmetic identities evaluated in double
+precision on matrices of condition number $O(n)$, so a few multiples of the machine
+epsilon is agreement, not approximation. No threshold appears anywhere in the
+procedure --- the residuals are reported, not tested against a bound.
+
+Two rows are exactly zero, which is a stronger statement than a small residual.
+
+\paragraph{The sign conditions are never violated.} The multipliers of active
+inequalities at the returned point are non-negative in every instance, with no
+negative excursion at any magnitude. That is what one wants from
+Proposition~\ref{prop:sufficient}: dual feasibility is maintained
+combinatorially, by the ratio test~\eqref{eq:t1} refusing to step past a zero
+crossing, rather than restored afterwards by clipping. A method that enforced it by
+clipping would show a small nonzero here.
+
+\paragraph{Rescaling a constraint changes the trajectory not at all.}
+Proposition~\ref{prop:scale} claims that the choice made by the selection
+rule~\eqref{eq:select} is invariant under $(c_i,b_i) \mapsto (\gamma c_i, \gamma
+b_i)$. The measured statement is stronger: over three decades of $\gamma$ either
+side of unity, the solver performs an identical number of additions and removals
+and returns a minimiser agreeing to $3.3\times10^{-16}$. The invariance is
+therefore a property of the entire walk and not only of the selected index, which
+is what makes it safe for a caller to write constraints in whatever units are
+natural.
+
+\subsection{The guessed active set, and what the certificate catches}
+\label{ssec:pdas}
+
+Section~\ref{sec:pdas} makes two claims that only measurement settles: that the
+block exchange converges in a number of repairs that does not grow with $n$, and
+that the loss of the $P$-matrix property for general $C$ is a real exposure rather
+than a technicality. Figure~\ref{fig:pdas} addresses both over
+\qpPdasFamilies{} constraint families, \qpPdasInstances{} instances each, at
+$n \in \{\qpPdasSizes\}$. The instrumentation wraps the shipped routines rather
+than reimplementing them, so what is counted is what runs.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/quadprog_pdas.pdf}
+\caption{Left: the fraction of guesses the certificate accepts. Right: set repairs
+to convergence. Four families are certified without exception at every size and
+settle in \qpPdasRepairsLo{} to \qpPdasRepairsHi{} repairs while the exact walk's
+outer iterations grow linearly in $n$. The fifth is constructed so that a guessed
+set can be linearly dependent, and it fails --- which is the point.}
+\label{fig:pdas}
+\end{figure}
+
+On the four well-posed families --- bounds, budget-plus-bounds, dense $C$, and
+$C$ with equalities --- every guess is certified at every size, and the repair
+count rises only from \qpPdasRepairsLo{} to \qpPdasRepairsHi{} across a
+sixteen-fold range of $n$, never exceeding \qpPdasRepairsMax{}. The comparison
+that matters is against the exact walk on the same instances: on
+budget-plus-bounds it takes \qpPdasBudgetOuter{} outer iterations at
+$n = \qpPdasRefN{}$, and its count grows linearly where the repair count is very
+nearly flat. That is the trade Section~\ref{sec:pdas} describes, measured.
+
+\paragraph{The rank-deficient guess is real, and it is not visible by accident.}
+Over \qpPdasInstances{} instances at each of five sizes, not one guess on those
+four families produced a rank-deficient working-set system. A reader might
+conclude the exposure is theoretical. It is not; it is merely invisible in random
+data, because a random dense $C$ almost never has a dependent subset that the
+guess happens to name. The fifth family makes it reachable in the most elementary
+way, by repeating columns of $C$, so that a guess naming both copies of a
+constraint induces a singular system. There the Cholesky rank test fires on
+\qpPdasSingularDup\% of attempts, and the certified fraction collapses from
+\qpPdasCertSmall\% at $n = \qpPdasNsmall{}$ to \qpPdasCertBig\% at
+$n = \qpPdasNbig{}$ --- against \qpPdasSingularBox\%, \qpPdasSingularBudget\%,
+\qpPdasSingularDense\% and \qpPdasSingularEq\% on the others. Duplicated
+constraints are not exotic; they arise whenever a model is assembled
+programmatically from overlapping rules. This is the concrete form of the
+structural point in Section~\ref{sec:pdas}: with bound constraints the system is a
+principal submatrix of $G^{-1}$ and cannot be singular, and nothing about general
+$C$ preserves that.
+
+\paragraph{Where the failures are caught.} Of the candidates that reached the
+certificate, \qpPdasAccepted{} were accepted, with a worst KKT
+residual~\eqref{eq:certificate} of $\qpPdasAcceptWorst$, and
+\qpPdasRejected{} were rejected. We report that asymmetry rather than smoothing
+it: on these families the certificate never had to reject a converged candidate,
+because the failures were caught earlier and more cheaply, by the Cholesky
+factorisation of the working-set system refusing a dependent guess. The
+certificate remains the guarantee --- it is what makes the method sound rather
+than merely usually right --- but on this evidence it is the rank test that does
+the work in practice, and a reader should not infer from
+Section~\ref{sec:pdas} that non-optimal converged candidates are common.
+
+\subsection{What a warm-started solve costs}
+\label{ssec:sweepcost}
+
+Section~\ref{sec:sweep} derives the cost of recovery from cached factors as
+$O(n^2)$, all of it in $x_u = J J\T a$, with $O(nk + k^2)$ for everything after.
+Measuring that requires care, because the natural experiment cannot see it: on a
+box-constrained family the active set grows with $n$, so $O(nk)$ and $O(n^2)$
+predict the same curve and either reading fits. Figure~\ref{fig:sweep} therefore
+holds the active set fixed at $k = \qpSweepFixedK{}$ while $n$ grows, where the two
+predictions separate --- doubling versus quadrupling per doubling of $n$.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{graphs/quadprog_sweep.pdf}
+\caption{Left: cost per solve against $n$, with the active set held at
+$k = \qpSweepFixedK{}$ and with $k$ growing, against a cold solve and two
+reference slopes. Right: the local exponent $d\log t / d\log n$, which is what
+distinguishes the two regimes.}
+\label{fig:sweep}
+\end{figure}
+
+The local exponent runs from $\qpSweepSlopeLo$ at the small end to
+$\qpSweepSlopeHi$ at the large end. Neither figure is $1$, and the second is the
+one the derivation predicts: at $n = \qpSweepNhi{}$ a hit costs
+$\qpSweepHitHi\,\mu$s against $\qpSweepHitLo\,\mu$s at
+$n = \qpSweepNlo{}$, growing faster than any linear reading allows. So the
+$O(n^2)$ of Section~\ref{sec:sweep} is what a large warm solve costs, and an
+$O(nk)$ reading of the same formulas --- tempting, because every term after $x_u$
+does scale with $k$ --- is wrong.
+
+The small end is worth as much attention, because it is where the class is most
+used and where the flat curve invites the wrong explanation. Below roughly
+$n = 400$ the exponent is near zero: a hit costs what its dozen array operations
+cost to dispatch, not what its arithmetic costs. The flatness is an overhead floor
+and it ends where the $n^2$ overtakes dispatch. Reported as a speedup against
+solving each member of the family from scratch, reuse is worth
+$\qpSweepSpeedLo\times$ at $n = \qpSweepNlo{}$ and $\qpSweepSpeedHi\times$ at
+$n = \qpSweepNhi{}$, and the cached set stayed optimal on \qpSweepHitRate\% of
+solves under a relative perturbation of $\qpSweepPerturb$ to the linear term.
+
+\subsection{What these experiments do not establish}
+
+Three limits, stated because the section is easy to over-read.
+
+They verify agreement between the code and the identities proved here. They do not
+verify the absence of defects elsewhere --- in the constraint-selection scan, the
+infeasibility verdict, or the handling of degenerate input. A stronger instrument
+for that is a differential comparison of complete active-set trajectories against
+an independent implementation of the same method, which is not attempted here.
+
+They say nothing about conditioning. Problems are generated with $G = BB\T + nI$
+for Gaussian $B$, positive definite by construction and moderately conditioned;
+the residuals in Table~\ref{tab:identities} would grow with $\kappa(G)$, and that
+table should not be read as a claim about ill-conditioned instances.
+
+That choice also biases Section~\ref{ssec:pdas} in a direction worth naming,
+because it works against the conclusion drawn there. A well-conditioned $G$ has a
+minimiser that spreads across coordinates, so few bounds bind and the active set
+is small; a realistic covariance, being close to low-rank plus diagonal,
+concentrates the optimum and binds many more. The exact walk's iteration count
+grows with the size of the set it must reach, so the counts reported here are at
+the low end of what an application would produce, and the advantage measured for
+the guessed set is correspondingly the low end of the advantage available. The
+direction of the bias is favourable to the method this paper does \emph{not}
+advocate, which is the safe direction for it to run in, but a reader should not
+read \qpPdasBudgetOuter{} outer iterations at $n = \qpPdasRefN{}$ as typical of a
+portfolio problem.
+
+Finally, the identity checks are dense and of modest size, chosen for breadth of
+shape rather than scale, and the timings are single-machine. An identity that
+survives $n = 120$ with a working set of $60$ will not fail at $n = 1200$ for
+mathematical reasons; if it fails there it will be for reasons of memory layout,
+which the derivation is indifferent to and a timing on one host cannot settle.

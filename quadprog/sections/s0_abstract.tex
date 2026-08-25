@@ -3,10 +3,10 @@
 This note derives the Goldfarb--Idnani dual active-set method for strictly
 convex quadratic programs in the form in which the \texttt{cvx-quadprog} package
 implements it, and proves the identities the implementation relies on. The
-companion paper accompanying that package~\cite{schmelzer2026quadprog} is an
-account of what happens when forty-year-old Fortran is transcribed into an array
-language; it takes the mathematics as read. This note supplies the mathematics,
-and draws on that paper for every empirical claim made here.
+derivation is accompanied by a numerical section that checks each identity
+against the running code, on the internal state the implementation actually
+holds, and that measures the two behaviours the derivation reasons about but
+cannot predict.
 
 Three things are worth stating precisely and are not, in our experience, easy to
 extract from the original paper. First, the solver carries a single matrix $J$

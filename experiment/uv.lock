@@ -442,6 +442,21 @@ wheels = [
 ]
 
 [[package]]
+name = "cvx-quadprog"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/79/8251fa9cbe273cd14b3870a845e6f1515356dbe1e4fa6ffb5fc31fce9659/cvx_quadprog-0.4.1.tar.gz", hash = "sha256:5a564a186f2c4f0bf531c5c9a7c95753037def52fa1c8d451bd160e2df666d5b", size = 120143, upload-time = "2026-08-25T13:21:51.958Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/57/3b25ce95e27055f59036825e82f078a6aaa18ffcb80d007243616d2c83b4/cvx_quadprog-0.4.1-py3-none-any.whl", hash = "sha256:0a46144e9406512c3a63abf3198ffce0d1894420317ad1c5b93b1262d8b529d4", size = 61644, upload-time = "2026-08-25T13:21:50.838Z" },
+]
+
+[[package]]
 name = "cvxpy"
 version = "1.9.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1009,6 +1024,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "clarabel" },
     { name = "cvx-linalg" },
+    { name = "cvx-quadprog" },
     { name = "cvxpy" },
     { name = "lxml" },
     { name = "matplotlib" },
@@ -1035,6 +1051,7 @@ dev = [
 requires-dist = [
     { name = "clarabel" },
     { name = "cvx-linalg" },
+    { name = "cvx-quadprog", specifier = ">=0.4.1" },
     { name = "cvxpy" },
     { name = "lxml" },
     { name = "matplotlib" },
@@ -1728,7 +1745,7 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7a/97/5a3609c4f8d58b039179648e62dd220f89864f56f7357f5d4f45c29eb2cc/scipy-1.17.1.tar.gz", hash = "sha256:95d8e012d8cb8816c226aef832200b1d45109ed4464303e997c5b13122b297c0", size = 30573822, upload-time = "2026-02-23T00:26:24.851Z" }
 wheels = [
@@ -1807,7 +1824,7 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a7/25/c2700dfaf6442b4effaa91af24ebce5dc9d31bb4a69706313aae70d72cd0/scipy-1.18.0.tar.gz", hash = "sha256:67b2ad2ad54c72ca6d04975a9b2df8c3638c34ddd5b28738e94fc2b57929d378", size = 30774447, upload-time = "2026-06-19T15:01:43.456Z" }
 wheels = [

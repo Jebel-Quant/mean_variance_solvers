@@ -2,6 +2,7 @@
 
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{microtype}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -32,6 +33,14 @@
 
 \date{}
 
+% Generated numbers from experiment/quadprog_note/, loaded in the preamble rather
+% than in Section 10 so that earlier sections can quote their own measurements
+% instead of borrowing figures from elsewhere. Regenerate with `make figures`.
+\input{tables/quadprog_identities_defs}
+\input{tables/quadprog_identities}
+\input{tables/quadprog_pdas_defs}
+\input{tables/quadprog_sweep_defs}
+
 \begin{document}
 \maketitle
 
@@ -45,7 +54,8 @@
 \input{sections/s7_pdas}
 \input{sections/s8_sweep}
 \input{sections/s9_arithmetic}
-\input{sections/s10_conclusions}
+\input{sections/s10_experiments}
+\input{sections/s11_conclusions}
 
 \bibliographystyle{plain}
 \bibliography{../matrix_free/bib/refs}
