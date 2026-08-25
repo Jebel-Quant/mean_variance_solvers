@@ -3,8 +3,9 @@
 
 The dual method reaches the active set one constraint at a time. That is its
 defining feature and, at moderate $n$, its principal cost: a budget-plus-bounds
-problem in $100$ variables takes some $74$ outer iterations, each of which is a
-handful of matrix--vector products. The alternative is to guess the whole active
+problem in $n = \qpPdasRefN{}$ variables takes some \qpPdasBudgetOuter{} outer
+iterations (Section~\ref{ssec:pdas}), each of which is a handful of
+matrix--vector products. The alternative is to guess the whole active
 set at once, solve the working-set subproblem it induces, and repair the guess
 from the signs that come back. This is the semismooth Newton method of
 Hinterm\"uller, Ito and Kunisch~\cite{hintermuller2002} read as a primal--dual
@@ -44,9 +45,11 @@ already the answer when it violates nothing. If $\Active' = \Active$ the
 conditions~\eqref{eq:pfeas}--\eqref{eq:comp} hold to the tolerance used, and
 \eqref{eq:pdassolve} supplies \eqref{eq:stat} by construction.
 
-The whole set is exchanged at once, which is what converges in two to four repairs
-independently of $n$. It trades arithmetic, which is abundant at these sizes, for
-iterations, which are not.
+The whole set is exchanged at once, which is what converges in a handful of
+repairs almost independently of $n$ --- \qpPdasRepairsLo{} to
+\qpPdasRepairsHi{} across every family and size measured in
+Section~\ref{ssec:pdas}. It trades arithmetic, which is abundant at these sizes,
+for iterations, which are not.
 
 \subsection{Why there is no finite-termination theorem here}
 
@@ -118,9 +121,10 @@ The tolerance in~\eqref{eq:repair} decides which set is tried next. A bad choice
 there costs a repair or a fallback and can never cost correctness, so it is not
 delicate. The tolerance in~\eqref{eq:certificate} is the only thing standing
 between a non-optimal point and the caller, and is therefore the one to reason
-about. The gap it must separate is empirically wide: over the implementation's
-measurements, converged attempts that were optimal satisfied
-\eqref{eq:certificate} with residual at most $4\times10^{-15}$, while those that
-were not missed by $10^{-1}$ or worse. Any threshold in between separates them,
-which is the sense in which the certificate is robust rather than tuned.
+about. It is nonetheless not delicate either, because the quantity it thresholds
+is bimodal: a candidate constructed from a well-conditioned working set satisfies
+\eqref{eq:certificate} to a few multiples of the machine epsilon, and one built on
+a set that is not has no reason to come close. Section~\ref{ssec:pdas} measures
+the accepted population --- worst residual $\qpPdasAcceptWorst$ --- and reports
+what it did and did not observe on the rejecting side.
 \end{remark}

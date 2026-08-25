@@ -20,13 +20,12 @@ unconstrained minimiser $G^{-1}a$ is dual feasible for free, so the iteration ca
 start there and drive primal infeasibility to zero.
 
 This note is a derivation of that method in the form the \texttt{cvx-quadprog}
-package implements it,\footnote{\url{https://github.com/Jebel-Quant/quadprog}}
-together with the two extensions that package adds. It is written because the
-companion paper accompanying the package is about something else. That paper asks
-which of the reference implementation's decisions are essential to the algorithm
-and which are artefacts of Fortran, and answers with measurements; it states the
-mathematics compactly and moves on. What follows is the part it moves past: every
-identity the solver depends on, derived, with the degenerate cases named.
+package~\cite{cvxquadprog} implements it, together with the two extensions that
+package adds. Its aim is to state every identity the solver depends on, derive
+it, and name the degenerate cases --- and then, in
+Section~\ref{sec:experiments}, to check each one against the code that ships,
+which is a different question from whether it is true. Every empirical claim made
+anywhere below is measured there; none is quoted from elsewhere.
 
 \subsection{Why the dual method}
 

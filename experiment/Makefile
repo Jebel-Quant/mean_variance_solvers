@@ -1,7 +1,8 @@
-# Regenerate the figures (graphs/) and tables (tables/) that all three papers
+# Regenerate the figures (graphs/) and tables (tables/) that the papers
 # include. The scripts are nested by paper into importable packages — cg/
 # (Shrinkage-as-Preconditioning), rmt/ (Eigenvalue-Cleaning), nncg_note/
-# (Non-Negative Conjugate Gradients) — over a shared common/ (baselines,
+# (Non-Negative Conjugate Gradients), quadprog_note/ (the dual active-set
+# note, which verifies its own identities) — over a shared common/ (baselines,
 # simulate, util, data fetchers). They are run as modules from this directory
 # (`uv run python -m <pkg>.<module>`) against the .venv that `make venv` builds
 # from pyproject.toml, so imports resolve across packages. The committed
@@ -29,7 +30,7 @@ data:  ## Download the raw S&P 500 / FTSE 100 return data into data/
 	uv run python -m common.fetch_sp500
 	uv run python -m common.fetch_ftse100
 
-figures:  ## Regenerate every graph and table for all three papers
+figures:  ## Regenerate every graph and table for every paper
 	uv run python -m cg.experiment
 	uv run python -m cg.experiment_synthetic
 	uv run python -m cg.experiment_oos
@@ -42,6 +43,10 @@ figures:  ## Regenerate every graph and table for all three papers
 	uv run python -m nncg_note.experiment_nncg_regu
 	uv run python -m nncg_note.experiment_nncg_deblur
 	uv run python -m nncg_note.experiment_nncg_hyperspectral_library
+	uv run python -m quadprog_note.experiment_qp_identities
+	uv run python -m quadprog_note.experiment_qp_pdas
+	uv run python -m quadprog_note.experiment_qp_sweep
+	uv run python -m quadprog_note.experiment_qp_compare
 
 clean:  ## Remove the persistent virtual environment
 	rm -rf .venv uv.lock

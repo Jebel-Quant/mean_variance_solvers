@@ -1,4 +1,4 @@
-"""End-to-end smoke tests for the four figure/table scripts.
+"""End-to-end smoke tests for the figure/table scripts.
 
 Each script is a top-level program (no ``main``), so it is exercised by running
 it in a subprocess and asserting it exits 0 and writes its declared outputs.
@@ -72,6 +72,25 @@ SCRIPTS = {
     "nncg_note.experiment_nncg_hyperspectral_urban": [
         "graphs/nncg_hyperspectral_urban.pdf",
         "tables/nncg_hyperspectral_urban_defs.tex",
+    ],
+    # companion "The Mathematics of a Dual Active-Set QP Solver" note
+    # (quadprog_note package over cvx-quadprog)
+    "quadprog_note.experiment_qp_identities": [
+        "tables/quadprog_identities.tex",
+        "tables/quadprog_identities_defs.tex",
+    ],
+    "quadprog_note.experiment_qp_pdas": [
+        "graphs/quadprog_pdas.pdf",
+        "tables/quadprog_pdas_defs.tex",
+    ],
+    "quadprog_note.experiment_qp_sweep": [
+        "graphs/quadprog_sweep.pdf",
+        "tables/quadprog_sweep_defs.tex",
+    ],
+    "quadprog_note.experiment_qp_compare": [
+        "graphs/quadprog_compare.pdf",
+        "tables/quadprog_compare.tex",
+        "tables/quadprog_compare_defs.tex",
     ],
 }
 
