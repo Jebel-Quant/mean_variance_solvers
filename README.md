@@ -1,6 +1,6 @@
 # mean_variance_solvers
 
-LaTeX source for a set of companion working papers on fast, matrix-free solvers
+LaTeX source for a set of companion papers on fast, matrix-free solvers
 for the long-only minimum-variance / mean-variance portfolio problem, by Thomas
 Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
 (University of Zurich / ADIA Lab):
@@ -14,7 +14,9 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
   (Marchenko–Pastur) to motivate a low-rank-plus-diagonal covariance model that
   a Woodbury identity turns into a fast direct solver.
 - **Non-Negative Conjugate Gradients** — under
-  [`non_negative_cg/`](non_negative_cg/). A domain-neutral technical note that
+  [`non_negative_cg/`](non_negative_cg/), published as
+  [arXiv:2607.22121](https://arxiv.org/abs/2607.22121) (Schmelzer and Stoll,
+  24 July 2026). A domain-neutral technical note that
   isolates the computational kernel shared by the two papers above: solving the
   bound-constrained SPD quadratic `min_{x≥0} ½xᵀAx − bᵀx` (and its
   least-squares / equality-augmented variants) by wrapping matrix-free

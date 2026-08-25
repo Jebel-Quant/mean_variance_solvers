@@ -19,19 +19,19 @@ actual S\&P~500 return series ($n=494$, $T=1213$); the out-of-sample backtests
 Two solvers are applied to the same problem: minimise
 $w^\top \Sigma_0\, w - \rho\,\hat\mu^\top w$
 subject to $w \geq 0$, $\mathbf{1}^\top w = 1$ (the budget case) over a $50$-point efficient frontier.
-Synthetic equity data: $n = 500$ assets, $T = 1250$ days, $k = 22$ signal factors.
-Active-set sizes averaged $n_a = 42$ across the frontier (warm start).
+Synthetic equity data: $n = 500$ assets, $T = 1250$ days, $k = 21$ signal factors.
 
 \begin{itemize}
-  \item \textbf{KKT-Cholesky}: the same primal-dual outer loop as
-        Algorithm~\ref{alg:woodbury}, but with the inner solve replaced by
-        explicitly assembling $T_{0,\mathcal{A}}^{\mathrm{RMT}}$ as a dense
-        $n_a \times n_a$ matrix via a rank-$k$ symmetric update and then
-        factoring by Cholesky.
+  \item \textbf{KKT-Cholesky}: the inner solve replaced by explicitly assembling
+        $C_{0,\mathcal{A}}$ as a dense $n_a \times n_a$ matrix via a rank-$k$
+        symmetric update and then factoring by Cholesky.
   \item \textbf{Woodbury}: Algorithm~\ref{alg:woodbury} as stated: the inner
         solve uses the Woodbury identity and never assembles an $n_a \times n_a$
         matrix.
 \end{itemize}
+Both run the same primal-dual outer loop
+(\cite[Algorithm~1]{schmelzer2026nncg}, cf.\ Remark~\ref{rem:safeguards}) and
+differ only in the inner linear algebra.
 
 \input{tables/rmt_solver_comparison}
 \begin{table}[ht]
@@ -57,8 +57,8 @@ Woodbury and KKT-Cholesky produce identical portfolios to machine precision.}
 
 \paragraph{Correctness}
 The active-set loop terminates only on a verified KKT certificate (the $N=0$
-exit of Algorithm~\ref{alg:woodbury}), so each returned portfolio is the global
-optimum of its equality-constrained subproblem up to the tolerance
+exit of~\cite[Algorithm~1]{schmelzer2026nncg}), so each returned portfolio is the
+global optimum of its equality-constrained subproblem up to the tolerance
 $\varepsilon$. Woodbury and KKT-Cholesky execute the same outer loop on the same
 subproblems and differ only in the inner linear algebra, so they return
 identical portfolios: the maximum frontier-volatility difference across the
