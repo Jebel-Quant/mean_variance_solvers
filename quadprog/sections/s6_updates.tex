@@ -149,6 +149,6 @@ solve for $r$ reads once per iteration, is a contiguous run of $k(k+1)/2$ values
 at every $k$. Insertion writes one column, which is contiguous in that layout.
 Deletion mixes two \emph{rows} across a range of columns, and since column offsets
 grow with the column index, a row is a strided gather rather than a slice. The
-asymmetry is deliberate and the companion implementation paper measures it; the
-mathematics is indifferent.
+asymmetry is deliberate and the companion implementation
+paper~\cite{schmelzer2026quadprog} measures it; the mathematics is indifferent.
 \end{remark}
