@@ -53,31 +53,47 @@ jobs:
       - name: Compile every paper
         run: make compile
 
+      # Collects out/<DOC>.pdf for every paper, by asking each paper's own
+      # Makefile to stage the document its DOC names -- so a new paper folder is
+      # published by existing in, and nothing here enumerates papers.
+      #
+      # This replaces three `cp`s written out by name. Under those, quadprog/
+      # compiled and passed the gate but was never published, and the run stayed
+      # green because a list that is missing an entry cannot fail.
+      #
+      # Unconditional, and before the release step, so that a tag has the PDFs
+      # on disk to attach and a broken `stage` surfaces on pull requests rather
+      # than first on main. `names` feeds the publish commit message below.
+      - name: Collect the compiled PDFs
+        id: pdfs
+        run: |
+          make pdfs
+          names=$(cd out && ls *.pdf \
+            | sed 's/_paper\.pdf$//; s/\.pdf$//' \
+            | sort \
+            | tr '\n' ',' \
+            | sed 's/,$//; s/,/, /g')
+          echo "names=$names" >> "$GITHUB_OUTPUT"
+          echo "Staged $(ls out/*.pdf | wc -l | tr -d ' ') PDFs: $names"
+
       # Build the arXiv source tarballs after `make compile` -- compile ends
       # with `make clean`, which removes the tarballs, so this must run later.
+      # It leaves out/*.pdf alone, adding out/arxiv/ beside them.
       - name: Build arXiv source tarballs
         if: startsWith(github.ref, 'refs/tags/')
         run: make arxiv
 
+      # Globs rather than names, for the same reason as the step above: the
+      # release assets are whatever the papers produced. This list going stale
+      # is the failure mode that only bites at the next tag, which is the worst
+      # kind to leave to a hardcoded list.
       - name: Attach PDFs and arXiv source to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            matrix_free/cg_paper.pdf
-            rmt/rmt_paper.pdf
-            non_negative_cg/nncg_paper.pdf
-            out/arxiv/cg_paper.tar.gz
-            out/arxiv/rmt_paper.tar.gz
-            out/arxiv/nncg_paper.tar.gz
-
-      - name: Stage PDFs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p out
-          cp matrix_free/cg_paper.pdf out/
-          cp rmt/rmt_paper.pdf out/
-          cp non_negative_cg/nncg_paper.pdf out/
+            out/*.pdf
+            out/arxiv/*.tar.gz
 
       - name: Publish to pdf
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -87,4 +103,4 @@ jobs:
           publish_branch: pdf
           publish_dir: ./out
           keep_files: true
-          commit_message: "Publish compiled PDFs (cg, rmt, nncg) from ${{ github.sha }}"
+          commit_message: "Publish compiled PDFs (${{ steps.pdfs.outputs.names }}) from ${{ github.sha }}"

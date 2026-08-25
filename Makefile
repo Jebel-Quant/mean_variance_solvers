@@ -12,7 +12,7 @@
 # below needs editing.
 PAPERS := $(filter-out experiment,$(patsubst %/Makefile,%,$(wildcard */Makefile)))
 
-.PHONY: help compile figures test clean arxiv check
+.PHONY: help compile pdfs figures test clean arxiv check
 
 # Self-documenting help: lists every target with a `## description` comment.
 help:  ## Show this overview of available commands
@@ -28,6 +28,20 @@ help:  ## Show this overview of available commands
 
 compile:  ## Build every paper
 	@$(foreach p,$(PAPERS),$(MAKE) -C $(p) compile &&) true
+
+# Collect every paper's PDF under out/. Each paper's own `stage` target does the
+# copying, so this needs to know which folders are papers but not what any of
+# them calls its document -- that lives in the paper's DOC. OUTDIR is absolute
+# because make -C has already changed directory when it is expanded.
+#
+# This is what the CI publish step runs. It used to `cp` three PDFs by name,
+# which meant a fourth paper (quadprog/) compiled and gated in CI but was never
+# published, and nothing failed to say so. Anything that discovers papers should
+# discover them the way PAPERS above does.
+pdfs:  ## Collect every paper's PDF under out/
+	@mkdir -p out
+	@$(foreach p,$(PAPERS),$(MAKE) -C $(p) stage OUTDIR=$(CURDIR)/out &&) true
+	@ls -l out
 
 figures:  ## Regenerate every paper's figures and tables (runs the experiment)
 	$(MAKE) -C experiment figures
