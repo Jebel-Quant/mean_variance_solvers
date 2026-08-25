@@ -44,6 +44,9 @@ figures:  ## Regenerate every graph and table for every paper
 	uv run python -m nncg_note.experiment_nncg_deblur
 	uv run python -m nncg_note.experiment_nncg_hyperspectral_library
 	uv run python -m quadprog_note.experiment_qp_identities
+	uv run python -m quadprog_note.experiment_qp_pdas
+	uv run python -m quadprog_note.experiment_qp_sweep
+	uv run python -m quadprog_note.experiment_qp_compare
 
 clean:  ## Remove the persistent virtual environment
 	rm -rf .venv uv.lock
