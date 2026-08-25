@@ -1,6 +1,6 @@
 \section{The Woodbury Portfolio Solver}\label{sec:algorithm}
 
-\subsection{Primal-dual active-set reduction}
+\subsection{Active-set reduction and the inner solve}
 
 By the change of variables $y = D^{1/2} w$ of Section~\ref{sec:rmt} the
 minimum-variance problem is solved against the cleaned correlation $C_0$: minimise
@@ -11,112 +11,92 @@ $w$, $B$, $\hat\mu$ for the standardised weight $y$, the transformed balance mat
 $\tilde B$, and $\tilde\mu$; every displayed formula is in these standardised
 coordinates and the reported weights are $D^{-1/2}$ times the solve's output.
 
-The balance constraints $Bw = c$ and non-negativity $w \geq 0$
-are handled separately. Fix a set $\mathcal{A} \subseteq \{1,\ldots,n\}$ of
-active assets and write $B_\mathcal{A}$ for the columns of $B$ indexed by
-$\mathcal{A}$. The balance-constrained subproblem on $\mathcal{A}$,
+This is the equality-augmented non-negative quadratic
+of~\cite{schmelzer2026nncg} at $A = 2C_0$, $b = \rho\hat\mu$. We adopt that
+solver as printed and contribute the inner linear algebra
+(Section~\ref{sec:woodbury}); this subsection records only what the
+instantiation needs.
+
+\paragraph{The restricted subproblem}
+Fix a set $\mathcal{A} \subseteq \{1,\ldots,n\}$ of active assets, write
+$B_\mathcal{A}$ for the columns of $B$ indexed by $\mathcal{A}$, and put
+$n_a = |\mathcal{A}|$. The balance-constrained subproblem on $\mathcal{A}$,
 \[
   \min_{w_\mathcal{A}:\,B_\mathcal{A} w_\mathcal{A}=c}\;
   w_\mathcal{A}^\top C_{0,\mathcal{A}}\, w_\mathcal{A}
   - \rho\,\hat\mu_\mathcal{A}^\top w_\mathcal{A}\,,
 \]
-has, by the KKT conditions, the closed-form solution
+is a saddle-point system whose $p$ multipliers are eliminated analytically by a
+$p \times p$ Schur complement~\cite[Section~3]{schmelzer2026nncg}, leaving
 \[
   w^\star_\mathcal{A}
   \;=\; \tfrac12 V_1\,\lambda + \tfrac{\rho}{2} v_2\,,
   \qquad
-  V_1 = (C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top \in \mathbb{R}^{n_a \times p}\,,
+  V_1 = (C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top\,,
   \quad
   v_2 = (C_{0,\mathcal{A}})^{-1}\hat\mu_\mathcal{A}\,,
 \]
-where the $p$ balance multipliers $\lambda \in \mathbb{R}^p$ are recovered
-analytically from feasibility $B_\mathcal{A} w^\star_\mathcal{A} = c$ through the
-$p \times p$ Schur complement
+with $\lambda \in \mathbb{R}^p$ fixed by feasibility through
 \[
   S\,\lambda = 2c - \rho\,B_\mathcal{A} v_2\,,
   \qquad
-  S = B_\mathcal{A} V_1 = B_\mathcal{A}(C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top \succ 0\,,
+  S = B_\mathcal{A} V_1 = B_\mathcal{A}(C_{0,\mathcal{A}})^{-1}B_\mathcal{A}^\top \succ 0\,.
 \]
-which is SPD because $C_{0,\mathcal{A}} \succ 0$ and $B_\mathcal{A}$
-has full row rank; the dense $p \times p$ solve is negligible for the small $p$
-typical of balance conditions. In the budget case ($p = 1$,
+The factors of two carry the convention $w^\top C_0 w$ in place of
+$\tfrac12 w^\top A w$; $S$ is SPD because $C_{0,\mathcal{A}} \succ 0$ and
+$B_\mathcal{A}$ has full row rank, and the dense $p \times p$ solve is negligible
+for the small $p$ typical of balance conditions. In the budget case ($p = 1$,
 $B_\mathcal{A} = \mathbf{1}^\top$, $c = 1$) this collapses to a single vector
-$v_1 = (C_{0,\mathcal{A}})^{-1}\mathbf{1}$, a scalar Schur
-complement $S = \mathbf{1}^\top v_1$, and
+$v_1 = (C_{0,\mathcal{A}})^{-1}\mathbf{1}$, a scalar Schur complement
+$S = \mathbf{1}^\top v_1$, and
 $w^\star_\mathcal{A} = \theta v_1 + \tfrac{\rho}{2} v_2$ with
 $\theta = \tfrac{\lambda}{2} = (1 - \tfrac{\rho}{2}\mathbf{1}^\top v_2)/(\mathbf{1}^\top v_1)$.
+Every outer step thus reduces to $p+1$ applications of
+$(C_{0,\mathcal{A}})^{-1}$.
 
-Non-negativity is enforced by the primal-dual active-set outer loop of the
-companion paper~\cite{schmelzer2026nncg}. Throughout,
-the objective gradient is
-\[
-  g \;=\; 2\,C_0 w - \rho\,\hat\mu\,,
-\]
-evaluated through the low-rank form
-$C_0w = \bar\mu w + U_k(\Delta_k(U_k^\top w))$ at cost
-$O(nk)$ (Proposition~\ref{prop:rmt_spectrum}); the return matrix $X$ never
-enters the solve. Stationarity of the restricted subproblem reads
-$g_j = (B_\mathcal{A}^\top\lambda)_j$ for every $j \in \mathcal{A}$, with the
-multipliers $\lambda$ delivered for free by the Schur solve above. In the budget
-case $B = \mathbf{1}^\top$ all active gradients coincide with the single
-multiplier $\lambda = 2\theta$, which the implementation then reads off as the
-median of $g_j$ over $\mathcal{A}$ (used for robustness, exact up to roundoff).
+\paragraph{The outer loop}
+Non-negativity is enforced by~\cite[Algorithm~1]{schmelzer2026nncg} unchanged,
+and its Theorem~4.1 gives finite termination at the unique global minimiser with
+no non-degeneracy assumption. The hypotheses hold for \emph{every} active set
+here, since $C_{0,\mathcal{A}} \succ 0$ whenever $\bar\mu > 0$ and all
+$\delta_j > 0$. That theorem also licenses any \emph{direct} factorisation of the
+free-set system in place of its conjugate-gradient inner solve, so the Woodbury
+solve of Section~\ref{sec:woodbury} inherits termination and the KKT certificate
+verbatim, with no inexactness condition to verify.
 
-The loop drops any active asset whose weight turns negative (the \emph{primal
-step}) and re-admits any excluded asset whose reduced gradient
-$g_i - (B^\top\lambda)_i$ is negative (the \emph{dual step}), re-solving the
-restricted subproblem after each exchange and stopping once
-$w_{\mathcal{A},i} \geq -\varepsilon$ for all $i \in \mathcal{A}$ and
-$g_i \geq (B^\top\lambda)_i - \varepsilon$ for all $i \notin \mathcal{A}$. In the
-budget case $(B^\top\lambda)_i = \lambda$ reduces to the scalar threshold
-$\nu = 2\theta$. These toggles are the principal pivots of the
-$P$-matrix linear complementarity problem $(C_0,\,-\rho\hat\mu)$:
-because
-$C_{0,\mathcal{A}} = \bar\mu I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top \succ 0$
-for every $\mathcal{A}$ (all $\delta_j > 0$ and $\bar\mu > 0$), every
-principal submatrix is invertible, each pivot is well defined, and the
-restricted subproblem has a unique optimum.
-
-The outer loop, its finite-termination proof, and the batch/least-index pivot
-schedule that makes it robust are developed in full generality in the companion
-paper~\cite{schmelzer2026nncg}, of which the RMT problem is the instance
-$A = C_0$, $b = \rho\hat\mu$. Theorem~4.1 there gives finite termination at the
-unique global minimiser with no non-degeneracy assumption, and licenses any
-\emph{direct} factorisation of the free-set system as the inner solve: the
-Woodbury solve developed below is exactly such a solver, so termination is
-inherited.
+The one problem-specific ingredient the loop needs is the gradient
+$g = 2\,C_0 w - \rho\,\hat\mu$ supplying its dual test, evaluated through the
+low-rank form $C_0w = \bar\mu w + U_k(\Delta_k(U_k^\top w))$ at cost $O(nk)$
+(Proposition~\ref{prop:rmt_spectrum}). The return matrix $X$ never enters the
+solve, which runs entirely on the $O(nk)$ factors $(U_k, \Delta_k, \bar\mu)$.
 
 \begin{remark}[Implementation safeguards]\label{rem:safeguards}
-The reference implementation runs the batch fast path (assets whose weights are
-strongly negative, $w_i < -10\,\varepsilon$, are dropped together before any
-single-exchange step) and carries an iteration cap and an active-set-change
-check as a lightweight stand-in for the least-index fallback
-of~\cite{schmelzer2026nncg}. In all experiments of Section~\ref{sec:results}
-neither safeguard triggered and the batch drops did not affect the returned
-portfolio (the converged weights agree with the KKT-Cholesky reference to
-machine precision, Section~\ref{ssec:solvers}).
+The reference implementation runs the batch exchange as an unguarded fast path
+(assets with $w_i < -10\,\varepsilon$ are dropped together), with an iteration cap
+and an active-set-change check in place of the patience-guarded least-index
+fallback that~\cite[Algorithm~1]{schmelzer2026nncg} makes the proof rest on.
+Neither safeguard triggered in any experiment of Section~\ref{sec:results}, and
+the converged weights match the KKT-Cholesky reference to machine precision
+(Section~\ref{ssec:solvers}); a deployment wanting the unconditional guarantee
+should use the fallback as printed there.
 \end{remark}
 
 \begin{remark}[Tolerance scale]\label{rem:tolerance}
 The tolerance $\varepsilon$ applies to the standardised weights (primal step) and
 the reduced gradient (dual step). In the standardised coordinates both live on the
 $O(1)$ correlation scale, with noise floor $\bar\mu \approx 0.5$, so the default
-$\varepsilon = 10^{-6}$ is a standard KKT tolerance; the change of variables removes
-the dependence on the raw return scale that a covariance formulation would carry.
+$\varepsilon = 10^{-6}$ is a standard KKT tolerance for active-set
+methods~\cite{nocedal2006}; the change of variables removes the dependence on the
+raw return scale that a covariance formulation would carry.
 \end{remark}
 
-What remains is the inner solve $(C_{0,\mathcal{A}})^{-1}b$
-required at each outer step. This inverse is
-available in closed form via the Woodbury identity, reducing the dominant
-per-step cost from $O(n_a^2 k + n_a^3)$ to $O(n_a k^2 + k^3)$; we develop it now.
-
-\subsection{Woodbury direct solve}
+\subsection{Woodbury direct solve}\label{sec:woodbury}
 
 The system matrix on the active set $\mathcal{A}$ is
 $C_{0,\mathcal{A}} = \bar\mu I_{n_a} + U_{k,\mathcal{A}}\Delta_k U_{k,\mathcal{A}}^\top$,
 where $U_{k,\mathcal{A}} = U_k[\mathcal{A},:] \in \mathbb{R}^{n_a \times k}$ is the restriction
-of the signal eigenvectors to the active assets and $n_a = |\mathcal{A}|$.
-The Woodbury matrix identity~\cite{golub2013}, applied with
+of the signal eigenvectors to the active assets. The Woodbury matrix
+identity~\cite{golub2013}, applied with
 $A = \bar\mu I_{n_a}$, $U = U_{k,\mathcal{A}}$, $C = \Delta_k$,
 $V = U_{k,\mathcal{A}}^\top$, gives
 
@@ -137,9 +117,8 @@ $V = U_{k,\mathcal{A}}^\top$, gives
 Note that after restricting to $\mathcal{A}$ the columns of $U_{k,\mathcal{A}}$
 are generally no longer orthonormal: $U_{k,\mathcal{A}}^\top U_{k,\mathcal{A}} \neq I_k$.
 The correction matrix $W$ accounts for this; its Cholesky factorisation is used
-to evaluate $W^{-1}U_{k,\mathcal{A}}^\top b$. The active-set reduction requires
-$p+1$ such solves per outer step (the $p$ columns of $B_\mathcal{A}^\top$ and
-$\hat\mu_\mathcal{A}$); all share the single factorisation of $W$, so each
+to evaluate $W^{-1}U_{k,\mathcal{A}}^\top b$. The $p+1$ right-hand sides of the
+restricted subproblem all share the single factorisation of $W$, so each
 right-hand side beyond the first costs only $O(n_a k)$.
 
 \begin{proposition}[Woodbury solve complexity]\label{prop:woodbury_cost}
@@ -154,72 +133,47 @@ One application of $(C_{0,\mathcal{A}})^{-1}$ costs:
 The dominant term is $O(n_a k^2)$; the total per-application cost is $O(n_a k^2 + k^3)$.
 \end{proposition}
 
-\subsection{Algorithm and warm-starting}
+Algorithm~\ref{alg:woodbury} assembles these pieces into the routine
+$f(\mathcal{A})$ that~\cite[Algorithm~1]{schmelzer2026nncg} calls once per outer
+step.
 
 \begin{algorithm}[ht]
-\caption{Woodbury portfolio solver}\label{alg:woodbury}
+\caption{Woodbury inner solve $f(\mathcal{A})$ for the RMT-cleaned correlation}\label{alg:woodbury}
 \begin{algorithmic}[1]
-\Require Signal eigenpairs $(U_k, \Lambda_k) \in \mathbb{R}^{n \times k} \times \mathbb{R}^k$;
+\Require Signal eigenpairs $(U_k, \Delta_k)$ with $\Delta_k = \Lambda_k - \bar\mu I$;
          bulk mean $\bar\mu$;
+         active set $\mathcal{A}$;
          balance system $B \in \mathbb{R}^{p \times n}$, $c \in \mathbb{R}^p$
          \textit{(default $\mathbf{1}^\top,\, 1$)};
-         return-tilt $\rho \geq 0$; expected returns $\hat\mu$;
-         tolerance $\varepsilon = 10^{-6}$;
-         optional warm start $(\mathcal{A}_0, w_0)$
-\Ensure  Portfolio weights $w \in \mathbb{R}^n$ with $w \geq 0$, $Bw = c$
-\State $\mathcal{A} \leftarrow \mathcal{A}_0$ (or $\{1,\ldots,n\}$ for cold start);\;
-       $w \leftarrow w_0$ (or $\mathbf{0}$);\;
-       $\Delta_k \leftarrow \Lambda_k - \bar\mu\mathbf{1}$
-\Loop
-  \State $U_a \leftarrow U_k[\mathcal{A}, :]$ \Comment{$n_a \times k$ restriction}
-  \State $W \leftarrow \mathrm{diag}(1/\Delta_k) + U_a^\top U_a / \bar\mu$
-    \hfill\textit{($O(n_a k^2)$)}
-  \State $L \leftarrow \mathrm{chol}(W)$;\;
-         define $\mathrm{inv}(b) \leftarrow b/\bar\mu - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\mu^2$
-    \hfill\textit{($O(k^3)$ once)}
-  \State $V_1 \leftarrow \mathrm{inv}(B_\mathcal{A}^\top)$;\;
-         $v_2 \leftarrow \mathrm{inv}(\hat\mu_\mathcal{A})$ if $\rho > 0$
-    \hfill\textit{($p{+}1$ solves, $O(n_a k)$ each)}
-  \State $S \leftarrow B_\mathcal{A} V_1$;\; solve $S\lambda = 2c - \rho\,B_\mathcal{A} v_2$
-    \hfill\textit{($p \times p$ Schur, $O(p^3)$)}
-  \State $w_\mathcal{A} = \tfrac12 V_1\lambda + \tfrac{\rho}{2} v_2$
-  \If{$\exists\, i \in \mathcal{A}$ with $w_{\mathcal{A},i} < -\varepsilon$}
-    \State $\mathcal{A} \leftarrow \mathcal{A} \setminus \{\arg\min_i w_{\mathcal{A},i}\}$
-      \hfill\textit{(primal step; cf.\ Remark~\ref{rem:safeguards})}
-  \Else
-    \State $w \leftarrow 0$;\; $w[\mathcal{A}] \leftarrow w_\mathcal{A}$
-    \State $g \leftarrow 2\bigl(\bar\mu w + U_k(\Delta_k(U_k^\top w))\bigr) - \rho\hat\mu$;\;
-           $r \leftarrow g - B^\top\lambda$
-      \hfill\textit{(reduced gradient, $O(nk)$)}
-    \State $j^\star \leftarrow \arg\min_{i \notin \mathcal{A}} r_i$
-    \If{$r_{j^\star} \geq -\varepsilon$} \textbf{break}
-      \hfill\textit{(KKT satisfied)}
-    \EndIf
-    \State $\mathcal{A} \leftarrow \mathcal{A} \cup \{j^\star\}$
-      \hfill\textit{(dual step)}
-  \EndIf
-\EndLoop
-\State \Return $w$
+         return-tilt $\rho \geq 0$; expected returns $\hat\mu$
+\Ensure  Restricted optimum $w_\mathcal{A}$ and multipliers $\lambda \in \mathbb{R}^p$
+\State $U_a \leftarrow U_k[\mathcal{A}, :]$ \Comment{$n_a \times k$ restriction}
+\State $W \leftarrow \mathrm{diag}(1/\Delta_k) + U_a^\top U_a / \bar\mu$
+  \hfill\textit{($O(n_a k^2)$)}
+\State $L \leftarrow \mathrm{chol}(W)$;\;
+       define $\mathrm{inv}(b) \leftarrow b/\bar\mu - U_a\,(L^\top \backslash (L \backslash U_a^\top b)) / \bar\mu^2$
+  \hfill\textit{($O(k^3)$ once)}
+\State $V_1 \leftarrow \mathrm{inv}(B_\mathcal{A}^\top)$;\;
+       $v_2 \leftarrow \mathrm{inv}(\hat\mu_\mathcal{A})$ if $\rho > 0$
+  \hfill\textit{($p{+}1$ solves, $O(n_a k)$ each)}
+\State $S \leftarrow B_\mathcal{A} V_1$;\; solve $S\lambda = 2c - \rho\,B_\mathcal{A} v_2$
+  \hfill\textit{($p \times p$ Schur, $O(p^3)$)}
+\State \Return $w_\mathcal{A} = \tfrac12 V_1\lambda + \tfrac{\rho}{2} v_2$,\; $\lambda$
 \end{algorithmic}
 \end{algorithm}
 
-The tolerance $\varepsilon = 10^{-6}$ governs both the primal feasibility check
-(drop assets with $w_{\mathcal{A},i} < -\varepsilon$) and the dual violation
-threshold (admit assets with reduced gradient $r_i < -\varepsilon$); see
-Remark~\ref{rem:tolerance} for its scale. This is a standard KKT tolerance for
-active-set methods~\cite{nocedal2006}.
+The outer loop calls Algorithm~\ref{alg:woodbury}, extends its output by zeros
+off $\mathcal{A}$, and forms the reduced gradient $r = g - B^\top\lambda$ at
+$O(nk)$ from the returned multipliers; in the budget case
+$(B^\top\lambda)_i = \lambda$ reduces to the scalar threshold $\nu = 2\theta$.
 
-Two further features of Algorithm~\ref{alg:woodbury} deserve emphasis.
-
-\emph{The return matrix never enters the solve}. The dual-feasibility check
-evaluates the gradient of the objective,
-$g = 2\,C_0w - \rho\hat\mu$, through the low-rank form at cost
-$O(nk)$. Neither $\hat\Sigma$ nor $X$ is touched after preprocessing: the
-entire solve operates on the $O(nk)$ factors $(U_k, \Delta_k, \bar\mu)$.
+\subsection{Warm-starting}
 
 \emph{Warm-starting profits from active-set continuity, not initial guesses}.
 A direct solver has no initial guess; warm-starting instead passes the previous
-active set and weights, cutting the number of outer steps. Along the frontier the
+active set and weights, cutting the number of outer steps --- the direct-solver
+half of the warm-start analysis
+of~\cite[Proposition~4.2]{schmelzer2026nncg}. Along the frontier the
 Markowitz solution is piecewise-linear in $\rho$ with generically single-asset
 breakpoint changes~\cite{markowitz1956}, so adjacent solves on a fine grid share
 all but a few active assets and the warm solver typically terminates in one to two
@@ -242,7 +196,9 @@ $\rho$.
 \begin{remark}[Ridge terms and other structured modifications]\label{rem:ridge}
 The Woodbury structure survives several practically relevant modifications.
 A ridge penalty $\gamma\norm{w}^2$ simply shifts the identity coefficient,
-$\bar\mu \mapsto \bar\mu + \gamma$. A diagonal loading
+$\bar\mu \mapsto \bar\mu + \gamma$ --- the scalar-identity special case of the
+regularising split of~\cite[Section~5]{schmelzer2026nncg}, here available in
+closed form. A diagonal loading
 $D + U_k\Delta_kU_k^\top$ with non-scalar $D \succ 0$ replaces $b/\bar\mu$
 by $D^{-1}b$ at unchanged cost. Further \emph{linear equality} constraints
 beyond the balance system (e.g.\ sector-neutrality) are absorbed by appending
