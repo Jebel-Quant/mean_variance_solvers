@@ -84,8 +84,8 @@ constructed for the purpose.
 
 \paragraph{Accuracy survives the conditioning.} The active-set method returns
 $\qpPfSpResid$ on the S\&P~500 despite $\kappa(\Sigma) = \qpPfSpKappa$, while the
-two iterative solvers return residuals seven to nine orders of magnitude larger at
-the same requested tolerance. The reason is the one given in
+interior-point solver returns a residual five orders of magnitude larger at
+the same requested tolerance, and larger again on the FTSE~100. The reason is the one given in
 Section~\ref{ssec:compare} and it is sharper here: the optimum is a vertex with
 $\qpPfSpActive{}$ active constraints, which is the worst case for a method that
 approaches the boundary asymptotically and the natural case for one that
@@ -101,27 +101,47 @@ $\qpPfPoints{}$ points across the S\&P~500 frontier.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{graphs/quadprog_portfolio.pdf}
-\caption{Left: the long-only efficient frontier. Right: the number of names held
-along it, from $\qpPfNamesHi{}$ at the minimum-variance corner down to
-$\qpPfNamesLo{}$ at the return-seeking end, where the budget is concentrated in a
-single asset.}
+\caption{Left: the long-only efficient frontier, with the individual assets it
+dominates. Right: the number of names held along it, on a log scale, falling from
+$\qpPfNamesHi{}$ at the minimum-variance corner to $\qpPfNamesLo{}$ at the
+return-seeking end, where the budget concentrates in a single asset.}
 \label{fig:portfolio}
 \end{figure}
 
 Reusing the factorisation costs $\qpPfWarm$\,ms per point against
-$\qpPfCold$\,ms solving each point from scratch, a factor of
-$\qpPfSweepSpeed$. The cached active set stayed optimal on $\qpPfHits{}$ of the
-$\qpPfPoints{}$ points, with $\qpPfMisses{}$ requiring the repair of
-Proposition~\ref{prop:repair}; and the answers are identical to the cold solves,
-because a reused point is returned only against the certificate of
-Section~\ref{ssec:sweepcost}.
+$\qpPfCold$\,ms solving each point from scratch, a factor of $\qpPfSweepSpeed$,
+and the answers are identical to the cold solves because a reused point is
+returned only against the certificate of Section~\ref{ssec:sweepcost}.
 
-The right-hand panel is the reason the hit rate is as high as it is, and it is a
-fact about the problem rather than about the solver. The number of names held
-falls monotonically along the frontier, so consecutive points differ by a handful
-of constraints out of nearly five hundred, and a cached set is usually still
-optimal one step later. That is the structural property Section~\ref{sec:sweep}
-assumes, appearing in the wild.
+The interesting part is where that factor comes from, and it is not where one
+would expect. The cached active set stayed optimal on only $\qpPfHits{}$ of the
+$\qpPfPoints{}$ points; the other $\qpPfMisses{}$ were misses. A sweep spanning
+three decades of $\rho$ moves a long way between consecutive points --- the
+right-hand panel shows the holdings falling from $\qpPfNamesHi{}$ names to
+$\qpPfNamesLo{}$ across it --- and the active set moves with them. Sampling the
+frontier more finely would raise the hit rate directly; nothing here is tuned to
+produce one.
+
+So the saving is not mostly the hit path. It is that a \emph{miss} is repaired
+rather than restarted. Proposition~\ref{prop:repair} turns a stale set into a
+dual-feasible state by dropping the constraints whose multipliers have gone
+negative, and the iteration resumes from there instead of from the unconstrained
+minimum, keeping $J$ and $R$ throughout. A sweep that misses two points in three
+is still $\qpPfSweepSpeed\times$ faster than solving each point cold, which is a
+sharper statement about the machinery than a high hit rate would have been: it
+says the mechanism that matters is the one that runs when the cache is
+\emph{wrong}.
+
+\begin{remark}[A degenerate sweep flatters this measurement]\label{rem:sweeptrap}
+An earlier version of this experiment spaced $\rho$ linearly. Almost every point
+then landed on the return-seeking corner, where the solution is a single asset and
+does not move, and the cache hit $48$ times out of $50$. The number was real and
+the conclusion drawn from it would have been worthless, because the sweep was not
+tracing the frontier at all --- it was solving the same problem forty-nine times.
+The geometric spacing used here is what makes the left-hand panel a curve rather
+than two points joined by a line, and the honest hit rate is the one that comes
+with it.
+\end{remark}
 
 \begin{remark}[What this section does and does not claim]
 It claims that the method's advantages are larger on the problems it was designed
