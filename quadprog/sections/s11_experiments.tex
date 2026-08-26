@@ -1,23 +1,19 @@
 \section{Numerical experiments}
 \label{sec:experiments}
 
-Everything above is a proof, and proofs leave two things open that only
-measurement closes.
-
-The first is whether the code satisfies the identities. A proof establishes them in
-exact arithmetic; the implementation reaches them through a triangular factor held
-as packed columns addressed by hand and through library calls that write in place
-into a view of $J$'s own buffer, correct only while that view stays contiguous. A
-sign error in the packed indexing would leave every proposition above true and the
-running solver wrong. The invariants are also the kind of property that decays
-quietly, being maintained across a run rather than recomputed: a solver that has
-drifted from $J\T G J = I$ still returns a vector that is very nearly right.
-
-The second is the set of quantities the paper reasons about but cannot predict ---
-how often a guessed active set is certifiable, how many repairs it takes, what a
-warm-started solve costs. All measurements are on the implementation at the
-version recorded in Section~\ref{sec:reproducibility}, by scripts distributed with
-this paper's sources.
+Everything above is a proof, and proofs leave two things open. The first is whether
+the code satisfies the identities: they hold in exact arithmetic, but the
+implementation reaches them through a triangular factor held as packed columns
+addressed by hand and through library calls writing in place into a view of $J$'s
+own buffer, correct only while that view stays contiguous. A sign error in the
+packed indexing would leave every proposition above true and the running solver
+wrong --- quietly, since the invariants are maintained across a run rather than
+recomputed, and a solver drifting from $J\T G J = I$ still returns a vector that is
+very nearly right. The second is the set of quantities the paper reasons about but
+cannot predict: how often a guessed active set is certifiable, how many repairs it
+takes, what a warm-started solve costs. All measurements are on the implementation
+at the version recorded in Section~\ref{sec:reproducibility}, by scripts
+distributed with this paper's sources.
 
 \subsection{The identities hold in the running code}
 \label{ssec:identities}
