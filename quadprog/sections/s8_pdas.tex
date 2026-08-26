@@ -56,7 +56,11 @@ for iterations, which are not.
 Block exchange can cycle, and the standard remedy is a least-index rule --- flip
 only the lowest-indexed offending constraint, in the manner of Bland's rule for
 the simplex method and Murty's least-index rule for linear complementarity
-problems~\cite{murty1988}. In the bound-constrained case that remedy comes with a
+problems~\cite{murty1988}. What follows concerns this \emph{block} exchange
+specifically, and not active-set methods in general: the exact walk of
+Section~\ref{sec:iteration} is finite under nondegeneracy
+(Proposition~\ref{prop:ascent}), and for parametric families of QPs its worst-case
+iteration count can be certified exactly~\cite{arnstrom2022certification}. In the bound-constrained case that remedy comes with a
 theorem, and it is worth being precise about why the theorem does not survive the
 generalisation, because the reason is structural rather than a gap in the
 argument.
@@ -87,34 +91,32 @@ appeal to, and correspondingly no theorem to inherit. Contrast
 Proposition~\ref{prop:rank}: the dual method's step rules make dependence
 unreachable, and it is exactly that protection which guessing forfeits.
 
-The implementation's response is to treat the Cholesky factorisation of
+The implementation treats the Cholesky factorisation of
 $C_\Active\T G^{-1}C_\Active$ as the rank test --- a dependent guess fails there
-rather than returning something plausible --- and to treat the least-index rule as
-a way of making progress where block exchange oscillates rather than as a
-termination proof. Neither is a substitute for the guarantee. The certificate is.
+rather than returning something plausible --- and the least-index rule as a way of
+making progress where block exchange oscillates rather than as a termination proof.
+Neither substitutes for the guarantee. The certificate does.
 
 \subsection{The certificate}
 
-Because the method may fail, and may fail by stabilising on a set that is simply
-not optimal, the trade is sound only because the answer is checked. This is where
-Proposition~\ref{prop:sufficient} earns its place: for a strictly convex program
-the KKT conditions are sufficient, so a candidate $(x,\lambda)$ satisfying
+Because the method may fail --- and may fail by stabilising on a set that is
+simply not optimal --- the trade is sound only because the answer is checked. This
+is where Proposition~\ref{prop:sufficient} earns its place: a candidate
+$(x,\lambda)$ satisfying
 \begin{equation}
   \norm{G x - a - C\lambda}_\infty \le \varepsilon,
-  \quad
-  |c_i\T x - b_i| \le \varepsilon \ (i \le m_{\mathrm{eq}}),
-  \quad
-  c_i\T x - b_i \ge -\varepsilon, \ \ \lambda_i \ge -\varepsilon,
+  \quad |c_i\T x - b_i| \le \varepsilon \ (i \le m_{\mathrm{eq}}),
+  \quad c_i\T x - b_i \ge -\varepsilon, \ \ \lambda_i \ge -\varepsilon,
   \ \ |\lambda_i (c_i\T x - b_i)| \le \varepsilon
   \label{eq:certificate}
 \end{equation}
-for the inequalities, with $\varepsilon$ scaled by the data, \emph{is} the answer
-up to that tolerance --- not a plausible candidate awaiting a second opinion.
+on the inequalities, with $\varepsilon$ scaled by the data, \emph{is} the answer to
+that tolerance --- not a plausible candidate awaiting a second opinion.
 Stationarity is checked against $G$ directly rather than trusted from the
-construction, since the construction is precisely what an ill-conditioned working
-set corrupts. A candidate failing~\eqref{eq:certificate} is discarded and the
-exact walk of Algorithm~\ref{alg:gi} is run instead, so the guess can never
-degrade the answer: it either produces the minimiser or produces nothing.
+construction, since the construction is what an ill-conditioned working set
+corrupts. A candidate that fails is discarded and the exact walk of
+Algorithm~\ref{alg:gi} runs instead, so guessing can never degrade the answer: it
+produces the minimiser or nothing.
 
 \begin{remark}[Two tolerances with very different jobs]
 The tolerance in~\eqref{eq:repair} decides which set is tried next. A bad choice

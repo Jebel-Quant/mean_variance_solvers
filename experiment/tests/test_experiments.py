@@ -73,7 +73,7 @@ SCRIPTS = {
         "graphs/nncg_hyperspectral_urban.pdf",
         "tables/nncg_hyperspectral_urban_defs.tex",
     ],
-    # companion "The Mathematics of a Dual Active-Set QP Solver" note
+    # companion "Goldfarb/Idnani Revisited" paper
     # (quadprog_note package over cvx-quadprog)
     "quadprog_note.experiment_qp_identities": [
         "tables/quadprog_identities.tex",
@@ -91,10 +91,6 @@ SCRIPTS = {
         "graphs/quadprog_portfolio.pdf",
         "tables/quadprog_portfolio.tex",
         "tables/quadprog_portfolio_defs.tex",
-    ],
-    "quadprog_note.experiment_qp_layout": [
-        "graphs/quadprog_layout.pdf",
-        "tables/quadprog_layout_defs.tex",
     ],
     "quadprog_note.experiment_qp_compare": [
         "graphs/quadprog_compare.pdf",

@@ -1,4 +1,4 @@
-"""Experiments for "The Mathematics of a Dual Active-Set Quadratic Programming Solver".
+"""Experiments for "Goldfarb/Idnani Revisited: Invariants, Implementation, and Certificates".
 
 The paper that these support is a derivation: every claim in it is proved rather
 than measured. The experiments here exist for the two jobs that a proof cannot do

@@ -1,45 +1,36 @@
 \begin{abstract}
 \noindent
-This note derives the Goldfarb--Idnani dual active-set method for strictly
-convex quadratic programs in the form in which the \texttt{cvx-quadprog} package
-implements it, and proves the identities the implementation relies on. The
-derivation is accompanied by a numerical section that checks each identity
-against the running code, on the internal state the implementation actually
-holds, and that measures the two behaviours the derivation reasons about but
-cannot predict.
+Guessing a whole active set at once and repairing it from the signs that come back
+--- primal--dual active set, block principal pivoting --- terminates finitely for
+the bound-constrained quadratic program, because the system it solves on a
+candidate set is then a principal submatrix of $G^{-1}$ and inherits that matrix's
+$P$-matrix property. Our first result is that this is exactly what the general
+constraint class costs. For $C\T x \ge b$ the working-set system is
+$C_\Active\T G^{-1} C_\Active$, positive definite only when $C_\Active$ has full
+column rank, which is a property of the \emph{guess} and not of the data; the
+$P$-matrix property is lost, and with it the guarantee. The obstruction is
+structural rather than a missing anti-cycling rule.
 
-Three things are worth stating precisely and are not, in our experience, easy to
-extract from the original paper. First, the solver carries a single matrix $J$
-satisfying two invariants --- $J\T G J = I$ and $J\T A = [R;0]$ --- and every
-quantity it computes is a consequence of those two lines; in particular the
-primal search direction is the $G$-orthogonal projection of $G^{-1}n_*$ onto the
-working set's feasible subspace, and the dual direction is the solution of a
-least-squares problem in the $G^{-1}$ metric. Because both admit
-representation-free closed forms, any pair $(J, R)$ meeting the invariants
-produces the same iterate, which is what licenses replacing the reference's
-chain of Givens rotations by a single Householder reflection. Second, the
-objective increment along a step of length $t$ is
-$t\,(t/2 + u_*)\,z\T G z$ for $u_*$ the entering multiplier accumulated so far,
-an exact closed form rather than a re-evaluation, and it is strictly positive
-even in the reversed-step case that an equality constraint violated from above
-produces. Third, when the primal cannot move and no multiplier can be reduced,
-the vector $r$ the solver already holds is a Farkas certificate of primal
-infeasibility, which we exhibit; the solver's infeasibility verdict is therefore
-a proof and not a failure to converge.
+That exposure is easy to mistake for a technicality, and we show it is not. Over
+six hundred random instances across four constraint families it never occurs ---
+which is why it can be overlooked --- while duplicating columns of $C$, as any
+programmatically assembled model may, raises it to $93\%$, at which point the
+certified fraction collapses from $100\%$ to nothing.
 
-We then treat the two additions the package makes to the classical method: a
-primal--dual active-set fast path, which guesses the whole active set at once and
-is sound only because a strictly convex program makes the KKT conditions
-sufficient, so that every candidate can be certified; and warm starting across a
-family of programs differing only in the linear term, where $J$ and $R$ are
-reusable verbatim and a stale active set can be repaired into a dual-feasible
-state rather than discarded. For the general constraints treated here neither
-addition admits a finite-termination theorem, and the reason is structural rather
-than a missing anti-cycling rule: the working-set system is a principal submatrix
-of $G^{-1}$ only when the constraints are bounds, and it is the loss of that
-$P$-matrix property that removes the guarantee. That exposure is easy to mistake
-for a technicality, because it does not appear in random data at all --- over six
-hundred attempts here it never occurs --- and repeating columns of the constraint
-matrix, which any programmatically assembled model can do, raises it to
-$93\%$.
+To make that argument precise we first give a self-contained derivation of the
+Goldfarb--Idnani dual method, organised around a single matrix $J$ satisfying
+$J\T G J = I$ and $J\T A = [R;0]$. Every quantity the iteration computes follows
+from those two lines and admits a representation-free closed form, so any $(J,R)$
+meeting the invariants produces the same iterate; the objective increment along a
+step of length $t$ is exactly $t(t/2 + u_*)\,z\T G z$; and when the primal cannot
+move and no multiplier can be reduced, the vector $r$ the solver already holds is a
+Farkas certificate, so the infeasibility verdict is a proof. All \qpIdentCount{}
+identities are then checked against a running implementation, on its own internal
+state, over \qpIdentChecks{} evaluations.
+
+What makes the unguaranteed methods usable is that strict convexity makes the KKT
+conditions sufficient, so every candidate can be certified rather than trusted. On
+long-only portfolio data the active set reaches $\qpPfSpActive{}$ of
+$\qpPfSpN{}+1$ constraints, against the small sets the synthetic families common
+in this literature produce.
 \end{abstract}

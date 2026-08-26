@@ -148,6 +148,33 @@ def run_osqp(g, a, c, b, meq):
     return np.asarray(prob.solve().x, dtype=float)
 
 
+def run_daqp(g, a, c, b, meq):
+    """DAQP wants ``blower <= A x <= bupper``; equalities are flagged in ``sense``.
+
+    This is the comparison that matters most, and the one a table of splitting and
+    interior-point solvers does not provide: DAQP is the same algorithmic family --
+    a dual active-set walk warm-started at the unconstrained minimum -- carried on
+    recursive LDL^T updates of the working-set system instead of the Goldfarb/Idnani
+    pair ``(J, R)``. Where it differs from the method under study is in the
+    factorisation and in what can be proved about the iteration count, not in the
+    shape of the walk.
+    """
+    import daqp
+    m = len(b)
+    lower = b.astype(float).copy()
+    upper = np.full(m, 1e30)
+    upper[:meq] = b[:meq]
+    sense = np.zeros(m, dtype=np.int32)
+    sense[:meq] = 5
+    x, _fval, flag, _info = daqp.solve(
+        np.ascontiguousarray(g), -a, np.ascontiguousarray(c.T),
+        upper, lower, sense, primal_tol=TOL,
+    )
+    if flag != 1:
+        raise RuntimeError(f"daqp exitflag {flag}")
+    return np.asarray(x, dtype=float)
+
+
 def run_clarabel(g, a, c, b, meq):
     """Clarabel wants ``Ax + s = rhs`` with ``s`` in a cone; flip the sign of C^T."""
     import clarabel
@@ -180,6 +207,7 @@ def solvers():
         out.append(("\\texttt{quadprog} (C)",
                     lambda g, a, c, b, meq: quadprog_c.solve_qp(
                         g.copy(), a.copy(), c, b, meq)[0]))
+    out.append(("DAQP", run_daqp))
     out.append(("OSQP", run_osqp))
     out.append(("Clarabel", run_clarabel))
     return out
@@ -217,10 +245,25 @@ def run():
     return results
 
 
+def log_x_ticks(ax, sizes) -> None:
+    """Label a log x-axis at the sizes actually measured, and nowhere else.
+
+    A log axis spanning a narrow range -- 12 to 200 here -- puts minor ticks at
+    2, 3, 4, 6 times each decade, and at figure width their labels overlap into an
+    illegible smear. The sizes are a short discrete list, so label exactly those
+    and silence the minor formatter.
+    """
+    ax.set_xticks(list(sizes))
+    ax.set_xticklabels([str(s) for s in sizes])
+    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
+    ax.tick_params(axis="x", which="minor", length=2)
+
+
 def figure(results) -> None:
     labels = [label for label, _ in solvers()]
-    colours = dict(zip(labels, ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]))
-    markers = dict(zip(labels, ["o", "s", "^", "v", "D"]))
+    colours = dict(zip(labels,
+                       ["#1f77b4", "#ff7f0e", "#2ca02c", "#8c564b", "#d62728", "#9467bd"]))
+    markers = dict(zip(labels, ["o", "s", "^", "P", "v", "D"]))
 
     fig, axes = plt.subplots(1, len(FAMILIES), figsize=(2.5 * len(FAMILIES) + 0.6, 2.9),
                              sharey=True)
@@ -230,6 +273,7 @@ def figure(results) -> None:
             ax.plot(SIZES, ys, color=colours[label], marker=markers[label],
                     markersize=4, label=label)
         ax.set_xscale("log")
+        log_x_ticks(ax, SIZES)
         ax.set_yscale("log")
         ax.set_xlabel("$n$")
         ax.set_title(family)
@@ -292,6 +336,7 @@ def emit(results) -> None:
                      for f in FAMILIES for n in SIZES)
     worst_clarabel = max(results[(f, n, "Clarabel")]["resid"]
                          for f in FAMILIES for n in SIZES)
+    worst_daqp = max(results[(f, n, "DAQP")]["resid"] for f in FAMILIES for n in SIZES)
 
     path = TABLES / "quadprog_compare_defs.tex"
     with open(path, "w") as fh:
@@ -302,6 +347,10 @@ def emit(results) -> None:
         fh.write(f"\\newcommand{{\\qpCmpResidExact}}{{{sci(worst_exact)}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpResidOsqp}}{{{sci(worst_osqp)}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpResidClarabel}}{{{sci(worst_clarabel)}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpResidDaqp}}{{{sci(worst_daqp)}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpVsDaqp}}{{{speedup('box', 'DAQP'):.2f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpVsDaqpDense}}"
+                 f"{{{speedup('dense $C$', 'DAQP'):.2f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsOsqp}}{{{speedup('box', 'OSQP'):.0f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsClarabel}}{{{speedup('box', 'Clarabel'):.0f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsOsqpDense}}{{{speedup('dense $C$', 'OSQP'):.1f}}}\n")

@@ -54,7 +54,12 @@ from common.util.runner import SMOKE, output_dirs
 from cvx.quadprog import Sweep, solve_qp
 from cvx.quadprog import _pdas
 
-from quadprog_note.experiment_qp_compare import kkt_residual, run_clarabel, run_osqp
+from quadprog_note.experiment_qp_compare import (
+    kkt_residual,
+    run_clarabel,
+    run_daqp,
+    run_osqp,
+)
 
 HERE = Path(__file__).resolve().parents[1]
 GRAPHS, TABLES = output_dirs(HERE)
@@ -88,13 +93,17 @@ def load(path, cap):
     asset with no variance has no place in a variance-minimising portfolio.
     """
     frame = pd.read_parquet(HERE / path).dropna(axis=1, how="any")
-    returns_all = frame.to_numpy(dtype=float) / 100.0
+    # Despite the file name, these are decimal returns rather than percentages:
+    # the daily cross-sectional standard deviation is 0.021, which is 2.1% and not
+    # 0.021%. Dividing by 100 here would put annualised volatility two orders of
+    # magnitude below anything an equity portfolio produces.
+    returns_all = frame.to_numpy(dtype=float)
     keep = returns_all.std(axis=0) > 0.0
     dropped = int((~keep).sum())
     frame = frame.loc[:, keep]
     if cap and frame.shape[1] > cap:
         frame = frame.iloc[:, :cap]
-    returns = frame.to_numpy(dtype=float) / 100.0
+    returns = frame.to_numpy(dtype=float)
     sigma = np.cov(returns, rowvar=False) * 252.0
     mu = returns.mean(axis=0) * 252.0
     return sigma, mu, frame.shape, dropped
@@ -166,7 +175,8 @@ def analyse(label, path):
         t_ref, out = best_of(
             lambda: quadprog_c.solve_qp(g.copy(), a.copy(), c, b, meq)[0], REPEATS)
         rows["\\texttt{quadprog} (C)"] = (t_ref, kkt_residual(g, a, c, b, meq, out))
-    for name, fn in (("OSQP", run_osqp), ("Clarabel", run_clarabel)):
+    for name, fn in (("DAQP", run_daqp), ("OSQP", run_osqp),
+                     ("Clarabel", run_clarabel)):
         try:
             seconds, out = best_of(lambda: fn(g, a, c, b, meq), REPEATS)
             rows[name] = (seconds, kkt_residual(g, a, c, b, meq, out))
@@ -194,8 +204,16 @@ def frontier(sigma, mu, points):
     n = sigma.shape[0]
     c = np.hstack([np.ones((n, 1)), np.eye(n)])
     b = np.concatenate([[1.0], np.zeros(n)])
-    scale = float(np.max(np.abs(mu))) or 1.0
-    rhos = np.linspace(0.0, 2.0 / scale, points)
+    # Locate the rho at which the budget collapses onto the single highest-mean
+    # asset, by doubling; then space the sweep geometrically below it. A linear
+    # sweep piles almost every point on that corner and traces nothing.
+    rho_hi = 1.0
+    for _ in range(60):
+        held = int(np.sum(solve_qp(sigma, rho_hi * mu, c, b, 1).x > 1e-10))
+        if held <= 1:
+            break
+        rho_hi *= 2.0
+    rhos = np.concatenate([[0.0], np.geomspace(rho_hi / 3000.0, rho_hi, points - 1)])
 
     sweep = Sweep(sigma, c, b, meq=1)
     start = time.perf_counter()
@@ -216,21 +234,53 @@ def frontier(sigma, mu, points):
 
 
 def figure(results, front) -> None:
-    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(7.2, 2.9))
+    """Frontier on the left, holdings along it on the right.
 
-    ax_a.plot(np.array(front["vol"]) * 100, np.array(front["ret"]) * 100,
-              color="#1f77b4", marker="o", markersize=3, linewidth=1)
-    ax_a.set_xlabel("annualised volatility (\\%)")
-    ax_a.set_ylabel("annualised return (\\%)")
-    ax_a.set_title(f"Long-only frontier, {results[0]['label'].replace(chr(92) + '&', '&')}")
+    The frontier is the plot the problem is named after, so it gets the space and
+    the annotation: the two corners it runs between, and the individual assets it
+    dominates, which is what makes the curve mean anything.
+    """
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(7.4, 3.1),
+                                     gridspec_kw={"width_ratios": [1.25, 1.0]})
+
+    sigma, mu = results[0]["sigma"], results[0]["mu"]
+    vol = np.array(front["vol"]) * 100
+    ret = np.array(front["ret"]) * 100
+
+    # The individual assets, so the frontier is visibly an improvement on them.
+    asset_vol = np.sqrt(np.diag(sigma)) * 100
+    asset_ret = mu * 100
+    ax_a.scatter(asset_vol, asset_ret, s=5, color="#b0b7c9", alpha=0.55,
+                 linewidths=0, label="individual assets", zorder=1)
+
+    ax_a.plot(vol, ret, color="#1f77b4", linewidth=1.6,
+              label="long-only frontier", zorder=3)
+    ax_a.scatter(vol, ret, s=9, color="#1f77b4", zorder=4)
+
+    ax_a.scatter([vol[0]], [ret[0]], s=42, facecolor="white",
+                 edgecolor="#1f77b4", linewidth=1.4, zorder=5)
+    ax_a.annotate(f"minimum variance\n{front['names'][0]} names",
+                  (vol[0], ret[0]), textcoords="offset points", xytext=(10, -14),
+                  fontsize=7, color="#31405e")
+    ax_a.scatter([vol[-1]], [ret[-1]], s=42, facecolor="white",
+                 edgecolor="#d62728", linewidth=1.4, zorder=5)
+    ax_a.annotate(f"{front['names'][-1]} name", (vol[-1], ret[-1]),
+                  textcoords="offset points", xytext=(-46, 6),
+                  fontsize=7, color="#7a2224")
+
+    ax_a.set_xlabel("annualised volatility (%)")
+    ax_a.set_ylabel("annualised return (%)")
+    ax_a.set_title("Long-only efficient frontier, S&P 500")
     ax_a.grid(True, linestyle=":", linewidth=0.5, alpha=0.7)
+    ax_a.legend(framealpha=0.9, fontsize=7, loc="lower right")
 
-    ax_b.plot(np.array(front["vol"]) * 100, front["names"],
-              color="#d62728", marker="s", markersize=3, linewidth=1)
-    ax_b.set_xlabel("annualised volatility (\\%)")
+    ax_b.plot(vol, front["names"], color="#d62728", linewidth=1.4)
+    ax_b.scatter(vol, front["names"], s=9, color="#d62728")
+    ax_b.set_xlabel("annualised volatility (%)")
     ax_b.set_ylabel("names held")
+    ax_b.set_yscale("log")
     ax_b.set_title("Holdings along the frontier")
-    ax_b.grid(True, linestyle=":", linewidth=0.5, alpha=0.7)
+    ax_b.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.7)
 
     fig.tight_layout(pad=0.8)
     fig.savefig(GRAPHS / "quadprog_portfolio.pdf", bbox_inches="tight")

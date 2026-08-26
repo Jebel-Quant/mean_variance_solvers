@@ -57,15 +57,13 @@ Suppose \eqref{eq:inv1}--\eqref{eq:inv2} hold with $R$ nonsingular. Then
 \end{proposition}
 
 \begin{proof}
-(i) From~\eqref{eq:inv2}, $A\T J = [\,R\T\ \ 0\,]$, so
-$A\T G^{-1} A = A\T J J\T A = [\,R\T\ 0\,][\,R\T\ 0\,]\T = R\T R$. Uniqueness of
-the Cholesky factor of a positive definite matrix up to the signs of the diagonal
-entries gives the last clause, since two upper triangular matrices with the same
-Gram matrix differ by a left factor $\mathrm{diag}(\pm1)$.
+(i) $A\T G^{-1} A = A\T J J\T A = R\T R$ by~\eqref{eq:inv2}, and two upper
+triangular matrices with the same Gram matrix differ by a left factor
+$\mathrm{diag}(\pm1)$.
 
-(ii) $J_2\T A = 0$ places $\range(J_2) \subseteq \nullsp(A\T)$; the inclusion is
-an equality by dimension, $J$ being nonsingular and $A$ of full column rank. The
-basis is $G$-orthonormal because $J_2\T G J_2 = I_{n-k}$ is the trailing block
+(ii) $J_2\T A = 0$ places $\range(J_2) \subseteq \nullsp(A\T)$, with equality by
+dimension since $J$ is nonsingular and $A$ has full column rank; the basis is
+$G$-orthonormal because $J_2\T G J_2 = I_{n-k}$ is the trailing block
 of~\eqref{eq:inv1}.
 
 (iii) From~\eqref{eq:inv1}, $J^{-1} = J\T G$ and hence $J^{-\top} = G J$.

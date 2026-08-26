@@ -32,47 +32,33 @@ in~\eqref{eq:select}.
 
 \subsection{The outer loop}
 
-\begin{proposition}[Strict ascent]\label{prop:ascent}
-Every outer iteration that ends in a full step with $t_2 \neq 0$ strictly
-increases the objective, and hence, by Proposition~\ref{prop:dual}, strictly
-increases the dual objective $\psi$.
+\begin{proposition}[Strict ascent and finiteness]\label{prop:ascent}
+Every outer iteration ending in a full step with $t_2 \neq 0$ strictly increases
+the objective, hence by Proposition~\ref{prop:dual} the dual value $\psi$. If every
+full step has $t_2 > 0$, the method terminates after finitely many outer
+iterations.
 \end{proposition}
 
 \begin{proof}
-The outer iteration's total increment is the sum of~\eqref{eq:increment} over its
-inner passes, each term of which is positive by
-Proposition~\ref{prop:increment} --- the accumulated $u_*$ and each step $t$ share
-a sign throughout, by Remark~\ref{rem:reverse} --- and the final term is nonzero
-because $t_2 \neq 0$.
-\end{proof}
-
-\begin{corollary}[Finite termination in the nondegenerate case]\label{cor:finite}
-If every full step has $t_2 > 0$, the method terminates after finitely many outer
-iterations.
-\end{corollary}
-
-\begin{proof}
-A working set determines the pair $(x,u)$ uniquely by
-Proposition~\ref{prop:sub}, and hence determines the objective value. By
-Proposition~\ref{prop:ascent} that value strictly increases from one outer
-iteration to the next, so no working set can recur. There are finitely many
-subsets of $\{1,\dots,m\}$, so the iteration cannot continue indefinitely; and it
-can only stop by the optimality test of~\eqref{eq:select} or by the infeasibility
-verdict.
+The iteration's total increment is the sum of~\eqref{eq:increment} over its inner
+passes, each positive by Proposition~\ref{prop:increment} --- the accumulated $u_*$
+and each step $t$ share a sign throughout, by Remark~\ref{rem:reverse} --- and the
+final term is nonzero because $t_2 \neq 0$. For the second claim, a working set
+determines $(x,u)$ uniquely by Proposition~\ref{prop:sub}, hence determines the
+objective; that value strictly increases from one outer iteration to the next, so
+no working set recurs. There are finitely many subsets of $\{1,\dots,m\}$, and the
+iteration stops only by the optimality test of~\eqref{eq:select} or by the
+infeasibility verdict.
 \end{proof}
 
 \begin{remark}[Degeneracy]\label{rem:degeneracy}
-The hypothesis of Corollary~\ref{cor:finite} fails exactly when a full step of
-length zero occurs, which requires $s_{i_*} = 0$: a constraint recorded as
-violated whose slack is already zero. In exact arithmetic that means more
-constraints pass through $x$ than the working set holds --- primal degeneracy ---
-and a zero step adds one of them without changing $x$, $u$ or the objective, so the
-ascent argument goes silent and a cycle is not excluded. Goldfarb and
-Idnani~\cite{goldfarb1983} discuss this; the classical remedies are a
-lexicographic or least-index rule of the kind Section~\ref{sec:pdas} uses for a
-different purpose. In finite precision the question changes character, because a
-slack of exactly zero is not what one observes; Section~\ref{sec:arithmetic}
-describes what is done instead.
+The hypothesis fails exactly when a full step of length zero occurs, which requires
+$s_{i_*} = 0$: more constraints pass through $x$ than the working set holds. A zero
+step then adds one without changing $x$, $u$ or the objective, the ascent argument
+goes silent, and a cycle is not excluded. Goldfarb and Idnani~\cite{goldfarb1983}
+discuss this; the classical remedies are lexicographic or least-index rules. In
+finite precision the question changes character, since a slack of exactly zero is
+not what one observes.
 \end{remark}
 
 \subsection{Infeasibility is a certificate, not a failure}
@@ -125,13 +111,25 @@ Remark~\ref{rem:reverse} --- an equality violated from above --- follows by
 applying the proposition to the constraint $-n_*\T x \ge -b_*$, which the equality
 implies.
 
-\begin{remark}[The two hypotheses are exactly the two infinite limits]
-Hypothesis (a) is $t_2 = \infty$ by Lemma~\ref{lem:directions}(ii)
-and~\eqref{eq:t2}; hypothesis (b) is $t_1 = \infty$ by~\eqref{eq:t1}. So the
-condition the implementation tests --- neither step limit is finite --- is
-literally the hypothesis of Proposition~\ref{prop:farkas}, with one caveat: it
-also requires the entering constraint to be genuinely violated. In exact
-arithmetic that is given, since a constraint is only selected when $v_{i_*} > 0$.
-In finite precision it is not, and Section~\ref{sec:arithmetic} takes up the
-difference.
+Hypothesis (a) is $t_2 = \infty$ and (b) is $t_1 = \infty$, so the condition an
+implementation tests --- neither step limit finite --- is literally the hypothesis
+of Proposition~\ref{prop:farkas}.
+
+\begin{remark}[The remaining hypothesis is not free in floating point]
+\label{rem:spurious}
+Proposition~\ref{prop:farkas} also needs the entering constraint to be genuinely
+violated. Exact arithmetic gives that: a constraint is selected only when
+$v_{i_*} > 0$. Floating point does not, and the gap is reachable by the very
+substitution Section~\ref{ssec:insert} argues for --- a Householder reflection and
+a Givens chain leave the iterate at slightly different points, so a constraint one
+implementation leaves inside its boundary by a few multiples of the machine
+epsilon, another can leave the same distance outside. Reaching the stuck state with
+such a constraint selected, a solver must neither enforce it, there being nothing
+to enforce, nor conclude infeasibility, the conclusion not following; the
+implementation studied here sets it aside for the current iterate and takes the
+next candidate, discarding that judgement as soon as the iterate moves. The test
+separating rounding from a real violation is comparatively easy to set, because it
+need only separate rounding from \emph{provable} infeasibility, and infeasibility
+is macroscopic: its size is set by the geometry of the constraints rather than by
+the arithmetic, so the two populations lie orders of magnitude apart.
 \end{remark}

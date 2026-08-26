@@ -20,16 +20,11 @@ sample mean. Two universes, so that nothing below is a property of one market:
 the S\&P~500 at $n = \qpPfSpN{}$ assets over $T = \qpPfSpT{}$ days, and the
 FTSE~100 at $n = \qpPfFtseN{}$ over $T = \qpPfFtseT{}$.
 
-\begin{remark}[The data needs one filter, and the solver is right to insist]
-The FTSE series carries an instrument quoted flat across the whole window. Its
-sample variance is zero, which makes $\Sigma$ singular --- rank $86$ of $87$ ---
-and \eqref{eq:portfolio} is then not strictly convex, so the factorisation of
-Section~\ref{sec:factorisation} does not exist and the solver refuses the problem.
-That refusal is correct and worth having: an asset with no variance has no place
-in a variance-minimising portfolio, and a solver that silently regularised it away
-would be hiding a modelling error. The degenerate column is dropped, and $n = 86$
-below is the result.
-\end{remark}
+The FTSE series carries one instrument quoted flat across the whole window. Its
+sample variance is zero, so $\Sigma$ is singular --- rank $86$ of $87$ --- and the
+solver refuses the problem, correctly: an asset with no variance has no place in a
+variance-minimising portfolio. The degenerate column is dropped and
+$n = \qpPfFtseN{}$ is the result.
 
 \subsection{Real covariances are the hard case, and in the expected direction}
 
@@ -52,18 +47,14 @@ Solver & ms & residual \\
 
 Three differences from the synthetic families, all of them in the same direction.
 
-\paragraph{The conditioning is worse by orders of magnitude.} $\kappa(\Sigma)$ is
-$\qpPfSpKappa$ on the S\&P~500 against the $O(n)$ of a Gaussian $BB\T + nI$. A
-sample covariance of returns is close to low rank plus diagonal, which is exactly
-the structure that makes it ill-conditioned, and it is the structure real data
-has.
-
-\paragraph{The active set is nearly everything.} At the minimum-variance corner
-the solver holds $\qpPfSpActive{}$ of $\qpPfSpN{} + 1$ constraints active on the
-S\&P~500, and the optimal portfolio holds only $\qpPfSpNames{}$ names. That is not
-a quirk: minimum variance concentrates, and long-only minimum variance concentrates
-onto a vertex at which almost every bound binds. A well-conditioned Hessian spreads
-the optimum instead, which is why the synthetic families produce small active sets.
+\paragraph{Worse conditioning, and a far larger active set.} $\kappa(\Sigma)$ is
+$\qpPfSpKappa$ on the S\&P~500 against the $O(n)$ of a Gaussian $BB\T + nI$: a
+sample covariance is close to low rank plus diagonal, which is what makes it
+ill-conditioned, and it is what real data looks like. At the minimum-variance
+corner the solver holds $\qpPfSpActive{}$ of $\qpPfSpN{} + 1$ constraints active
+and the portfolio holds only $\qpPfSpNames{}$ names --- not a quirk, but because
+long-only minimum variance concentrates onto a vertex at which almost every bound
+binds, where a well-conditioned Hessian spreads the optimum instead.
 
 \paragraph{And so the exact walk is far longer.} It takes $\qpPfSpOuter{}$ outer
 iterations here against the $\qpPdasBudgetOuter{}$ that the synthetic
@@ -75,23 +66,22 @@ its range: on the S\&P~500 the fast path settles in $\qpPfSpRepairs{}$ repairs
 against $\qpPfSpOuter{}$ outer iterations, and is $\qpPfFastSpeed\times$ faster
 than the exact walk rather than the two-to-three of the synthetic case.
 
-The comparison against the other solvers moves the same way. On the S\&P~500 the
-exact walk is faster than the reference C implementation of the same algorithm ---
-this is the large-$n$ side of the crossover of Section~\ref{ssec:compare} --- while
-on the FTSE~100, at $n = \qpPfFtseN{}$, the reference is faster, which is the
-small-$n$ side. Two points on one curve, on real data, without either being
-constructed for the purpose.
+The crossover of Section~\ref{ssec:compare} appears here too, with a point either
+side and on real instances constructed for neither purpose: on the S\&P~500 the
+exact walk beats both in-family competitors, the C reference and
+DAQP~\cite{arnstrom2022daqp}, and on the FTSE~100, at $n = \qpPfFtseN{}$, it loses
+to both.
 
 \paragraph{Accuracy survives the conditioning.} The active-set method returns
-$\qpPfSpResid$ on the S\&P~500 despite $\kappa(\Sigma) = \qpPfSpKappa$, while the
-two iterative solvers return residuals seven to nine orders of magnitude larger at
-the same requested tolerance. The reason is the one given in
-Section~\ref{ssec:compare} and it is sharper here: the optimum is a vertex with
-$\qpPfSpActive{}$ active constraints, which is the worst case for a method that
-approaches the boundary asymptotically and the natural case for one that
-terminates on it.
+$\qpPfSpResid$ despite $\kappa(\Sigma) = \qpPfSpKappa$, against five orders of
+magnitude more for the interior-point solver at the same requested tolerance, and
+eleven on the FTSE~100. That is the argument of Section~\ref{ssec:compare} in its
+sharpest form: the optimum here is a vertex with $\qpPfSpActive{}$ active
+constraints, which is the worst case for a method that approaches the boundary
+asymptotically and the natural case for one that terminates on it.
 
 \subsection{The frontier is what warm starting is for}
+\label{ssec:frontier}
 
 A frontier sweep varies $\rho$ in~\eqref{eq:portfolio} and changes nothing else.
 That is precisely the family of Section~\ref{sec:sweep}: $\Sigma$, $C$ and $b$
@@ -100,36 +90,49 @@ $\qpPfPoints{}$ points across the S\&P~500 frontier.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\textwidth]{graphs/quadprog_portfolio.pdf}
-\caption{Left: the long-only efficient frontier. Right: the number of names held
-along it, from $\qpPfNamesHi{}$ at the minimum-variance corner down to
-$\qpPfNamesLo{}$ at the return-seeking end, where the budget is concentrated in a
-single asset.}
+\includegraphics[width=0.86\textwidth]{graphs/quadprog_portfolio.pdf}
+\caption{Left: the long-only efficient frontier, with the individual assets it
+dominates. Right: the number of names held along it, on a log scale, falling from
+$\qpPfNamesHi{}$ at the minimum-variance corner to $\qpPfNamesLo{}$ at the
+return-seeking end, where the budget concentrates in a single asset.}
 \label{fig:portfolio}
 \end{figure}
 
 Reusing the factorisation costs $\qpPfWarm$\,ms per point against
-$\qpPfCold$\,ms solving each point from scratch, a factor of
-$\qpPfSweepSpeed$. The cached active set stayed optimal on $\qpPfHits{}$ of the
-$\qpPfPoints{}$ points, with $\qpPfMisses{}$ requiring the repair of
-Proposition~\ref{prop:repair}; and the answers are identical to the cold solves,
-because a reused point is returned only against the certificate of
-Section~\ref{ssec:sweepcost}.
+$\qpPfCold$\,ms solving each point from scratch, a factor of $\qpPfSweepSpeed$,
+and the answers are identical to the cold solves because a reused point is
+returned only against the certificate of Section~\ref{sec:sweep}.
 
-The right-hand panel is the reason the hit rate is as high as it is, and it is a
-fact about the problem rather than about the solver. The number of names held
-falls monotonically along the frontier, so consecutive points differ by a handful
-of constraints out of nearly five hundred, and a cached set is usually still
-optimal one step later. That is the structural property Section~\ref{sec:sweep}
-assumes, appearing in the wild.
+The interesting part is where that factor comes from, and it is not where one
+would expect. The cached active set stayed optimal on only $\qpPfHits{}$ of the
+$\qpPfPoints{}$ points; the other $\qpPfMisses{}$ were misses. A sweep spanning
+three decades of $\rho$ moves a long way between consecutive points --- the
+right-hand panel shows the holdings falling from $\qpPfNamesHi{}$ names to
+$\qpPfNamesLo{}$ across it --- and the active set moves with them. Sampling the
+frontier more finely would raise the hit rate directly; nothing here is tuned to
+produce one.
 
-\begin{remark}[What this section does and does not claim]
-It claims that the method's advantages are larger on the problems it was designed
-for than on the synthetic families used to test it, and that the direction of that
-gap was predicted rather than discovered after the fact. It does not claim that
-this is the best way to build a portfolio. Minimum variance on a raw sample
-covariance is a poor estimator, and the companion work in this
-series~\cite{schmelzer2026nncg,schmelzer2026rmt} is about the estimation problem;
-here $\Sigma$ is a source of realistically shaped matrices, and nothing in this
-paper depends on how it was estimated.
-\end{remark}
+So the saving is not mostly the hit path. It is that a \emph{miss} is repaired
+rather than restarted. Proposition~\ref{prop:repair} turns a stale set into a
+dual-feasible state by dropping the constraints whose multipliers have gone
+negative, and the iteration resumes from there instead of from the unconstrained
+minimum, keeping $J$ and $R$ throughout. A sweep that misses two points in three
+is still $\qpPfSweepSpeed\times$ faster than solving each point cold, which is a
+sharper statement about the machinery than a high hit rate would have been: it
+says the mechanism that matters is the one that runs when the cache is
+\emph{wrong}.
+
+An earlier version of this experiment spaced $\rho$ linearly. Almost every point
+then landed on the return-seeking corner, where the solution is a single asset and
+does not move, and the cache hit $48$ times out of $50$. That number was real and
+any conclusion drawn from it would have been worthless, because the sweep was
+solving the same problem forty-nine times rather than tracing a frontier. The
+geometric spacing is what makes the left-hand panel a curve, and the honest hit
+rate is the one that comes with it.
+
+This section claims that the method's advantages are larger on the problems it was
+designed for than on the synthetic families used to test it, and that the direction
+of the gap was predicted rather than found afterwards. It does not claim this is a
+good way to build a portfolio: minimum variance on a raw sample covariance is a
+poor estimator, and $\Sigma$ is used here only as a source of realistically shaped
+matrices.

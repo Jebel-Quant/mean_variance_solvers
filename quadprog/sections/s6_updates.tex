@@ -67,15 +67,12 @@ reflection achieves the same reduction:
   \qquad \alpha = \pm\norm{d_2}.
   \label{eq:householder}
 \end{equation}
-That $W_2\T d_2 = W_2 d_2 = \alpha e_1$ follows from
-$v\T d_2 = \norm{d_2}^2 - \alpha (d_2)_1$ and
-$\beta = \norm{d_2}^2 - 2\alpha (d_2)_1 + \alpha^2 = 2\,v\T d_2$, whence
-$W_2 d_2 = d_2 - 2v(v\T d_2)/\beta = d_2 - v = \alpha e_1$. The reflection is
-symmetric, so it applies to the columns of $J$ and to $d_2$ as one operation, and
-its application to a block is a matrix--vector product followed by a rank-one
-update --- two operations of $O(n(n-k))$ each, where the Givens chain is $n-k-1$
-operations of $O(n)$ each. The arithmetic is comparable; the number of operations
-is not.
+That $W_2 d_2 = \alpha e_1$ is the standard Householder identity, using
+$\beta = 2\,v\T d_2$. The reflection is symmetric, so it applies to the columns of
+$J$ and to $d_2$ as one operation, and applying it to a block is a
+matrix--vector product followed by a rank-one update --- two operations of
+$O(n(n-k))$, where the Givens chain is $n-k-1$ operations of $O(n)$. The
+arithmetic is comparable; the number of operations is not.
 
 \begin{remark}[The sign of $\alpha$, and cancellation]\label{rem:sign}
 Numerical analysis prescribes $\alpha = -\mathrm{sign}((d_2)_1)\norm{d_2}$, which
@@ -97,6 +94,31 @@ of $v$ are those of $d_2$, and $\beta = \tau + v_1^2$. By
 Proposition~\ref{prop:invariance} the sign convention is anyway immaterial to the
 iterates; \eqref{eq:nocancel} is what makes it immaterial to the accuracy as
 well. See~\cite{golub2013,higham2002} for the standard treatment.
+\end{remark}
+
+\begin{remark}[Why the reflections cannot be blocked]\label{rem:wy}
+A sequence of Householder reflections is normally applied as a block. The WY
+representation of Bischof and Van Loan~\cite{bischof1987}, and its storage-efficient
+form due to Schreiber and Van Loan~\cite{schreiber1989}, write a product
+$W_1 W_2 \cdots W_j$ as $I + WY\T$, so that $j$ reflections reach a matrix in one
+level-3 update rather than $j$ level-2 ones. That is what makes blocked QR
+factorisation fast, and it is the first thing to reach for here.
+
+It is not available, for a structural reason rather than an implementation one.
+Blocking requires the $j$ reflections to be known before any is applied. In this
+iteration the reflection that inserts a constraint is determined by
+$d = J\T n_*$, which depends on $J$ \emph{after} the previous insertion; and
+between any two insertions the solver reads $z$ and $r$ off the updated factors to
+decide which constraint enters next, and whether it enters at all. The updates are
+interleaved with reads of what they produce, so there is no window in which two
+reflections are simultaneously known and unapplied.
+
+This is the same obstruction as in the deletion chase below, and it is why the
+method stays a level-2 computation no matter how it is coded, which is worth
+knowing before reaching for a blocked update. A variant
+that inserted several constraints per iteration would open the window; the dual
+method's step rules, which admit one constraint at a time by construction, close
+it.
 \end{remark}
 
 \subsection{Deletion}
@@ -143,14 +165,11 @@ Proposition~\ref{prop:invariance} says that is free.
 \end{remark}
 
 \begin{remark}[Where the storage cost lands]
-$R$ is held as packed columns --- entry $(i,j)$ with $i \le j$ at offset
-$j(j+1)/2 + i$ --- so that its leading $k \times k$ block, which the triangular
-solve for $r$ reads once per iteration, is a contiguous run of $k(k+1)/2$ values
-at every $k$. Insertion writes one column, which is contiguous in that layout.
-Deletion mixes two \emph{rows} across a range of columns, and since column offsets
-grow with the column index, a row is a strided gather rather than a slice. The
-asymmetry is deliberate: it buys a contiguous triangular solve once per
-iteration at the price of a strided gather per deletion step. That trade is a
-property of the memory layout rather than of the derivation, and the mathematics
-is indifferent to it.
+$R$ is held as packed columns --- entry $(i,j)$, $i \le j$, at offset
+$j(j+1)/2 + i$ --- so its leading $k \times k$ block, which the solve for $r$ reads
+once per iteration, is a contiguous run at every $k$. Insertion writes one column,
+contiguous in that layout; deletion mixes two \emph{rows} across a range of
+columns, which is a strided gather because column offsets grow with the index. The
+asymmetry is deliberate, and it is the right way round. It is a property of the
+layout rather than of the derivation, to which the mathematics is indifferent.
 \end{remark}
