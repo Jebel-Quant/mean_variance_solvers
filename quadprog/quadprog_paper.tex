@@ -53,7 +53,6 @@
 \input{tables/quadprog_sweep_defs}
 \input{tables/quadprog_compare_defs}
 \input{tables/quadprog_compare}
-\input{tables/quadprog_layout_defs}
 \input{tables/quadprog_portfolio_defs}
 \input{tables/quadprog_portfolio}
 
@@ -67,7 +66,6 @@
 \input{sections/s4_iteration}
 \input{sections/s5_termination}
 \input{sections/s6_updates}
-\input{sections/s7_implementation}
 \input{sections/s8_pdas}
 \input{sections/s9_sweep}
 \input{sections/s10_arithmetic}
@@ -76,7 +74,11 @@
 \input{sections/s13_conclusions}
 \input{sections/s14_reproducibility}
 
+% References set two sizes down, as many journals in this area set them, which
+% also keeps the list on a single page.
+{\footnotesize
 \bibliographystyle{plain}
 \bibliography{../matrix_free/bib/refs}
+}
 
 \end{document}

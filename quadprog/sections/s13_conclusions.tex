@@ -2,25 +2,22 @@
 \label{sec:conclusions}
 
 The Goldfarb--Idnani method is often presented as a sequence of updates, which
-makes it look more intricate than it is. Read from the invariants it is short.
+makes it look more intricate than it is. Read from the invariants it is short. One
+matrix $J$ is carried, defined by $J\T G J = I$ and $J\T A = [R;0]$: its columns
+are a $G$-orthonormal basis of $\R^n$, arranged so that the trailing block spans
+the working set's feasible subspace. Every quantity the iteration needs is then one
+matrix--vector product or one triangular solve away, and every quantity it
+\emph{consumes} has a closed form in $(G, A, n_*)$ alone
+(Proposition~\ref{prop:invariance}) --- which is why the representation may be
+chosen for speed, and why two implementations holding different factors compute
+the same step.
 
-One matrix $J$ is carried, defined by $J\T G J = I$ and $J\T A = [R;0]$. The first
-invariant says its columns are a $G$-orthonormal basis of $\R^n$; the second says
-that basis is arranged so that the trailing columns span the working set's
-feasible subspace and the leading ones the complement. Every quantity the
-iteration needs is then one matrix--vector product or one triangular solve away,
-and every quantity it \emph{consumes} --- the primal direction $z$, the dual
-direction $r$ --- has a closed form in $(G, A, n_*)$ alone
-(Proposition~\ref{prop:invariance}). That is why the representation may be chosen
-on grounds of speed: two implementations holding different $J$ and $R$ for the same
-working set compute the same step.
-
-The iteration itself is one affine path (Proposition~\ref{prop:path}), along which
+The iteration is one affine path (Proposition~\ref{prop:path}) along which
 stationarity holds identically while the entering multiplier rises and the
-working-set multipliers fall. Two limits cut it short, and which one binds decides
-whether a constraint is added or dropped. The objective advances by an exact
-closed form (Proposition~\ref{prop:increment}) which is positive in both step
-directions, so the method is a dual ascent and, absent degeneracy, finite
+working-set multipliers fall. Two limits cut it short, and which binds decides
+whether a constraint is added or dropped. The objective advances by an exact closed
+form (Proposition~\ref{prop:increment}), positive in both step directions, so the
+method is a dual ascent and, absent degeneracy, finite
 (Corollary~\ref{cor:finite}). When the path is blocked in both directions the
 vector $r$ is a Farkas certificate (Proposition~\ref{prop:farkas}): the
 infeasibility verdict is a proof, and the solver already holds it.
@@ -40,38 +37,16 @@ disposable.
 
 Both extensions are unguaranteed and both are safe, for the same reason: strict
 convexity makes the KKT conditions sufficient (Proposition~\ref{prop:sufficient}),
-so a candidate can be certified rather than trusted. A method that may fail, but
-that can recognise its own success, needs no convergence theory to be sound --- it
-needs a fallback.
+so a candidate can be certified rather than trusted. That is the idea here which
+travels furthest --- a method that may fail, but that can recognise its own
+success, needs a certificate rather than a convergence theory.
 
-Three observations from Section~\ref{sec:implementation} generalise past this
-solver, and all three are about the gap between a flop count and a running
-program.
-
-\emph{Layout decides which kernels are reachable.} Holding the triangular factor
-packed rather than dense is worth a factor of $\qpLayRatio$ on the operation that
-reads it (Section~\ref{ssec:packed}), and none of it is arithmetic. In a compiled
-language layout is chosen for cache behaviour; in an array language it
-additionally decides which library routine the data can be handed to at all, and a
-layout that reaches only the general routine pays for that on every call.
-
-\emph{A plausible mechanism is not a measured one.} The usual explanation for the
-previous paragraph --- that a strided view forces a copy at the library boundary
---- is wrong here, and wrong in a way that casual measurement confirms rather than
-exposes, because timing the two obvious shapes reproduces the headline ratio
-(Remark~\ref{rem:notcopy}). The control that settles it costs one extra line and
-we nearly did not run it.
-
-\emph{Iterations and the cost of an iteration are different targets, and the
-cheaper one is often the first.} Below a few hundred variables a solve costs what
-its array operations cost to dispatch, so halving the arithmetic buys nothing and
-halving the iteration count buys everything: the fast path of
-Section~\ref{sec:pdas} beats the exact walk by more than the gap between two
-implementations of the exact walk in different languages
-(Section~\ref{ssec:compare}). Effort spent on kernels is wasted where the
-bottleneck is the interpreter, and effort spent on iteration counts is wasted
-where it is not; knowing which regime one is in is the whole of the decision.
-
-Of the ideas here, the one that travels furthest is none of those. It is that a
-method which may fail, but which can recognise its own success, needs a
-certificate rather than a convergence theory.
+One observation generalises past this solver. Below a few hundred variables a
+solve costs what its array operations cost to dispatch rather than what its
+arithmetic costs, so halving the flop count buys nothing and halving the
+\emph{iteration} count buys everything: the fast path of Section~\ref{sec:pdas}
+beats the exact walk by more than the gap between two implementations of that walk
+in different languages (Section~\ref{ssec:compare}). Effort spent on kernels is
+wasted where the bottleneck is the interpreter, and effort spent on iteration
+counts is wasted where it is not; knowing which regime one is in is the whole of
+the decision.

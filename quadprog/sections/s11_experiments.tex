@@ -1,41 +1,33 @@
 \section{Numerical experiments}
 \label{sec:experiments}
 
-Everything above this section is a proof, and proofs leave two things open that
-only measurement closes.
+Everything above is a proof, and proofs leave two things open that only
+measurement closes.
 
 The first is whether the code satisfies the identities. A proof establishes them in
-exact arithmetic; the implementation reaches them through machinery the derivation
-does not mention --- a triangular factor held as packed columns addressed by hand,
-orthogonal updates applied by library calls that write in place into a view of
-$J$'s own buffer, correct only while that view stays contiguous. A sign error in
-the packed indexing, or a rank-one update handed a strided view and quietly given a
-copy to modify, would leave every proposition above true and the running solver
-wrong. Nothing in the derivation can detect that, and the invariants are exactly
-the kind of property that decays quietly: they are maintained across a run rather
-than recomputed, so an error does not announce itself but accumulates, and a solver
-that has drifted from $J\T G J = I$ still returns a vector that is very nearly
-right.
+exact arithmetic; the implementation reaches them through a triangular factor held
+as packed columns addressed by hand and through library calls that write in place
+into a view of $J$'s own buffer, correct only while that view stays contiguous. A
+sign error in the packed indexing would leave every proposition above true and the
+running solver wrong. The invariants are also the kind of property that decays
+quietly, being maintained across a run rather than recomputed: a solver that has
+drifted from $J\T G J = I$ still returns a vector that is very nearly right.
 
-The second is the set of quantities this paper reasons about but cannot predict.
-Section~\ref{sec:pdas} argues that guessing the active set is unguaranteed but
-sound; how often the guess is certifiable, and how many repairs it takes, are
-questions about behaviour. Section~\ref{sec:sweep} derives a cost;
-what a warm-started solve costs is not the same claim.
-
-All measurements below are on the implementation~\cite{cvxquadprog} at the version
-recorded there, and are produced by scripts distributed with this paper's sources.
-Where a claim in an earlier section rests on one of them, it points here.
+The second is the set of quantities the paper reasons about but cannot predict ---
+how often a guessed active set is certifiable, how many repairs it takes, what a
+warm-started solve costs. All measurements are on the implementation at the
+version recorded in Section~\ref{sec:reproducibility}, by scripts distributed with
+this paper's sources.
 
 \subsection{The identities hold in the running code}
 \label{ssec:identities}
 
 Every identity stated in this paper is evaluated on both sides against the shipped
-implementation, on the internal state that implementation actually holds --- its
-$J$, its packed $R$, and the $d$, $z$ and $r$ its own routine returns --- rather
-than against a reimplementation written for the purpose. Reaching into the private
-interior is the point: the claims are about objects that are internal by design,
-and a check written against the public surface could not see them.
+solver's own internal state --- its $J$, its packed $R$, and the $d$, $z$ and $r$
+its own routine returns --- rather than a reimplementation written for the purpose.
+Reaching into the private interior is the point: the claims are about objects that
+are internal by design, and a check written against the public surface could not
+see them.
 
 Residuals are reported in the scaled sup-norm
 \begin{equation}
@@ -50,14 +42,15 @@ columns one at a time: \qpIdentStates{} distinct factorisation states over
 
 \begin{table}[ht]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \caption{Worst relative residual~\eqref{eq:relresid} for each of the
 \qpIdentCount{} identities, over \qpIdentChecks{} checks on \qpIdentStates{}
 factorisation states. Two rows are exactly zero; see the text.}
 \label{tab:identities}
-\begin{tabular}{llrr}
+\begin{tabular}{llr}
 \toprule
-Result & Identity & Worst residual & Checks \\
+Result & Identity & Worst residual \\
 \midrule
 \quadprogIdentityRows
 \bottomrule
@@ -103,7 +96,7 @@ than reimplementing them, so what is counted is what runs.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\textwidth]{graphs/quadprog_pdas.pdf}
+\includegraphics[width=0.86\textwidth]{graphs/quadprog_pdas.pdf}
 \caption{Left: the fraction of guesses the certificate accepts. Right: set repairs
 to convergence. Four families are certified without exception at every size and
 settle in \qpPdasRepairsLo{} to \qpPdasRepairsHi{} repairs while the exact walk's
@@ -154,42 +147,27 @@ Section~\ref{sec:pdas} that non-optimal converged candidates are common.
 \subsection{What a warm-started solve costs}
 \label{ssec:sweepcost}
 
-Section~\ref{sec:sweep} derives the cost of recovery from cached factors as
-$O(n^2)$, all of it in $x_u = J J\T a$, with $O(nk + k^2)$ for everything after.
-Measuring that requires care, because the natural experiment cannot see it: on a
-box-constrained family the active set grows with $n$, so $O(nk)$ and $O(n^2)$
-predict the same curve and either reading fits. Figure~\ref{fig:sweep} therefore
-holds the active set fixed at $k = \qpSweepFixedK{}$ while $n$ grows, where the two
-predictions separate --- doubling versus quadrupling per doubling of $n$.
+Section~\ref{sec:sweep} derives the recovery cost as $O(n^2)$, all of it in
+$x_u = J J\T a$, with $O(nk + k^2)$ for everything after. Measuring that needs
+care, because the natural experiment cannot see it: on a box family the active set
+grows with $n$, so $O(nk)$ and $O(n^2)$ predict the same curve and either reading
+fits. Holding the active set at $k = \qpSweepFixedK{}$ while $n$ grows separates
+them, and the local exponent $d\log t/d\log n$ then runs from $\qpSweepSlopeLo$ at
+$n = \qpSweepNlo{}$ to $\qpSweepSlopeHi$ at $n = \qpSweepNhi{}$. Neither figure is
+$1$: the $O(n^2)$ is what a large warm solve costs, and an $O(nk)$ reading of the
+same formulas --- tempting, because every term after $x_u$ does scale with $k$ ---
+is wrong.
 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{graphs/quadprog_sweep.pdf}
-\caption{Left: cost per solve against $n$, with the active set held at
-$k = \qpSweepFixedK{}$ and with $k$ growing, against a cold solve and two
-reference slopes. Right: the local exponent $d\log t / d\log n$, which is what
-distinguishes the two regimes.}
-\label{fig:sweep}
-\end{figure}
-
-The local exponent runs from $\qpSweepSlopeLo$ at the small end to
-$\qpSweepSlopeHi$ at the large end. Neither figure is $1$, and the second is the
-one the derivation predicts: at $n = \qpSweepNhi{}$ a hit costs
-$\qpSweepHitHi\,\mu$s against $\qpSweepHitLo\,\mu$s at
-$n = \qpSweepNlo{}$, growing faster than any linear reading allows. So the
-$O(n^2)$ of Section~\ref{sec:sweep} is what a large warm solve costs, and an
-$O(nk)$ reading of the same formulas --- tempting, because every term after $x_u$
-does scale with $k$ --- is wrong.
-
-The small end is worth as much attention, because it is where the class is most
-used and where the flat curve invites the wrong explanation. Below roughly
-$n = 400$ the exponent is near zero: a hit costs what its dozen array operations
-cost to dispatch, not what its arithmetic costs. The flatness is an overhead floor
-and it ends where the $n^2$ overtakes dispatch. Reported as a speedup against
-solving each member of the family from scratch, reuse is worth
-$\qpSweepSpeedLo\times$ at $n = \qpSweepNlo{}$ and $\qpSweepSpeedHi\times$ at
-$n = \qpSweepNhi{}$, and the cached set stayed optimal on \qpSweepHitRate\% of
-solves under a relative perturbation of $\qpSweepPerturb$ to the linear term.
+The small end matters as much, because it is where the class is most used and
+where a flat curve invites the wrong explanation. Below roughly $n = 400$ the
+exponent is near zero: a hit costs what its dozen array operations cost to
+dispatch, not what its arithmetic costs. That flatness is an overhead floor, and it
+ends where the $n^2$ overtakes dispatch. Reuse is worth $\qpSweepSpeedLo\times$ at
+$n = \qpSweepNlo{}$ and $\qpSweepSpeedHi\times$ at $n = \qpSweepNhi{}$ against
+solving each member of the family from scratch, with the cached set still optimal
+on \qpSweepHitRate\% of solves under a relative perturbation of $\qpSweepPerturb$.
+Section~\ref{ssec:frontier} repeats the exercise on a real frontier, where the
+perturbations are not chosen.
 
 \subsection{Against solvers that are not active-set methods}
 \label{ssec:compare}
@@ -234,7 +212,7 @@ Solver & ms & resid. & ms & resid. & ms & resid. & ms & resid. \\
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\textwidth]{graphs/quadprog_compare.pdf}
+\includegraphics[width=0.86\textwidth]{graphs/quadprog_compare.pdf}
 \caption{Time per solve against $n$ on three constraint shapes. The reference
 implementation of the same algorithm wins at the small end, where cost is
 interpreter dispatch rather than arithmetic, and loses at the large end, where it
