@@ -54,7 +54,12 @@ from common.util.runner import SMOKE, output_dirs
 from cvx.quadprog import Sweep, solve_qp
 from cvx.quadprog import _pdas
 
-from quadprog_note.experiment_qp_compare import kkt_residual, run_clarabel, run_osqp
+from quadprog_note.experiment_qp_compare import (
+    kkt_residual,
+    run_clarabel,
+    run_daqp,
+    run_osqp,
+)
 
 HERE = Path(__file__).resolve().parents[1]
 GRAPHS, TABLES = output_dirs(HERE)
@@ -170,7 +175,8 @@ def analyse(label, path):
         t_ref, out = best_of(
             lambda: quadprog_c.solve_qp(g.copy(), a.copy(), c, b, meq)[0], REPEATS)
         rows["\\texttt{quadprog} (C)"] = (t_ref, kkt_residual(g, a, c, b, meq, out))
-    for name, fn in (("OSQP", run_osqp), ("Clarabel", run_clarabel)):
+    for name, fn in (("DAQP", run_daqp), ("OSQP", run_osqp),
+                     ("Clarabel", run_clarabel)):
         try:
             seconds, out = best_of(lambda: fn(g, a, c, b, meq), REPEATS)
             rows[name] = (seconds, kkt_residual(g, a, c, b, meq, out))

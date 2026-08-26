@@ -30,21 +30,17 @@ are internal by design, and a check written against the public surface could not
 see them.
 
 Residuals are reported in the scaled sup-norm
-\begin{equation}
-  \mathrm{rel}(P,Q) = \frac{\norm{P - Q}_\infty}{\max(1, \norm{Q}_\infty)},
-  \label{eq:relresid}
-\end{equation}
-so that figures are comparable across identities of different magnitudes. The
-sweep runs over problems of size $n \in \{\qpIdentSizes\}$, several seeds each,
-driving the factorisation into every intermediate working set reached by inserting
-columns one at a time: \qpIdentStates{} distinct factorisation states over
-\qpIdentProblems{} problems, and \qpIdentChecks{} individual checks.
+$\mathrm{rel}(P,Q) = \norm{P - Q}_\infty / \max(1, \norm{Q}_\infty)$, so that
+figures are comparable across identities of different magnitudes, over problems of
+size $n \in \{\qpIdentSizes\}$ and every intermediate working set reached by
+inserting columns one at a time: \qpIdentStates{} factorisation states over
+\qpIdentProblems{} problems, \qpIdentChecks{} checks.
 
 \begin{table}[ht]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\caption{Worst relative residual~\eqref{eq:relresid} for each of the
+\caption{Worst relative residual~the scaled sup-norm for each of the
 \qpIdentCount{} identities, over \qpIdentChecks{} checks on \qpIdentStates{}
 factorisation states. Two rows are exactly zero; see the text.}
 \label{tab:identities}
@@ -129,15 +125,18 @@ failures were caught earlier and more cheaply by the Cholesky factorisation
 refusing a dependent guess. The certificate remains the guarantee, but on this
 evidence the rank test does the work in practice.
 
-\subsection{Against solvers that are not active-set methods}
+\subsection{Against other solvers, and against the same method done differently}
 \label{ssec:compare}
 
 The experiments so far compare the solver with its own claims, which establishes
-that it is implemented correctly and says nothing about whether the method is
-worth using. That is a comparative question, and Table~\ref{tab:compare} and
-Figure~\ref{fig:compare} answer it against three alternatives: the reference C
-implementation of the same algorithm, an operator-splitting method (OSQP), and an
-interior-point method (Clarabel).
+that it is implemented correctly and says nothing about whether the method is worth
+using. Table~\ref{tab:compare} and Figure~\ref{fig:compare} answer that against
+four alternatives. Two are outside the family: an operator-splitting method (OSQP)
+and an interior-point method (Clarabel). Two are inside it, and are the
+informative ones --- the reference C implementation of this exact algorithm, and
+DAQP~\cite{arnstrom2022daqp}, which walks the same dual active set but carries it
+on recursive $LDL^\top$ updates of the working-set system rather than on the
+$(J,R)$ pair of Section~\ref{sec:factorisation}.
 
 Times alone would mislead, in the direction that flatters whichever solver was
 configured loosest: an active-set method returns an exact KKT point, a splitting
@@ -200,6 +199,20 @@ polishing step enabled and its tolerance set to $\qpCmpTol$; at its default
 tolerance it is faster and not comparable. The general point is that on
 combinatorially structured optima an active-set method returns an answer the
 others can only approach, and comparing times without residuals hides that.
+
+\paragraph{A different factorisation of the same walk crosses over too.} Both
+in-family solvers behave the same way: fastest of everything at $n = 50$ --- the C
+reference on bounds and on budget-plus-bounds, DAQP on dense $C$ --- and behind at
+$n = \qpCmpNhi{}$, where DAQP is $\qpCmpVsDaqp\times$ slower on bounds and
+$\qpCmpVsDaqpDense\times$ on dense $C$. Accuracy is indistinguishable from ours
+throughout ($\qpCmpResidDaqp$ at worst), as one expects of methods in the same
+family: all three terminate on a vertex rather than approaching one, which is
+exactly what separates them from the two rows below. The comparison is not
+apples to apples in one respect worth stating: DAQP is written in library-free C
+for embedded targets and pays no interpreter cost, so at small $n$ it is measuring
+a different thing from us. What it shares is the shape of the crossover, and what
+it shows is that the shape is a property of the regime and not of any one
+implementation.
 
 \paragraph{Guessing the active set is worth more than the language.} The
 \texttt{fast} path is the quickest of everything measured at

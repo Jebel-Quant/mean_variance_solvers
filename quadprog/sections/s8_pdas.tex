@@ -56,7 +56,11 @@ for iterations, which are not.
 Block exchange can cycle, and the standard remedy is a least-index rule --- flip
 only the lowest-indexed offending constraint, in the manner of Bland's rule for
 the simplex method and Murty's least-index rule for linear complementarity
-problems~\cite{murty1988}. In the bound-constrained case that remedy comes with a
+problems~\cite{murty1988}. What follows concerns this \emph{block} exchange
+specifically, and not active-set methods in general: the exact walk of
+Section~\ref{sec:iteration} is finite under nondegeneracy
+(Proposition~\ref{prop:ascent}), and for parametric families of QPs its worst-case
+iteration count can be certified exactly~\cite{arnstrom2022certification}. In the bound-constrained case that remedy comes with a
 theorem, and it is worth being precise about why the theorem does not survive the
 generalisation, because the reason is structural rather than a gap in the
 argument.

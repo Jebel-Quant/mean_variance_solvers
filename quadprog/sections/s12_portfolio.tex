@@ -66,19 +66,19 @@ its range: on the S\&P~500 the fast path settles in $\qpPfSpRepairs{}$ repairs
 against $\qpPfSpOuter{}$ outer iterations, and is $\qpPfFastSpeed\times$ faster
 than the exact walk rather than the two-to-three of the synthetic case.
 
-The crossover of Section~\ref{ssec:compare} also appears here, with a point either
-side: on the S\&P~500 the exact walk beats the reference C implementation of the
-same algorithm, and on the FTSE~100, at $n = \qpPfFtseN{}$, it loses to it ---
-neither instance constructed for the purpose.
+The crossover of Section~\ref{ssec:compare} appears here too, with a point either
+side and on real instances constructed for neither purpose: on the S\&P~500 the
+exact walk beats both in-family competitors, the C reference and
+DAQP~\cite{arnstrom2022daqp}, and on the FTSE~100, at $n = \qpPfFtseN{}$, it loses
+to both.
 
 \paragraph{Accuracy survives the conditioning.} The active-set method returns
-$\qpPfSpResid$ on the S\&P~500 despite $\kappa(\Sigma) = \qpPfSpKappa$, while the
-interior-point solver returns a residual five orders of magnitude larger at
-the same requested tolerance, and larger again on the FTSE~100. The reason is the one given in
-Section~\ref{ssec:compare} and it is sharper here: the optimum is a vertex with
-$\qpPfSpActive{}$ active constraints, which is the worst case for a method that
-approaches the boundary asymptotically and the natural case for one that
-terminates on it.
+$\qpPfSpResid$ despite $\kappa(\Sigma) = \qpPfSpKappa$, against five orders of
+magnitude more for the interior-point solver at the same requested tolerance, and
+eleven on the FTSE~100. That is the argument of Section~\ref{ssec:compare} in its
+sharpest form: the optimum here is a vertex with $\qpPfSpActive{}$ active
+constraints, which is the worst case for a method that approaches the boundary
+asymptotically and the natural case for one that terminates on it.
 
 \subsection{The frontier is what warm starting is for}
 \label{ssec:frontier}
