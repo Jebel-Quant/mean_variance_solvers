@@ -47,6 +47,8 @@ figures:  ## Regenerate every graph and table for every paper
 	uv run python -m quadprog_note.experiment_qp_pdas
 	uv run python -m quadprog_note.experiment_qp_sweep
 	uv run python -m quadprog_note.experiment_qp_compare
+	uv run python -m quadprog_note.experiment_qp_layout
+	uv run python -m quadprog_note.experiment_qp_portfolio
 
 clean:  ## Remove the persistent virtual environment
 	rm -rf .venv uv.lock

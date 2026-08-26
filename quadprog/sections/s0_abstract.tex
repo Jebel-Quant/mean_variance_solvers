@@ -34,8 +34,12 @@ sufficient, so that every candidate can be certified; and warm starting across a
 family of programs differing only in the linear term, where $J$ and $R$ are
 reusable verbatim and a stale active set can be repaired into a dual-feasible
 state rather than discarded. For the general constraints treated here neither
-addition admits a finite-termination theorem, and we make the reason explicit:
-the working-set system is a principal submatrix of $G^{-1}$ only when the
-constraints are bounds, and it is the loss of that $P$-matrix structure, not the
-absence of an anti-cycling rule, that removes the guarantee.
+addition admits a finite-termination theorem, and the reason is structural rather
+than a missing anti-cycling rule: the working-set system is a principal submatrix
+of $G^{-1}$ only when the constraints are bounds, and it is the loss of that
+$P$-matrix property that removes the guarantee. That exposure is easy to mistake
+for a technicality, because it does not appear in random data at all --- over six
+hundred attempts here it never occurs --- and repeating columns of the constraint
+matrix, which any programmatically assembled model can do, raises it to
+$93\%$.
 \end{abstract}

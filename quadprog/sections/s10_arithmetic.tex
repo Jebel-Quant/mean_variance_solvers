@@ -67,32 +67,3 @@ the constraints, not by the arithmetic --- so the two populations are separated 
 a dozen orders of magnitude and any threshold between them works. The scale in
 \eqref{eq:noise} is $\norm{c}\norm{x}$ rather than the size of the terms forming
 the dot product, precisely because the error is inherited from $x$.
-
-\subsection{Structure, and why it cannot change the answer}
-
-A bound constraint $x_j \ge \ell_j$ is a column of $C$ holding a single nonzero,
-$c_i = \nu e_\rho$, and a box-constrained problem consists of nothing else. Three
-of the per-iteration quantities then degenerate to indexing:
-\begin{equation}
-  c_i\T x = \nu\, x_\rho,
-  \qquad
-  d = J\T c_i = \nu\, (J_{\rho\cdot})\T,
-  \qquad
-  c_i\T z = \nu\, z_\rho ,
-  \label{eq:unit}
-\end{equation}
-replacing an $O(nm)$ product, an $O(n^2)$ product and an $O(n)$ dot product
-respectively. The identities are exact in floating point --- each is a single
-multiplication where the general form is a sum of $n$ terms of which $n-1$ are
-zero, and adding exact zeros in IEEE~754 changes nothing --- so the fast path
-computes the same values, not merely close ones.
-
-Two details of the detection matter mathematically. It is performed per column,
-not per matrix, because the case worth optimising is mixed: a mean--variance
-problem carries one dense budget column $\mathbf{1}\T x = 1$ alongside $2n$
-bounds, and an all-or-nothing test would observe the dense column and send the
-whole problem down the general path. And an all-zero column must not be mistaken
-for a unit column: it expresses $0 \ge b_i$, the case excluded from
-Proposition~\ref{prop:inner}, and treating it as $\nu e_\rho$ with $\nu = 0$ would
-scale a row of $J$ by zero and lose the infeasibility verdict that
-Section~\ref{sec:termination} owes it.
