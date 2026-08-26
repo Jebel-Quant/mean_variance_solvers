@@ -122,11 +122,6 @@ naturally test, where $k$ grows with $n$; Section~\ref{sec:sweep} separates
 the two by holding $k$ fixed, and separates the arithmetic from the interpreter
 dispatch that dominates below a few hundred variables.
 
-\item \textbf{A way of checking a derivation against the code it describes.}
-Every identity above is evaluated on both sides against the shipped solver's own
-internal state rather than a reimplementation of it
-(Section~\ref{ssec:identities}): \qpIdentCount{} identities, \qpIdentChecks{}
-checks, worst relative residual $\qpIdentWorst$.
 \end{enumerate}
 
 \subsection{Outline}

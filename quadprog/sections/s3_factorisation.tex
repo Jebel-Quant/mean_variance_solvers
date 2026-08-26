@@ -162,7 +162,8 @@ implementations follow the same trajectory in finite precision, because the
 rounding \emph{within} the reductions differs and the decisions are
 discontinuous functions of the computed values. That is an empirical question,
 and settling it properly needs two independent implementations to compare
-trajectories against each other. Section~\ref{ssec:identities} settles the weaker
+trajectories against each other. What is checkable against one --- and is checked,
+see the Reproducibility note --- is the weaker
 statement that is checkable against one: that the $z$ and $r$ the solver computes
 agree with the representation-free closed forms~\eqref{eq:zclosed}
 and~\eqref{eq:rclosed} to machine precision.

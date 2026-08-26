@@ -15,57 +15,6 @@ takes, what a warm-started solve costs. All measurements are on the implementati
 at the version recorded in Section~\ref{sec:reproducibility}, by scripts
 distributed with this paper's sources.
 
-\subsection{The identities hold in the running code}
-\label{ssec:identities}
-
-Every identity stated in this paper is evaluated on both sides against the shipped
-solver's own internal state --- its $J$, its packed $R$, and the $d$, $z$ and $r$
-its own routine returns --- rather than a reimplementation written for the purpose.
-Reaching into the private interior is the point: the claims are about objects that
-are internal by design, and a check written against the public surface could not
-see them.
-
-Residuals are reported in the scaled sup-norm
-$\mathrm{rel}(P,Q) = \norm{P - Q}_\infty / \max(1, \norm{Q}_\infty)$, so that
-figures are comparable across identities of different magnitudes, over problems of
-size $n \in \{\qpIdentSizes\}$ and every intermediate working set reached by
-inserting columns one at a time: \qpIdentStates{} factorisation states over
-\qpIdentProblems{} problems, \qpIdentChecks{} checks.
-
-\begin{table}[ht]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\caption{Worst relative residual~the scaled sup-norm for each of the
-\qpIdentCount{} identities, over \qpIdentChecks{} checks on \qpIdentStates{}
-factorisation states. Two rows are exactly zero; see the text.}
-\label{tab:identities}
-\begin{tabular}{llr}
-\toprule
-Result & Identity & Worst residual \\
-\midrule
-\quadprogIdentityRows
-\bottomrule
-\end{tabular}
-\end{table}
-
-The worst residual anywhere in Table~\ref{tab:identities} is $\qpIdentWorst$. That
-is the scale to expect: these are exact-arithmetic identities evaluated in double
-precision on matrices of condition number $O(n)$, so a few multiples of the machine
-epsilon is agreement, not approximation. No threshold appears anywhere in the
-procedure --- the residuals are reported, not tested against a bound.
-
-Two rows are exactly zero, which is stronger than a small residual. The
-multipliers of active inequalities are non-negative in every instance, with no
-negative excursion at any magnitude --- dual feasibility is maintained
-combinatorially, by the ratio test~\eqref{eq:t1} refusing to step past a zero
-crossing, where a method that restored it by clipping would show a small nonzero.
-And rescaling a constraint leaves the trajectory untouched: over three decades of
-$\gamma$ either side of unity the solver performs an identical number of additions
-and removals and returns a minimiser agreeing to $3.3\times10^{-16}$, so the
-invariance of Proposition~\ref{prop:scale} is a property of the whole walk and not
-only of the index it selects.
-
 \subsection{The guessed active set, and what the certificate catches}
 \label{ssec:pdas}
 
