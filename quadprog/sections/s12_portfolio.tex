@@ -20,16 +20,11 @@ sample mean. Two universes, so that nothing below is a property of one market:
 the S\&P~500 at $n = \qpPfSpN{}$ assets over $T = \qpPfSpT{}$ days, and the
 FTSE~100 at $n = \qpPfFtseN{}$ over $T = \qpPfFtseT{}$.
 
-\begin{remark}[The data needs one filter, and the solver is right to insist]
-The FTSE series carries an instrument quoted flat across the whole window. Its
-sample variance is zero, which makes $\Sigma$ singular --- rank $86$ of $87$ ---
-and \eqref{eq:portfolio} is then not strictly convex, so the factorisation of
-Section~\ref{sec:factorisation} does not exist and the solver refuses the problem.
-That refusal is correct and worth having: an asset with no variance has no place
-in a variance-minimising portfolio, and a solver that silently regularised it away
-would be hiding a modelling error. The degenerate column is dropped, and $n = 86$
-below is the result.
-\end{remark}
+The FTSE series carries one instrument quoted flat across the whole window. Its
+sample variance is zero, so $\Sigma$ is singular --- rank $86$ of $87$ --- and the
+solver refuses the problem, correctly: an asset with no variance has no place in a
+variance-minimising portfolio. The degenerate column is dropped and
+$n = \qpPfFtseN{}$ is the result.
 
 \subsection{Real covariances are the hard case, and in the expected direction}
 
@@ -92,6 +87,7 @@ approaches the boundary asymptotically and the natural case for one that
 terminates on it.
 
 \subsection{The frontier is what warm starting is for}
+\label{ssec:frontier}
 
 A frontier sweep varies $\rho$ in~\eqref{eq:portfolio} and changes nothing else.
 That is precisely the family of Section~\ref{sec:sweep}: $\Sigma$, $C$ and $b$
@@ -100,7 +96,7 @@ $\qpPfPoints{}$ points across the S\&P~500 frontier.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\textwidth]{graphs/quadprog_portfolio.pdf}
+\includegraphics[width=0.86\textwidth]{graphs/quadprog_portfolio.pdf}
 \caption{Left: the long-only efficient frontier, with the individual assets it
 dominates. Right: the number of names held along it, on a log scale, falling from
 $\qpPfNamesHi{}$ at the minimum-variance corner to $\qpPfNamesLo{}$ at the
@@ -132,24 +128,21 @@ sharper statement about the machinery than a high hit rate would have been: it
 says the mechanism that matters is the one that runs when the cache is
 \emph{wrong}.
 
-\begin{remark}[A degenerate sweep flatters this measurement]\label{rem:sweeptrap}
 An earlier version of this experiment spaced $\rho$ linearly. Almost every point
 then landed on the return-seeking corner, where the solution is a single asset and
-does not move, and the cache hit $48$ times out of $50$. The number was real and
-the conclusion drawn from it would have been worthless, because the sweep was not
-tracing the frontier at all --- it was solving the same problem forty-nine times.
-The geometric spacing used here is what makes the left-hand panel a curve rather
-than two points joined by a line, and the honest hit rate is the one that comes
-with it.
-\end{remark}
+does not move, and the cache hit $48$ times out of $50$. That number was real and
+any conclusion drawn from it would have been worthless, because the sweep was
+solving the same problem forty-nine times rather than tracing a frontier. The
+geometric spacing is what makes the left-hand panel a curve, and the honest hit
+rate is the one that comes with it.
 
 \begin{remark}[What this section does and does not claim]
 It claims that the method's advantages are larger on the problems it was designed
 for than on the synthetic families used to test it, and that the direction of that
 gap was predicted rather than discovered after the fact. It does not claim that
 this is the best way to build a portfolio. Minimum variance on a raw sample
-covariance is a poor estimator, and the companion work in this
-series~\cite{schmelzer2026nncg,schmelzer2026rmt} is about the estimation problem;
+covariance is a poor estimator, and the estimation problem is a separate
+literature;
 here $\Sigma$ is a source of realistically shaped matrices, and nothing in this
 paper depends on how it was estimated.
 \end{remark}

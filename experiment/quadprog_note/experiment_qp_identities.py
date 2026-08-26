@@ -346,7 +346,7 @@ def emit(w, n_problems, n_states) -> None:
     for key, label, desc in ROWS:
         if key not in w.keys():
             continue
-        lines.append(f"{label} & {desc} & ${sci(w.worst(key))}$ & {w.count(key)} \\\\\n")
+        lines.append(f"{label} & {desc} & ${sci(w.worst(key))}$ \\\\\n")
 
     path = TABLES / "quadprog_identities.tex"
     path.write_text(

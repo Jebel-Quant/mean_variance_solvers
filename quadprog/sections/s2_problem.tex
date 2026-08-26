@@ -23,21 +23,7 @@ below beyond signs.
 Let $\Omega = \{x : c_i\T x = b_i \ (i \le m_{\mathrm{eq}}),\ c_i\T x \ge b_i \
 (i > m_{\mathrm{eq}})\}$ denote the feasible set, a closed convex polyhedron.
 
-\begin{proposition}[Existence and uniqueness]\label{prop:unique}
-If $\Omega \neq \emptyset$ then~\eqref{eq:qp2} has exactly one solution.
-\end{proposition}
-
-\begin{proof}
-Since $G \succ 0$, write $G = R_G\T R_G$ and complete the square:
-$f(x) = \tfrac12\norm{R_G(x - G^{-1}a)}^2 - \tfrac12 a\T G^{-1} a$. So $f$ is
-coercive --- $f(x) \to \infty$ as $\norm{x} \to \infty$ --- and continuous, and
-$\Omega$ is closed and nonempty, so a minimiser exists. It is unique because $f$
-is strictly convex: for $x \neq y$ and $\theta \in (0,1)$,
-$f(\theta x + (1-\theta)y) = \theta f(x) + (1-\theta)f(y)
-- \tfrac12\theta(1-\theta)(x-y)\T G (x-y) < \theta f(x) + (1-\theta) f(y)$,
-and $\Omega$ is convex, so two distinct minimisers would produce a feasible point
-of strictly smaller value.
-\end{proof}
+Since $G \succ 0$ the objective is strictly convex and coercive, so \eqref{eq:qp2} has exactly one solution whenever $\Omega \neq \emptyset$; see~\cite[Ch.~16]{nocedal2006}. What the method needs beyond that is the converse of the usual necessary conditions, and that is worth proving because every certificate in this paper rests on it.
 
 The Lagrangian of~\eqref{eq:qp2} is
 $L(x,\lambda) = \tfrac12 x\T G x - a\T x - \lambda\T(C\T x - b)$, and the
@@ -111,7 +97,7 @@ $x = G^{-1}a + G^{-1}Au = x_u + G^{-1}Au$. Substituting into $A\T x = b_\Active$
 gives $A\T x_u + (A\T G^{-1}A)u = b_\Active$. The matrix $A\T G^{-1}A$ is
 positive definite because $G^{-1} \succ 0$ and $A$ has full column rank, hence
 invertible, which yields~\eqref{eq:subsol}; the point so constructed is the unique
-minimiser by the argument of Proposition~\ref{prop:unique} applied to the affine
+minimiser by strict convexity of $f$ on the affine
 feasible set of~\eqref{eq:sub}.
 \end{proof}
 
@@ -148,11 +134,10 @@ The method's name is earned by the following, which also explains why the
 objective value can be tracked as a running total and why it increases.
 
 \begin{proposition}[Dual function]\label{prop:dual}
-The Lagrangian dual of~\eqref{eq:qp2} is the concave quadratic program
+The Lagrangian dual of~\eqref{eq:qp2} is the concave program
+$\max\,\psi(\lambda)$ over $\lambda_i \ge 0$ $(i > m_{\mathrm{eq}})$, where
 \begin{equation}
-  \max_{\lambda_i \ge 0 \ (i > m_{\mathrm{eq}})} \;
-  \psi(\lambda) := -\tfrac12 (a + C\lambda)\T G^{-1} (a + C\lambda)
-   + b\T\lambda .
+  \psi(\lambda) = -\tfrac12 (a + C\lambda)\T G^{-1} (a + C\lambda) + b\T\lambda .
   \label{eq:dualfn}
 \end{equation}
 If $(x,\lambda)$ satisfies stationarity~\eqref{eq:stat} and
@@ -160,20 +145,11 @@ complementarity~\eqref{eq:comp}, then $\psi(\lambda) = f(x)$.
 \end{proposition}
 
 \begin{proof}
-For fixed $\lambda$, $L(\cdot,\lambda)$ is a strictly convex quadratic minimised
-where $Gx = a + C\lambda$, i.e.\ at $x(\lambda) = G^{-1}(a + C\lambda)$. Writing
-$s = a + C\lambda$,
-\[
-  \psi(\lambda) = L(x(\lambda),\lambda)
-  = \tfrac12 s\T G^{-1} s - a\T G^{-1} s - \lambda\T C\T G^{-1} s + b\T\lambda
-  = \tfrac12 s\T G^{-1}s - s\T G^{-1} s + b\T\lambda,
-\]
-using $a + C\lambda = s$, which is~\eqref{eq:dualfn}. For the second claim,
-\eqref{eq:stat} says $x = x(\lambda)$, so $s = Gx$ and
-$\psi(\lambda) = -\tfrac12 x\T G x + b\T\lambda$; and \eqref{eq:comp} together
-with $c_i\T x = b_i$ on the equalities gives
-$b\T\lambda = \lambda\T C\T x = (Gx - a)\T x = x\T G x - a\T x$. Adding,
-$\psi(\lambda) = \tfrac12 x\T Gx - a\T x = f(x)$.
+Minimising $L(\cdot,\lambda)$ gives $x(\lambda) = G^{-1}(a + C\lambda)$ and,
+writing $s = a + C\lambda$, $\psi(\lambda) = \tfrac12 s\T G^{-1}s - s\T G^{-1}s +
+b\T\lambda$, which is~\eqref{eq:dualfn}. For the second claim \eqref{eq:stat}
+gives $s = Gx$, and \eqref{eq:comp} with $c_i\T x = b_i$ on the equalities gives
+$b\T\lambda = (Gx - a)\T x$; adding the two yields $f(x)$.
 \end{proof}
 
 So along any sequence of states of the form~\eqref{eq:subsol} the tracked

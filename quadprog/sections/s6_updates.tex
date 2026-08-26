@@ -99,6 +99,31 @@ iterates; \eqref{eq:nocancel} is what makes it immaterial to the accuracy as
 well. See~\cite{golub2013,higham2002} for the standard treatment.
 \end{remark}
 
+\begin{remark}[Why the reflections cannot be blocked]\label{rem:wy}
+A sequence of Householder reflections is normally applied as a block. The WY
+representation of Bischof and Van Loan~\cite{bischof1987}, and its storage-efficient
+form due to Schreiber and Van Loan~\cite{schreiber1989}, write a product
+$W_1 W_2 \cdots W_j$ as $I + WY\T$, so that $j$ reflections reach a matrix in one
+level-3 update rather than $j$ level-2 ones. That is what makes blocked QR
+factorisation fast, and it is the first thing to reach for here.
+
+It is not available, for a structural reason rather than an implementation one.
+Blocking requires the $j$ reflections to be known before any is applied. In this
+iteration the reflection that inserts a constraint is determined by
+$d = J\T n_*$, which depends on $J$ \emph{after} the previous insertion; and
+between any two insertions the solver reads $z$ and $r$ off the updated factors to
+decide which constraint enters next, and whether it enters at all. The updates are
+interleaved with reads of what they produce, so there is no window in which two
+reflections are simultaneously known and unapplied.
+
+This is the same obstruction as in the deletion chase below, and it is why the
+method stays a level-2 computation no matter how it is coded, which is worth
+knowing before reaching for a blocked update. A variant
+that inserted several constraints per iteration would open the window; the dual
+method's step rules, which admit one constraint at a time by construction, close
+it.
+\end{remark}
+
 \subsection{Deletion}
 \label{ssec:delete}
 

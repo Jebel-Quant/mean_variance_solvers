@@ -105,44 +105,16 @@ internal state rather than a reimplementation of it
 checks, worst relative residual $\qpIdentWorst$.
 \end{enumerate}
 
-\subsection{What is derived here}
+\subsection{Outline}
 
-Section~\ref{sec:problem} fixes notation, records the optimality conditions, and
-establishes the two facts the rest of the paper leans on: that~\eqref{eq:qp} has at
-most one solution, and that its Karush--Kuhn--Tucker conditions are sufficient
-and not merely necessary. The second is what makes a certificate possible, and
-both of the extensions in Sections~\ref{sec:pdas} and~\ref{sec:sweep} are built
-on certificates.
-
-Section~\ref{sec:factorisation} introduces the single matrix the solver carries
-and the two invariants that define it. This is the heart of the method and the
-part most easily mistaken for an implementation detail. The matrix is not a
-factor of $G$, nor an orthogonal factor of the constraint normals; it is the
-product of both, and the reason to fold them together is that it makes the search
-directions matrix--vector products of fixed cost rather than solves whose cost
-grows with the active set. We give the geometric reading --- the columns are a
-$G$-orthonormal basis of $\R^n$ split so that the trailing block spans the
-working set's feasible subspace --- and then show, in
-Proposition~\ref{prop:invariance}, that the two quantities the iteration consumes
-depend on the invariants alone and not on which of the many matrices satisfying
-them is held. That is the licence for the implementation's choice of orthogonal
-reduction.
-
-Section~\ref{sec:iteration} derives the iteration: the two search directions and
-their closed forms, the fact that the multipliers move affinely along $-r$ while
-the entering multiplier rises with the step, the two competing step lengths, and
-the exact objective increment. Section~\ref{sec:termination} collects what can be
-proved about stopping --- strict monotonicity, termination of the inner loop in at
-most one pass per active constraint, and the Farkas certificate that turns a stuck
-iteration into a proof of infeasibility. Section~\ref{sec:updates} derives the two
-factorisation updates.
-
-Sections~\ref{sec:pdas} and~\ref{sec:sweep} treat the package's two departures
-from the classical method, and Section~\ref{sec:arithmetic} the finite-precision
-questions: how the constraint-selection rule is made invariant to how each
-constraint happens to be scaled, and why a violation the size of the rounding in
-the iterate must be set aside rather than either enforced or taken as evidence of
-infeasibility.
+Sections~\ref{sec:problem} to~\ref{sec:updates} derive the method: the optimality
+conditions and the working-set subproblem, the invariants, the iteration and its
+termination, and the two factorisation updates.
+Sections~\ref{sec:pdas} and~\ref{sec:sweep} treat the
+two departures from the classical method, Section~\ref{sec:arithmetic} the
+finite-precision questions, and Sections~\ref{sec:experiments}
+and~\ref{sec:portfolio} the measurements --- first against the claims above, then
+on real data.
 
 \subsection{Notation}
 
