@@ -12,8 +12,7 @@ a stale figure cannot survive a regeneration unnoticed.
 \toprule
 Script (\texttt{quadprog\_note/}) & Figure & Table & Used in \\
 \midrule
-\verb|experiment_qp_identities| & ---
-  & \verb|quadprog_identities| & \S\ref{ssec:identities} \\
+\verb|experiment_qp_identities| & --- & --- & below \\
 \verb|experiment_qp_pdas| & \verb|quadprog_pdas|
   & \verb|_pdas_defs| & \S\ref{ssec:pdas} \\
 \verb|experiment_qp_sweep| & ---
@@ -33,6 +32,17 @@ script writes no figure, and the sweep script writes one the paper does not
 include: its cost curves are the natural way to inspect the two regimes
 \S\ref{sec:sweep} describes in words, so the figure is left in place for a reader
 who wants to see them.
+
+\paragraph{The identities are checked against the code.} A proof establishes the
+identities of Sections~\ref{sec:factorisation} to~\ref{sec:sweep} in exact
+arithmetic; it does not establish that the implementation satisfies them, which
+matters because it reaches them through a packed triangular factor addressed by
+hand and through library calls writing in place into a view of $J$'s own buffer.
+\verb|experiment_qp_identities| evaluates both sides of all \qpIdentCount{} of them
+against the solver's own internal state rather than a reimplementation ---
+\qpIdentChecks{} checks over \qpIdentStates{} factorisation states, worst relative
+residual $\qpIdentWorst$. Two come out exactly zero, and one of those is
+Remark~\ref{rem:scaleexact}.
 
 \paragraph{Software under study.} \texttt{cvx-quadprog}, version
 $0.4.1$~\cite{cvxquadprog}, archived with a DOI. The measurements are tied to that
@@ -59,7 +69,7 @@ timings inherit whatever threading decision the installed library makes by defau
 and those defaults differ between libraries by more than the effects measured here.
 Accelerate exposes no thread control, so there was nothing to set; on a library
 that does, the same experiment can read differently. The residuals of
-\S\ref{ssec:identities} and the counts of \S\ref{ssec:pdas} are machine-independent
+the identity check below and the counts of \S\ref{ssec:pdas} are machine-independent
 to the last digit or two of rounding, and are what the paper rests on.
 
 \paragraph{Optional dependency.} The comparison in \S\ref{ssec:compare} includes
