@@ -1,45 +1,32 @@
 \begin{abstract}
 \noindent
-This paper derives the Goldfarb--Idnani dual active-set method for strictly
-convex quadratic programs in the form in which the \texttt{cvx-quadprog} package
-implements it, and proves the identities the implementation relies on. The
-derivation is accompanied by a numerical section that checks each identity
-against the running code, on the internal state the implementation actually
-holds, and that measures the two behaviours the derivation reasons about but
-cannot predict.
+We derive the Goldfarb--Idnani dual active-set method for strictly convex
+quadratic programs, prove the identities an implementation relies on, and check
+each one against the running code.
 
-Three things are worth stating precisely and are not, in our experience, easy to
-extract from the original paper. First, the solver carries a single matrix $J$
-satisfying two invariants --- $J\T G J = I$ and $J\T A = [R;0]$ --- and every
-quantity it computes is a consequence of those two lines; in particular the
-primal search direction is the $G$-orthogonal projection of $G^{-1}n_*$ onto the
-working set's feasible subspace, and the dual direction is the solution of a
-least-squares problem in the $G^{-1}$ metric. Because both admit
-representation-free closed forms, any pair $(J, R)$ meeting the invariants
-produces the same iterate, which is what licenses replacing the reference's
-chain of Givens rotations by a single Householder reflection. Second, the
-objective increment along a step of length $t$ is
-$t\,(t/2 + u_*)\,z\T G z$ for $u_*$ the entering multiplier accumulated so far,
-an exact closed form rather than a re-evaluation, and it is strictly positive
-even in the reversed-step case that an equality constraint violated from above
-produces. Third, when the primal cannot move and no multiplier can be reduced,
-the vector $r$ the solver already holds is a Farkas certificate of primal
-infeasibility, which we exhibit; the solver's infeasibility verdict is therefore
-a proof and not a failure to converge.
+The derivation is organised around a single matrix $J$ satisfying two invariants,
+$J\T G J = I$ and $J\T A = [R;0]$, from which every quantity the iteration
+computes follows: the primal direction is the $G$-orthogonal projection of
+$G^{-1}n_*$ onto the working set's feasible subspace, and the dual direction
+solves a least-squares problem in the $G^{-1}$ metric. Both admit
+representation-free closed forms, so any $(J,R)$ meeting the invariants produces
+the same iterate --- which licenses replacing a chain of Givens rotations by one
+Householder reflection. The objective increment along a step of length $t$ is
+exactly $t(t/2 + u_*)\,z\T G z$, positive in both step directions. And when the
+primal cannot move and no multiplier can be reduced, the vector $r$ the solver
+already holds is a Farkas certificate: the infeasibility verdict is a proof
+rather than a failure to converge.
 
-We then treat the two additions the package makes to the classical method: a
-primal--dual active-set fast path, which guesses the whole active set at once and
-is sound only because a strictly convex program makes the KKT conditions
-sufficient, so that every candidate can be certified; and warm starting across a
-family of programs differing only in the linear term, where $J$ and $R$ are
-reusable verbatim and a stale active set can be repaired into a dual-feasible
-state rather than discarded. For the general constraints treated here neither
-addition admits a finite-termination theorem, and the reason is structural rather
-than a missing anti-cycling rule: the working-set system is a principal submatrix
-of $G^{-1}$ only when the constraints are bounds, and it is the loss of that
-$P$-matrix property that removes the guarantee. That exposure is easy to mistake
-for a technicality, because it does not appear in random data at all --- over six
-hundred attempts here it never occurs --- and repeating columns of the constraint
-matrix, which any programmatically assembled model can do, raises it to
-$93\%$.
+We then treat two additions to the classical method --- a primal--dual fast path
+that guesses the whole active set, and warm starting across programs differing
+only in the linear term --- both unguaranteed, and both sound only because strict
+convexity makes the KKT conditions sufficient, so every candidate can be
+certified. Neither admits a finite-termination theorem for general
+$C\T x \ge b$, and the reason is structural rather than a missing anti-cycling
+rule: the working-set system is a principal submatrix of $G^{-1}$ only when the
+constraints are bounds. That exposure is easy to mistake for a technicality
+because it never occurs in six hundred random instances, and duplicating columns
+of the constraint matrix raises it to $93\%$. On real portfolio data the active
+set reaches $442$ of $495$ constraints, where the synthetic families that most
+of the literature tests on produce a small one.
 \end{abstract}

@@ -43,16 +43,21 @@ $J_1 y = J_1 R u = G^{-1}A u$ by Proposition~\ref{prop:blocks}(iii), so
 $x = x_u + G^{-1}Au$, again as in~\eqref{eq:subsol}.
 \end{proof}
 
-The cost is worth stating exactly, since the recovery is the point. Forming
-$x_u = J(J\T a)$ is two matrix--vector products with an $n \times n$ matrix,
-$O(n^2)$ --- and no cheaper, $J$ having lost its triangularity at the first
-update. Everything after it is $O(nk + k^2)$: one gather or product for
-$A\T x_u$, two triangular solves of order $k$, and one product with $J_1$.
-Against that, re-deriving the factors for the same working set costs $k$
-insertions at $O(n^2)$ each, and a cold solve costs that plus the walk. So the
-saving is a factor of order $k$, and it is largest exactly where it matters ---
-a long-only portfolio optimum is a vertex at which most of the bounds bind, so $k$
-is large.
+The cost is $O(n^2)$, all of it in $x_u = J(J\T a)$ --- two matrix--vector products
+with a dense $n \times n$ matrix, $J$ having lost its triangularity at the first
+update --- with $O(nk + k^2)$ for everything after. Re-deriving the factors for the
+same working set instead costs $k$ insertions at $O(n^2)$ each, so the saving is a
+factor of order $k$, largest exactly where it matters: a long-only optimum is a
+vertex at which most bounds bind.
+
+The $O(n^2)$ is worth insisting on, because the natural experiment cannot see it.
+On a box family the active set grows with $n$, so $O(nk)$ and $O(n^2)$ predict the
+same curve and either reading fits; holding $k$ fixed at $\qpSweepFixedK{}$ while
+$n$ grows separates them, and the measured local exponent
+$d\log t/d\log n$ then runs from $\qpSweepSlopeLo$ at $n = \qpSweepNlo{}$ to
+$\qpSweepSlopeHi$ at $n = \qpSweepNhi{}$. Neither is $1$. The flat small-$n$ end is
+an overhead floor --- a hit there costs what its dozen array operations cost to
+dispatch --- and it ends where the $n^2$ overtakes dispatch.
 
 Whether $(x,u)$ from~\eqref{eq:recover} is the answer to the \emph{full} program
 is then one certificate away, and it is the same certificate as before: the
@@ -80,14 +85,12 @@ a state satisfying~\eqref{eq:invariant}.
 \end{proposition}
 
 \begin{proof}
-Each pass that does not stop reduces the working-set size by one, so there are at
-most $k$ of them; with an empty working set the multiplier vector is empty and the
-sign condition is vacuous, which is the cold start of Remark~\ref{rem:cold}.
-On exit, $(x,u)$ solves the subproblem for the current set by
-Proposition~\ref{prop:recover} and the sign conditions hold, which
-is~\eqref{eq:invariant}. Full column rank of the remaining normals is inherited:
-a submatrix of a full-column-rank matrix formed by deleting columns has full
-column rank.
+Each pass that does not stop shrinks the working set by one, so there are at most
+$k$; with an empty set the sign condition is vacuous, which is the cold start of
+Remark~\ref{rem:cold}. On exit $(x,u)$ solves the subproblem by
+Proposition~\ref{prop:recover} and the sign conditions hold,
+which is~\eqref{eq:invariant}; full column rank is inherited, deleting columns
+preserving it.
 \end{proof}
 
 From such a state the iteration of Section~\ref{sec:iteration} cannot tell a

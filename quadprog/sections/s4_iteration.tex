@@ -175,24 +175,18 @@ finite and positive whenever $z \neq 0$, and $t_2 = +\infty$ when $z = 0$ by
 Lemma~\ref{lem:directions}(ii) --- in which case the primal iterate cannot move at
 all and only the multipliers change.
 
-\paragraph{The step.} Take $t = \min(t_1,t_2)$.
-\begin{itemize}
-  \item If $t_2 \le t_1$ (a \emph{full step}), the entering constraint now holds
-        with equality. Append it to the working set with multiplier
-        $u_* + t_2$, update the factorisation
-        (Section~\ref{sec:updates}), and return to the top of the outer loop.
-        The new state satisfies~\eqref{eq:invariant}: stationarity and
-        complementarity by Proposition~\ref{prop:path} together with the slack
-        now being zero, and the sign conditions because $t_2 \le t_1$.
-  \item If $t_1 < t_2$ (a \emph{partial step}), the multiplier of
-        $i_{\mathrm{del}}$ reaches zero first. Take the step, drop
-        $i_{\mathrm{del}}$ from the working set, downdate the factorisation, and
-        \emph{recompute $z$ and $r$} --- both change, because $J$ and $R$ have ---
-        keeping the same entering constraint and its accumulated $u_*$. This is
-        the inner loop.
-  \item If both limits are infinite the problem is infeasible; see
-        Proposition~\ref{prop:farkas}.
-\end{itemize}
+\paragraph{The step.} Take $t = \min(t_1,t_2)$. If $t_2 \le t_1$ the step is
+\emph{full}: the entering constraint now holds with equality, so it joins the
+working set with multiplier $u_* + t_2$ and the factorisation is updated
+(Section~\ref{sec:updates}). The new state satisfies~\eqref{eq:invariant} ---
+stationarity and complementarity by Proposition~\ref{prop:path} with the slack now
+zero, and the sign conditions because $t_2 \le t_1$. If $t_1 < t_2$ the step is
+\emph{partial}: the multiplier of $i_{\mathrm{del}}$ reaches zero first, that
+constraint leaves the working set, the factorisation is downdated, and $z$ and $r$
+are recomputed --- both change, because $J$ and $R$ have --- keeping the same
+entering constraint and its accumulated $u_*$. That is the inner loop. If both
+limits are infinite the problem is infeasible; see
+Proposition~\ref{prop:farkas}.
 
 \begin{remark}[Equalities violated from above]\label{rem:reverse}
 An equality constraint may be violated in either direction. When $s_{i_*} > 0$
@@ -246,34 +240,31 @@ Section~\ref{sec:termination} needs.
 \caption{The Goldfarb--Idnani dual active-set method}\label{alg:gi}
 \begin{algorithmic}[1]
 \Require $G \succ 0$, $a$, $C$, $b$, $m_{\mathrm{eq}}$
-\Ensure The solution of~\eqref{eq:qp2}, or a verdict of infeasibility
-\State $R_G \leftarrow \mathrm{chol}(G)$; \ $J \leftarrow R_G^{-1}$; \
-       $x \leftarrow G^{-1}a$; \ $f \leftarrow -\tfrac12 a\T x$
-\State $\Active \leftarrow \emptyset$; \ $k \leftarrow 0$; \ $u \leftarrow ()$
-\Loop \Comment{outer loop}
-  \State $s \leftarrow C\T x - b$; \ $s_i \leftarrow 0$ for $i \in \Active$
-  \State choose $i_*$ by~\eqref{eq:select}; \textbf{if} none \textbf{then}
-         \Return $(x, f, u)$ \Comment{optimal, by Prop.~\ref{prop:sufficient}}
+\State $J \leftarrow \mathrm{chol}(G)^{-1}$; \ $x \leftarrow G^{-1}a$; \
+       $f \leftarrow -\tfrac12 a\T x$; \ $\Active \leftarrow \emptyset$; \
+       $k \leftarrow 0$; \ $u \leftarrow ()$
+\Loop
+  \State $s \leftarrow C\T x - b$, with $s_i \leftarrow 0$ for $i \in \Active$;
+         choose $i_*$ by~\eqref{eq:select}
+  \State \textbf{if} none \textbf{then} \Return $(x,f,u)$
+         \Comment{optimal, by Prop.~\ref{prop:sufficient}}
   \State $n_* \leftarrow c_{i_*}$; \ $u_* \leftarrow 0$
-  \Loop \Comment{inner loop}
+  \Loop
     \State $d \leftarrow J\T n_*$; \ $z \leftarrow J_2 d_2$; \
            $r \leftarrow R^{-1} d_1$
-    \State $t_1, i_{\mathrm{del}} \leftarrow$ ratio test~\eqref{eq:t1}; \
-           $t_2 \leftarrow$ primal limit~\eqref{eq:t2}
-    \State \textbf{if} $t_1 = t_2 = \infty$ \textbf{then} \textbf{stop}:
-           infeasible \Comment{Prop.~\ref{prop:farkas}}
-    \State $t \leftarrow \min(t_1,t_2)$
-    \State $x \leftarrow x + t z$; \
-           $f \leftarrow f + t(t/2 + u_*)\, n_*\T z$ \Comment{Prop.~\ref{prop:increment}}
-    \State $u \leftarrow u - t r$; \ $u_* \leftarrow u_* + t$
-    \If{$t_2 \le t_1$} \Comment{full step}
-      \State $\Active \leftarrow \Active \cup \{i_*\}$; \ $u_{k+1} \leftarrow u_*$; \
-             $k \leftarrow k+1$
-      \State insert (Section~\ref{ssec:insert}) and \textbf{break}
-    \Else \Comment{partial step}
-      \State $\Active \leftarrow \Active \setminus \{i_{\mathrm{del}}\}$; \
-             $k \leftarrow k-1$; \ delete (Section~\ref{ssec:delete})
-      \State $s_{i_*} \leftarrow n_*\T x - b_*$
+    \State $t_1, i_{\mathrm{del}} \leftarrow$ \eqref{eq:t1}; \
+           $t_2 \leftarrow$ \eqref{eq:t2};
+           \textbf{if} both infinite \textbf{then stop}: infeasible
+    \State $t \leftarrow \min(t_1,t_2)$; \ $x \leftarrow x + tz$; \
+           $f \leftarrow f + t(t/2 + u_*)\,n_*\T z$; \
+           $u \leftarrow u - tr$; \ $u_* \leftarrow u_* + t$
+    \If{$t_2 \le t_1$}
+      \State $\Active \leftarrow \Active \cup \{i_*\}$, $u_{k+1} \leftarrow u_*$,
+             $k \leftarrow k+1$; insert (\S\ref{ssec:insert}); \textbf{break}
+    \Else
+      \State $\Active \leftarrow \Active \setminus \{i_{\mathrm{del}}\}$,
+             $k \leftarrow k-1$; delete (\S\ref{ssec:delete});
+             $s_{i_*} \leftarrow n_*\T x - b_*$
     \EndIf
   \EndLoop
 \EndLoop

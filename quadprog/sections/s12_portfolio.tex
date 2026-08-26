@@ -47,18 +47,14 @@ Solver & ms & residual \\
 
 Three differences from the synthetic families, all of them in the same direction.
 
-\paragraph{The conditioning is worse by orders of magnitude.} $\kappa(\Sigma)$ is
-$\qpPfSpKappa$ on the S\&P~500 against the $O(n)$ of a Gaussian $BB\T + nI$. A
-sample covariance of returns is close to low rank plus diagonal, which is exactly
-the structure that makes it ill-conditioned, and it is the structure real data
-has.
-
-\paragraph{The active set is nearly everything.} At the minimum-variance corner
-the solver holds $\qpPfSpActive{}$ of $\qpPfSpN{} + 1$ constraints active on the
-S\&P~500, and the optimal portfolio holds only $\qpPfSpNames{}$ names. That is not
-a quirk: minimum variance concentrates, and long-only minimum variance concentrates
-onto a vertex at which almost every bound binds. A well-conditioned Hessian spreads
-the optimum instead, which is why the synthetic families produce small active sets.
+\paragraph{Worse conditioning, and a far larger active set.} $\kappa(\Sigma)$ is
+$\qpPfSpKappa$ on the S\&P~500 against the $O(n)$ of a Gaussian $BB\T + nI$: a
+sample covariance is close to low rank plus diagonal, which is what makes it
+ill-conditioned, and it is what real data looks like. At the minimum-variance
+corner the solver holds $\qpPfSpActive{}$ of $\qpPfSpN{} + 1$ constraints active
+and the portfolio holds only $\qpPfSpNames{}$ names --- not a quirk, but because
+long-only minimum variance concentrates onto a vertex at which almost every bound
+binds, where a well-conditioned Hessian spreads the optimum instead.
 
 \paragraph{And so the exact walk is far longer.} It takes $\qpPfSpOuter{}$ outer
 iterations here against the $\qpPdasBudgetOuter{}$ that the synthetic
@@ -70,12 +66,10 @@ its range: on the S\&P~500 the fast path settles in $\qpPfSpRepairs{}$ repairs
 against $\qpPfSpOuter{}$ outer iterations, and is $\qpPfFastSpeed\times$ faster
 than the exact walk rather than the two-to-three of the synthetic case.
 
-The comparison against the other solvers moves the same way. On the S\&P~500 the
-exact walk is faster than the reference C implementation of the same algorithm ---
-this is the large-$n$ side of the crossover of Section~\ref{ssec:compare} --- while
-on the FTSE~100, at $n = \qpPfFtseN{}$, the reference is faster, which is the
-small-$n$ side. Two points on one curve, on real data, without either being
-constructed for the purpose.
+The crossover of Section~\ref{ssec:compare} also appears here, with a point either
+side: on the S\&P~500 the exact walk beats the reference C implementation of the
+same algorithm, and on the FTSE~100, at $n = \qpPfFtseN{}$, it loses to it ---
+neither instance constructed for the purpose.
 
 \paragraph{Accuracy survives the conditioning.} The active-set method returns
 $\qpPfSpResid$ on the S\&P~500 despite $\kappa(\Sigma) = \qpPfSpKappa$, while the
@@ -107,7 +101,7 @@ return-seeking end, where the budget concentrates in a single asset.}
 Reusing the factorisation costs $\qpPfWarm$\,ms per point against
 $\qpPfCold$\,ms solving each point from scratch, a factor of $\qpPfSweepSpeed$,
 and the answers are identical to the cold solves because a reused point is
-returned only against the certificate of Section~\ref{ssec:sweepcost}.
+returned only against the certificate of Section~\ref{sec:sweep}.
 
 The interesting part is where that factor comes from, and it is not where one
 would expect. The cached active set stayed optimal on only $\qpPfHits{}$ of the
@@ -136,13 +130,9 @@ solving the same problem forty-nine times rather than tracing a frontier. The
 geometric spacing is what makes the left-hand panel a curve, and the honest hit
 rate is the one that comes with it.
 
-\begin{remark}[What this section does and does not claim]
-It claims that the method's advantages are larger on the problems it was designed
-for than on the synthetic families used to test it, and that the direction of that
-gap was predicted rather than discovered after the fact. It does not claim that
-this is the best way to build a portfolio. Minimum variance on a raw sample
-covariance is a poor estimator, and the estimation problem is a separate
-literature;
-here $\Sigma$ is a source of realistically shaped matrices, and nothing in this
-paper depends on how it was estimated.
-\end{remark}
+This section claims that the method's advantages are larger on the problems it was
+designed for than on the synthetic families used to test it, and that the direction
+of the gap was predicted rather than found afterwards. It does not claim this is a
+good way to build a portfolio: minimum variance on a raw sample covariance is a
+poor estimator, and $\Sigma$ is used here only as a source of realistically shaped
+matrices.
