@@ -87,6 +87,10 @@ SCRIPTS = {
         "graphs/quadprog_sweep.pdf",
         "tables/quadprog_sweep_defs.tex",
     ],
+    "quadprog_note.experiment_qp_layout": [
+        "graphs/quadprog_layout.pdf",
+        "tables/quadprog_layout_defs.tex",
+    ],
     "quadprog_note.experiment_qp_compare": [
         "graphs/quadprog_compare.pdf",
         "tables/quadprog_compare.tex",
