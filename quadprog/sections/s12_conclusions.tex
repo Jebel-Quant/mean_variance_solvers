@@ -42,5 +42,36 @@ Both extensions are unguaranteed and both are safe, for the same reason: strict
 convexity makes the KKT conditions sufficient (Proposition~\ref{prop:sufficient}),
 so a candidate can be certified rather than trusted. A method that may fail, but
 that can recognise its own success, needs no convergence theory to be sound --- it
-needs a fallback. That is the one idea in this note that generalises beyond
-quadratic programming.
+needs a fallback.
+
+Three observations from Section~\ref{sec:implementation} generalise past this
+solver, and all three are about the gap between a flop count and a running
+program.
+
+\emph{Layout decides which kernels are reachable.} Holding the triangular factor
+packed rather than dense is worth a factor of $\qpLayRatio$ on the operation that
+reads it (Section~\ref{ssec:packed}), and none of it is arithmetic. In a compiled
+language layout is chosen for cache behaviour; in an array language it
+additionally decides which library routine the data can be handed to at all, and a
+layout that reaches only the general routine pays for that on every call.
+
+\emph{A plausible mechanism is not a measured one.} The usual explanation for the
+previous paragraph --- that a strided view forces a copy at the library boundary
+--- is wrong here, and wrong in a way that casual measurement confirms rather than
+exposes, because timing the two obvious shapes reproduces the headline ratio
+(Remark~\ref{rem:notcopy}). The control that settles it costs one extra line and
+we nearly did not run it.
+
+\emph{Iterations and the cost of an iteration are different targets, and the
+cheaper one is often the first.} Below a few hundred variables a solve costs what
+its array operations cost to dispatch, so halving the arithmetic buys nothing and
+halving the iteration count buys everything: the fast path of
+Section~\ref{sec:pdas} beats the exact walk by more than the gap between two
+implementations of the exact walk in different languages
+(Section~\ref{ssec:compare}). Effort spent on kernels is wasted where the
+bottleneck is the interpreter, and effort spent on iteration counts is wasted
+where it is not; knowing which regime one is in is the whole of the decision.
+
+Of the ideas here, the one that travels furthest is none of those. It is that a
+method which may fail, but which can recognise its own success, needs a
+certificate rather than a convergence theory.
