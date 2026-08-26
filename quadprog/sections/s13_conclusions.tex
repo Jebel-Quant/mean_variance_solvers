@@ -37,7 +37,11 @@ disposable.
 
 Both extensions are unguaranteed and both are safe, for the same reason: strict
 convexity makes the KKT conditions sufficient (Proposition~\ref{prop:sufficient}),
-so a candidate can be certified rather than trusted. That is the idea here which
+so a candidate can be certified rather than trusted. The strict convexity that
+buys it is a choice of scope rather than a boundary of the approach: the dual
+method extends to semidefinite $G$, with finite termination, by
+Boland~\cite{boland1997}, and by proximal regularisation in the solver
+of~\cite{arnstrom2022daqp}. That is the idea here which
 travels furthest --- a method that may fail, but that can recognise its own
 success, needs a certificate rather than a convergence theory.
 
