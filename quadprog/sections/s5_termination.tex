@@ -32,33 +32,23 @@ in~\eqref{eq:select}.
 
 \subsection{The outer loop}
 
-\begin{proposition}[Strict ascent]\label{prop:ascent}
-Every outer iteration that ends in a full step with $t_2 \neq 0$ strictly
-increases the objective, and hence, by Proposition~\ref{prop:dual}, strictly
-increases the dual objective $\psi$.
+\begin{proposition}[Strict ascent and finiteness]\label{prop:ascent}
+Every outer iteration ending in a full step with $t_2 \neq 0$ strictly increases
+the objective, hence by Proposition~\ref{prop:dual} the dual value $\psi$. If every
+full step has $t_2 > 0$, the method terminates after finitely many outer
+iterations.
 \end{proposition}
 
 \begin{proof}
-The outer iteration's total increment is the sum of~\eqref{eq:increment} over its
-inner passes, each term of which is positive by
-Proposition~\ref{prop:increment} --- the accumulated $u_*$ and each step $t$ share
-a sign throughout, by Remark~\ref{rem:reverse} --- and the final term is nonzero
-because $t_2 \neq 0$.
-\end{proof}
-
-\begin{corollary}[Finite termination in the nondegenerate case]\label{cor:finite}
-If every full step has $t_2 > 0$, the method terminates after finitely many outer
-iterations.
-\end{corollary}
-
-\begin{proof}
-A working set determines the pair $(x,u)$ uniquely by
-Proposition~\ref{prop:sub}, and hence determines the objective value. By
-Proposition~\ref{prop:ascent} that value strictly increases from one outer
-iteration to the next, so no working set can recur. There are finitely many
-subsets of $\{1,\dots,m\}$, so the iteration cannot continue indefinitely; and it
-can only stop by the optimality test of~\eqref{eq:select} or by the infeasibility
-verdict.
+The iteration's total increment is the sum of~\eqref{eq:increment} over its inner
+passes, each positive by Proposition~\ref{prop:increment} --- the accumulated $u_*$
+and each step $t$ share a sign throughout, by Remark~\ref{rem:reverse} --- and the
+final term is nonzero because $t_2 \neq 0$. For the second claim, a working set
+determines $(x,u)$ uniquely by Proposition~\ref{prop:sub}, hence determines the
+objective; that value strictly increases from one outer iteration to the next, so
+no working set recurs. There are finitely many subsets of $\{1,\dots,m\}$, and the
+iteration stops only by the optimality test of~\eqref{eq:select} or by the
+infeasibility verdict.
 \end{proof}
 
 \begin{remark}[Degeneracy]\label{rem:degeneracy}
@@ -121,13 +111,8 @@ Remark~\ref{rem:reverse} --- an equality violated from above --- follows by
 applying the proposition to the constraint $-n_*\T x \ge -b_*$, which the equality
 implies.
 
-\begin{remark}[The two hypotheses are exactly the two infinite limits]
-Hypothesis (a) is $t_2 = \infty$ by Lemma~\ref{lem:directions}(ii)
-and~\eqref{eq:t2}; hypothesis (b) is $t_1 = \infty$ by~\eqref{eq:t1}. So the
-condition the implementation tests --- neither step limit is finite --- is
-literally the hypothesis of Proposition~\ref{prop:farkas}, with one caveat: it
-also requires the entering constraint to be genuinely violated. In exact
-arithmetic that is given, since a constraint is only selected when $v_{i_*} > 0$.
-In finite precision it is not, and Section~\ref{sec:arithmetic} takes up the
-difference.
-\end{remark}
+Hypothesis (a) is $t_2 = \infty$ and (b) is $t_1 = \infty$, so the condition the
+implementation tests --- neither step limit finite --- is literally the hypothesis
+of Proposition~\ref{prop:farkas}. One caveat: it also needs the entering
+constraint to be genuinely violated, which exact arithmetic gives free and finite
+precision does not (Section~\ref{sec:arithmetic}).

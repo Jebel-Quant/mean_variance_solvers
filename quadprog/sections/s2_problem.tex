@@ -152,13 +152,10 @@ gives $s = Gx$, and \eqref{eq:comp} with $c_i\T x = b_i$ on the equalities gives
 $b\T\lambda = (Gx - a)\T x$; adding the two yields $f(x)$.
 \end{proof}
 
-So along any sequence of states of the form~\eqref{eq:subsol} the tracked
-objective value is simultaneously the primal objective at the subproblem
-minimiser and the dual objective at the current multipliers. The method is a dual
-ascent: Proposition~\ref{prop:increment} will show the value strictly increases,
-and Proposition~\ref{prop:dual} is what makes that a statement about progress
-towards optimality rather than an accident of bookkeeping. It also gives the
-sandwich $\psi(\lambda) \le f(x^\star) \le f(\tilde x)$ for any dual-feasible
-$\lambda$ and primal-feasible $\tilde x$, so the method approaches the optimal
-value from below --- the mirror image of a primal active-set method, which
-approaches it from above.
+So along any sequence of states of the form~\eqref{eq:subsol} the tracked value is
+at once the primal objective at the subproblem minimiser and the dual objective at
+the current multipliers. That is what makes the strict increase of
+Proposition~\ref{prop:increment} progress towards optimality rather than
+bookkeeping, and it gives the sandwich
+$\psi(\lambda) \le f(x^\star) \le f(\tilde x)$: the method approaches the optimal
+value from below, the mirror image of a primal active-set method.
