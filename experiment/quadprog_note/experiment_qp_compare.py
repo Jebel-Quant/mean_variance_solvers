@@ -245,6 +245,20 @@ def run():
     return results
 
 
+def log_x_ticks(ax, sizes) -> None:
+    """Label a log x-axis at the sizes actually measured, and nowhere else.
+
+    A log axis spanning a narrow range -- 12 to 200 here -- puts minor ticks at
+    2, 3, 4, 6 times each decade, and at figure width their labels overlap into an
+    illegible smear. The sizes are a short discrete list, so label exactly those
+    and silence the minor formatter.
+    """
+    ax.set_xticks(list(sizes))
+    ax.set_xticklabels([str(s) for s in sizes])
+    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
+    ax.tick_params(axis="x", which="minor", length=2)
+
+
 def figure(results) -> None:
     labels = [label for label, _ in solvers()]
     colours = dict(zip(labels,
@@ -259,6 +273,7 @@ def figure(results) -> None:
             ax.plot(SIZES, ys, color=colours[label], marker=markers[label],
                     markersize=4, label=label)
         ax.set_xscale("log")
+        log_x_ticks(ax, SIZES)
         ax.set_yscale("log")
         ax.set_xlabel("$n$")
         ax.set_title(family)

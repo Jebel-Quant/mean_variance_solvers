@@ -129,6 +129,20 @@ def run():
     return fixed, growing
 
 
+def log_x_ticks(ax, sizes) -> None:
+    """Label a log x-axis at the sizes actually measured, and nowhere else.
+
+    A log axis spanning a narrow range -- 12 to 200 here -- puts minor ticks at
+    2, 3, 4, 6 times each decade, and at figure width their labels overlap into an
+    illegible smear. The sizes are a short discrete list, so label exactly those
+    and silence the minor formatter.
+    """
+    ax.set_xticks(list(sizes))
+    ax.set_xticklabels([str(s) for s in sizes])
+    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
+    ax.tick_params(axis="x", which="minor", length=2)
+
+
 def figure(fixed, growing) -> None:
     fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(7.2, 2.9))
 
@@ -149,6 +163,7 @@ def figure(fixed, growing) -> None:
     ax_a.plot(ns, hit_fixed[-1] * (ns / ns[-1]), color="#2ca02c",
               linewidth=0.8, alpha=0.5, linestyle="-.", label="$O(n)$")
     ax_a.set_xscale("log")
+    log_x_ticks(ax_a, SIZES)
     ax_a.set_yscale("log")
     ax_a.set_xlabel("$n$")
     ax_a.set_ylabel("per solve ($\\mu$s)")
@@ -165,6 +180,7 @@ def figure(fixed, growing) -> None:
     ax_b.text(mids[0], 2.06, "$O(n^2)$", fontsize=7, color="#1f77b4")
     ax_b.text(mids[0], 1.06, "$O(n)$", fontsize=7, color="#2ca02c")
     ax_b.set_xscale("log")
+    log_x_ticks(ax_b, SIZES)
     ax_b.set_xlabel("$n$")
     ax_b.set_ylabel("local exponent $d\\log t / d\\log n$")
     ax_b.set_ylim(-0.2, 2.8)

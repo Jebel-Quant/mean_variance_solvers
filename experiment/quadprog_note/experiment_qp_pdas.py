@@ -238,6 +238,20 @@ def run():
     return cells, accepted, rejected, singular_by_family, attempts_by_family
 
 
+def log_x_ticks(ax, sizes) -> None:
+    """Label a log x-axis at the sizes actually measured, and nowhere else.
+
+    A log axis spanning a narrow range -- 12 to 200 here -- puts minor ticks at
+    2, 3, 4, 6 times each decade, and at figure width their labels overlap into an
+    illegible smear. The sizes are a short discrete list, so label exactly those
+    and silence the minor formatter.
+    """
+    ax.set_xticks(list(sizes))
+    ax.set_xticklabels([str(s) for s in sizes])
+    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
+    ax.tick_params(axis="x", which="minor", length=2)
+
+
 def figure(cells) -> None:
     fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(7.2, 2.9))
 
@@ -249,6 +263,7 @@ def figure(cells) -> None:
                   color=colour, marker=marker, linestyle=dash, markersize=4, label=family)
 
     ax_a.set_xscale("log")
+    log_x_ticks(ax_a, SIZES)
     ax_a.set_xlabel("$n$")
     ax_a.set_ylabel("certified (\\%)")
     ax_a.set_ylim(-5, 105)
@@ -257,6 +272,7 @@ def figure(cells) -> None:
     ax_a.legend(framealpha=0.9, loc="lower right")
 
     ax_b.set_xscale("log")
+    log_x_ticks(ax_b, SIZES)
     ax_b.set_xlabel("$n$")
     ax_b.set_ylabel("set repairs to convergence")
     ax_b.set_ylim(bottom=0)
