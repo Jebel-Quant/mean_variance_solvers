@@ -177,6 +177,28 @@ win outright at $n$ in the tens of thousands with a sparse $G$. The table is
 evidence that the method is the right choice on its own ground, and no evidence at
 all about anyone else's.
 
+\paragraph{So which of the four should a reader use?} The question is fair, and the
+table answers it only if one reads the columns against each other, so we state it.
+For dense problems whose optima are vertices, any of the four in-family rows returns
+the same answer to machine precision, and the choice is about constraints other than
+accuracy. Below a few hundred variables the compiled implementations win, and by a
+margin no amount of array-language tuning will close, because what is being measured
+there is interpreter dispatch. Above that the ordering reverses, and the fast path of
+Section~\ref{sec:pdas} leads on every family measured. The two solvers outside the
+family are the right choice once $n$ is large and $G$ is sparse, which this
+experiment does not test and does not claim to.
+
+DAQP deserves a sharper statement than the ordering gives it, because on three
+counts it is simply ahead: it handles semidefinite $G$ through proximal
+regularisation, its worst-case iteration count can be certified offline for a
+parametric family~\cite{arnstrom2022certification}, and it is library-free C sized
+for embedded targets. A reader with a toolchain, a real-time deadline and a
+semidefinite Hessian should use it. What the implementation studied here offers
+against that is narrower and worth naming plainly: no compiler and no build step, a
+drop-in signature for code already written against the reference, and the arithmetic
+advantage above a few hundred variables. Whether that is the better trade is a
+property of the reader's situation and not of the method.
+
 \subsection{What these experiments do not establish}
 \label{ssec:limits}
 
