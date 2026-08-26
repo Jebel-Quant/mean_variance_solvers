@@ -27,7 +27,7 @@ The excluded case $n_* = 0$ is a column of $C$ that is identically zero. Such a
 constraint reads $0 \ge b_*$: no $x$ influences it, so it is either vacuous
 ($b_* \le 0$) or renders the problem infeasible outright. The implementation
 scores it as infinitely violated when $b_* > 0$, which routes it to the
-infeasibility verdict below rather than to a division by zero
+infeasibility verdict below instead of to a division by zero
 in~\eqref{eq:select}.
 
 \subsection{The outer loop}
@@ -41,8 +41,8 @@ iterations.
 
 \begin{proof}
 The iteration's total increment is the sum of~\eqref{eq:increment} over its inner
-passes, each positive by Proposition~\ref{prop:increment} --- the accumulated $u_*$
-and each step $t$ share a sign throughout, by Remark~\ref{rem:reverse} --- and the
+passes, each positive by Proposition~\ref{prop:increment}, since the accumulated $u_*$ and
+each step $t$ share a sign throughout by Remark~\ref{rem:reverse}, and the
 final term is nonzero because $t_2 \neq 0$. For the second claim, a working set
 determines $(x,u)$ uniquely by Proposition~\ref{prop:sub}, hence determines the
 objective; that value strictly increases from one outer iteration to the next, so
@@ -65,9 +65,9 @@ not what one observes.
 
 The interesting case is a stuck iteration: $z = 0$, so the primal cannot move, and
 $t_1 = \infty$, so no multiplier limits the step. The classical reading is that
-the dual is unbounded --- by Proposition~\ref{prop:path} the whole ray is dual
-feasible, and by~\eqref{eq:increment} with $z = 0$ the value is constant, so the
-argument needs care --- and therefore the primal is infeasible. The cleanest
+the dual is unbounded, and therefore the primal infeasible. That argument needs
+care: by Proposition~\ref{prop:path} the whole ray is dual feasible, and
+by~\eqref{eq:increment} with $z = 0$ the value is constant. The cleanest
 statement avoids the dual entirely: the vector $r$ that the solver already holds
 is a Farkas certificate.
 
@@ -107,12 +107,12 @@ The proposition says the solver's infeasibility verdict is a proof rather than a
 exhausted search, and it says what the proof is: the multipliers $r$ of the
 entering normal in terms of the working-set normals, which the solver computed for
 its own purposes, are the Farkas multipliers. The reversed case of
-Remark~\ref{rem:reverse} --- an equality violated from above --- follows by
+Remark~\ref{rem:reverse}, an equality violated from above, follows by
 applying the proposition to the constraint $-n_*\T x \ge -b_*$, which the equality
 implies.
 
 Hypothesis (a) is $t_2 = \infty$ and (b) is $t_1 = \infty$, so the condition an
-implementation tests --- neither step limit finite --- is literally the hypothesis
+implementation tests, neither step limit being finite, is literally the hypothesis
 of Proposition~\ref{prop:farkas}.
 
 \begin{remark}[The remaining hypothesis is not free in floating point]
@@ -120,7 +120,7 @@ of Proposition~\ref{prop:farkas}.
 Proposition~\ref{prop:farkas} also needs the entering constraint to be genuinely
 violated. Exact arithmetic gives that: a constraint is selected only when
 $v_{i_*} > 0$. Floating point does not, and the gap is reachable by the very
-substitution Section~\ref{ssec:insert} argues for --- a Householder reflection and
+substitution Section~\ref{ssec:insert} argues for. A Householder reflection and
 a Givens chain leave the iterate at slightly different points, so a constraint one
 implementation leaves inside its boundary by a few multiples of the machine
 epsilon, another can leave the same distance outside. Reaching the stuck state with

@@ -5,7 +5,7 @@ Each iteration changes the working set by one column, and the factors must follo
 Recomputing them from scratch costs a QR factorisation of $J\T A$, $O(nk^2)$; the
 updates below cost $O(n^2)$ and $O(nk)$ respectively. Over the $O(n)$ iterations
 of a run that is the difference between $O(n^3)$ and $O(n^4)$, and it is the whole
-reason the factors are carried rather than rebuilt.
+reason the factors are carried and not rebuilt.
 
 Both updates work the same way. The invariant~\eqref{eq:inv1} is preserved by
 post-multiplying $J$ with any orthogonal $W$, since $(JW)\T G (JW) = W\T W = I$;
@@ -70,7 +70,7 @@ reflection achieves the same reduction:
 That $W_2 d_2 = \alpha e_1$ is the standard Householder identity, using
 $\beta = 2\,v\T d_2$. The reflection is symmetric, so it applies to the columns of
 $J$ and to $d_2$ as one operation, and applying it to a block is a
-matrix--vector product followed by a rank-one update --- two operations of
+matrix--vector product followed by a rank-one update, two operations of
 $O(n(n-k))$, where the Givens chain is $n-k-1$ operations of $O(n)$. The
 arithmetic is comparable; the number of operations is not.
 
@@ -78,7 +78,7 @@ arithmetic is comparable; the number of operations is not.
 Numerical analysis prescribes $\alpha = -\mathrm{sign}((d_2)_1)\norm{d_2}$, which
 makes $v_1 = (d_2)_1 - \alpha$ a sum of like-signed terms. The implementation
 takes the opposite sign, $\alpha = \mathrm{sign}((d_2)_1)\norm{d_2}$, so as to
-reproduce the sign convention of the reference's Givens chain --- and thereby walks
+reproduce the sign convention of the reference's Givens chain, and thereby walks
 into the cancellation the prescription exists to avoid, severely when $d_2$ is
 already close to a positive multiple of $e_1$. The cure is algebraic rather than a
 change of convention: with $\tau = \norm{(d_2)_{2:}}^2$ and
@@ -104,7 +104,7 @@ $W_1 W_2 \cdots W_j$ as $I + WY\T$, so that $j$ reflections reach a matrix in on
 level-3 update rather than $j$ level-2 ones. That is what makes blocked QR
 factorisation fast, and it is the first thing to reach for here.
 
-It is not available, for a structural reason rather than an implementation one.
+It is not available, for a structural reason, not an implementation one.
 Blocking requires the $j$ reflections to be known before any is applied. In this
 iteration the reflection that inserts a constraint is determined by
 $d = J\T n_*$, which depends on $J$ \emph{after} the previous insertion; and
@@ -136,8 +136,8 @@ components of distinct vectors. What restores the shape is a \emph{chase} of
 $k-p$ plane transformations: for $j = p,\dots,k-1$ in order, a $2\times2$
 orthogonal acting on rows $j$ and $j+1$ annihilates $\tilde R_{j+1,j}$, and the
 same transformation is applied to columns $j$ and $j+1$ of $J$. The chase is
-inherently sequential --- the parameters of each transformation are read from
-entries the previous one wrote --- which is why no batched form of it exists.
+inherently sequential, the parameters of each transformation being read from entries
+the previous one wrote, which is why no batched form of it exists.
 
 The implementation takes the $2 \times 2$ block to be the symmetric reflection
 \begin{equation}
@@ -165,8 +165,8 @@ Proposition~\ref{prop:invariance} says that is free.
 \end{remark}
 
 \begin{remark}[Where the storage cost lands]
-$R$ is held as packed columns --- entry $(i,j)$, $i \le j$, at offset
-$j(j+1)/2 + i$ --- so its leading $k \times k$ block, which the solve for $r$ reads
+$R$ is held as packed columns, entry $(i,j)$ with $i \le j$ at offset
+$j(j+1)/2 + i$, so its leading $k \times k$ block, which the solve for $r$ reads
 once per iteration, is a contiguous run at every $k$. Insertion writes one column,
 contiguous in that layout; deletion mixes two \emph{rows} across a range of
 columns, which is a strided gather because column offsets grow with the index. The

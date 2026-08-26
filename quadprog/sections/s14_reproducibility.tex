@@ -39,7 +39,7 @@ arithmetic; it does not establish that the implementation satisfies them, which
 matters because it reaches them through a packed triangular factor addressed by
 hand and through library calls writing in place into a view of $J$'s own buffer.
 \verb|experiment_qp_identities| evaluates both sides of all \qpIdentCount{} of them
-against the solver's own internal state rather than a reimplementation ---
+against the solver's own internal state and not a reimplementation:
 \qpIdentChecks{} checks over \qpIdentStates{} factorisation states, worst relative
 residual $\qpIdentWorst$. Two come out exactly zero, and one of those is
 Remark~\ref{rem:scaleexact}.
@@ -48,9 +48,9 @@ Remark~\ref{rem:scaleexact}.
 $0.4.1$~\cite{cvxquadprog}, archived with a DOI. The measurements are tied to that
 version rather than to the latest release, so that the reference keeps pointing at
 the code that produced them. The experiments import the package's private modules
-where the claims are about private state --- $J$, the packed $R$, and the vectors
-$d$, $z$, $r$ --- and instrument the shipped routines by wrapping them rather than
-reimplementing them, so what is measured is what runs.
+where the claims are about private state, namely $J$, the packed $R$, and the
+vectors $d$, $z$, $r$, and they instrument the shipped routines by wrapping them
+instead of reimplementing them, so what is measured is what runs.
 
 \paragraph{Regenerating everything.} From the paper's source tree, \verb|make figures|
 runs all five scripts and rewrites every generated file; \verb|make compile| then
@@ -64,7 +64,7 @@ so that a reduced run cannot overwrite the committed ones.
 arithmetically from the family, size and instance index, so the tables reproduce
 across runs and machines. Timings do not, and are not claimed to: they were taken
 on one machine against NumPy built on Apple Accelerate, with no thread count set.
-That is not incidental --- this solver pushes its work into BLAS calls, so its
+That is not incidental. This solver pushes its work into BLAS calls, so its
 timings inherit whatever threading decision the installed library makes by default,
 and those defaults differ between libraries by more than the effects measured here.
 Accelerate exposes no thread control, so there was nothing to set; on a library

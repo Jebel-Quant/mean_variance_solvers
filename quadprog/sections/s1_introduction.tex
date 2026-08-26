@@ -12,26 +12,26 @@ and the first $m_{\mathrm{eq}}$ of the $m$ constraints understood as equalities,
 is solved a great many times a day. Mean-variance portfolio
 selection~\cite{markowitz1952} is exactly~\eqref{eq:qp}; so is every step of a
 sequential quadratic programming method and every horizon of a linear model
-predictive controller. For dense instances of small to moderate size --- $n$ from
-a handful to a few thousand --- the method of choice has for forty years been the
+predictive controller. For dense instances of small to moderate size, with $n$ from
+a handful to a few thousand, the method of choice has for forty years been the
 dual active-set algorithm of Goldfarb and Idnani~\cite{goldfarb1982,goldfarb1983},
 whose distinguishing property is that it needs no phase-one problem: the
 unconstrained minimiser $G^{-1}a$ is dual feasible for free, so the iteration can
 start there and drive primal infeasibility to zero.
 
-This paper is a derivation of that method in the form the \texttt{cvx-quadprog}
+This paper derives that method in the form the \texttt{cvx-quadprog}
 package~\cite{cvxquadprog} implements it, together with the two extensions that
 package adds. Its aim is to state every identity the solver depends on, derive
-it, and name the degenerate cases --- and then, in
-Section~\ref{sec:experiments}, to check each one against the code that ships,
-which is a different question from whether it is true. Every empirical claim made
+it, and name the degenerate cases. Section~\ref{sec:experiments} then checks each
+one against the code that ships, which is a different question from whether it is
+true. Every empirical claim made
 anywhere below is measured there; none is quoted from elsewhere.
 
 \subsection{Why the dual method}
 
 A primal active-set method maintains a feasible iterate and works towards
 stationarity. It must therefore begin at a feasible point, and finding one is a
-linear program in its own right --- the phase-one problem. The dual method
+linear program in its own right, the phase-one problem. The dual method
 reverses the roles. It maintains stationarity and the sign conditions on the
 multipliers throughout, and works towards feasibility. Its starting point is
 free, because with no constraint active the stationarity condition reads
@@ -63,7 +63,7 @@ Arnstr\"om, Bemporad and Axehill~\cite{arnstrom2022daqp} carry the same dual wal
 recursive $LDL^\top$ updates rather than the $(J,R)$ pair used here, handle
 semidefinite $G$ by outer proximal-point iterations, and ship it as library-free C
 for embedded model-predictive control; it is benchmarked against this solver in
-Section~\ref{ssec:compare}, being the fair comparison --- same family, different
+Section~\ref{ssec:compare}, being the fair comparison: same family, different
 linear algebra. Arnstr\"om and Axehill~\cite{arnstrom2022certification}
 additionally compute the \emph{exact} worst-case iteration count of active-set
 methods on parametric QP families. That is stronger than anything proved here, and
@@ -79,9 +79,9 @@ class, which is the one claim here we believe to be new.} For bound constraints 
 working-set system is a principal submatrix of $G^{-1}$, hence positive definite
 whatever the guess, and that $P$-matrix property is the hypothesis under which
 block principal pivoting terminates finitely~\cite{judice1994,murty1988,%
-schmelzer2026nncg}. For $C\T x \ge b$ it is lost, structurally rather than for want
-of an anti-cycling rule (Section~\ref{sec:pdas}), and the consequence is measured
-rather than asserted: over $600$ attempts on well-posed random families the failure
+schmelzer2026nncg}. For $C\T x \ge b$ it is lost, structurally, not for want
+of an anti-cycling rule (Section~\ref{sec:pdas}), and the consequence is measured, not
+asserted: over $600$ attempts on well-posed random families the failure
 never occurs, and repeating columns of $C$ raises it to $93\%$
 (Section~\ref{ssec:pdas}).
 
@@ -102,7 +102,7 @@ speed alone.
 
 \item \textbf{An exact objective increment.} A step of length $t$ changes the
 objective by $t(t/2 + u_*)\,z\T G z$ (Proposition~\ref{prop:increment}), so the
-value is carried rather than re-evaluated, and the increment is positive in both
+value is carried and not re-evaluated, and the increment is positive in both
 step directions.
 
 \item \textbf{The infeasibility verdict is a certificate.} When the primal cannot
@@ -113,7 +113,7 @@ infeasible problem; it proves the problem infeasible.
 
 \item \textbf{Linear dependence is unreachable.} The step rules make the
 working-set normals full column rank for free, so no rank test is needed anywhere
-(Proposition~\ref{prop:rank}) --- and that is precisely what guessing gives up.
+(Proposition~\ref{prop:rank}), and that is what guessing gives up.
 
 \item \textbf{The cost of a warm start, corrected.} Recovery from cached factors
 is $O(n^2)$ and not $O(nk)$, the $n^2$ residing entirely in $x_u = JJ\T a$
@@ -131,7 +131,7 @@ conditions and the working-set subproblem, the invariants, the iteration and its
 termination, and the two factorisation updates.
 Sections~\ref{sec:pdas} and~\ref{sec:sweep} treat the
 two departures from the classical method, and Sections~\ref{sec:experiments}
-and~\ref{sec:portfolio} the measurements --- first against the claims above, then
+and~\ref{sec:portfolio} the measurements, first against the claims above and then
 on real data.
 
 \subsection{Notation}
