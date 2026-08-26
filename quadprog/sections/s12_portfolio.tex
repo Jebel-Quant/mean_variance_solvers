@@ -4,8 +4,8 @@
 Every experiment so far draws its Hessian as $G = BB\T + nI$ for Gaussian $B$.
 Section~\ref{ssec:limits} names that as a limitation and says the bias runs against
 the method the paper advocates. This section makes the claim concrete rather than
-leaving it as a caveat, by solving the problem the method was built for --- the
-long-only portfolio --- on two real return series.
+leaving it as a caveat, by solving the problem the method was built for, the
+long-only portfolio, on two real return series.
 
 The program is~\eqref{eq:qp2} with the budget as the single equality and
 non-negativity as the bounds,
@@ -21,7 +21,7 @@ the S\&P~500 at $n = \qpPfSpN{}$ assets over $T = \qpPfSpT{}$ days, and the
 FTSE~100 at $n = \qpPfFtseN{}$ over $T = \qpPfFtseT{}$.
 
 The FTSE series carries one instrument quoted flat across the whole window. Its
-sample variance is zero, so $\Sigma$ is singular --- rank $86$ of $87$ --- and the
+sample variance is zero, so $\Sigma$ is singular, rank $86$ of $87$, and the
 solver refuses the problem, correctly: an asset with no variance has no place in a
 variance-minimising portfolio. The degenerate column is dropped and
 $n = \qpPfFtseN{}$ is the result.
@@ -52,7 +52,7 @@ $\qpPfSpKappa$ on the S\&P~500 against the $O(n)$ of a Gaussian $BB\T + nI$: a
 sample covariance is close to low rank plus diagonal, which is what makes it
 ill-conditioned, and it is what real data looks like. At the minimum-variance
 corner the solver holds $\qpPfSpActive{}$ of $\qpPfSpN{} + 1$ constraints active
-and the portfolio holds only $\qpPfSpNames{}$ names --- not a quirk, but because
+and the portfolio holds only $\qpPfSpNames{}$ names. That is not a quirk: because
 long-only minimum variance concentrates onto a vertex at which almost every bound
 binds, where a well-conditioned Hessian spreads the optimum instead.
 
@@ -106,9 +106,9 @@ returned only against the certificate of Section~\ref{sec:sweep}.
 The interesting part is where that factor comes from, and it is not where one
 would expect. The cached active set stayed optimal on only $\qpPfHits{}$ of the
 $\qpPfPoints{}$ points; the other $\qpPfMisses{}$ were misses. A sweep spanning
-three decades of $\rho$ moves a long way between consecutive points --- the
-right-hand panel shows the holdings falling from $\qpPfNamesHi{}$ names to
-$\qpPfNamesLo{}$ across it --- and the active set moves with them. Sampling the
+three decades of $\rho$ moves a long way between consecutive points, the right-hand
+panel showing the holdings falling from $\qpPfNamesHi{}$ names to $\qpPfNamesLo{}$
+across it, and the active set moves with them. Sampling the
 frontier more finely would raise the hit rate directly; nothing here is tuned to
 produce one.
 
@@ -126,13 +126,13 @@ An earlier version of this experiment spaced $\rho$ linearly. Almost every point
 then landed on the return-seeking corner, where the solution is a single asset and
 does not move, and the cache hit $48$ times out of $50$. That number was real and
 any conclusion drawn from it would have been worthless, because the sweep was
-solving the same problem forty-nine times rather than tracing a frontier. The
+solving the same problem forty-nine times instead of tracing a frontier. The
 geometric spacing is what makes the left-hand panel a curve, and the honest hit
 rate is the one that comes with it.
 
 This section claims that the method's advantages are larger on the problems it was
 designed for than on the synthetic families used to test it, and that the direction
-of the gap was predicted rather than found afterwards. It does not claim this is a
+of the gap was predicted, not found afterwards. It does not claim this is a
 good way to build a portfolio: minimum variance on a raw sample covariance is a
 poor estimator, and $\Sigma$ is used here only as a source of realistically shaped
 matrices.

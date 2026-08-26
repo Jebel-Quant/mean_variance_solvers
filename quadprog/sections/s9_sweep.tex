@@ -43,9 +43,9 @@ $J_1 y = J_1 R u = G^{-1}A u$ by Proposition~\ref{prop:blocks}(iii), so
 $x = x_u + G^{-1}Au$, again as in~\eqref{eq:subsol}.
 \end{proof}
 
-The cost is $O(n^2)$, all of it in $x_u = J(J\T a)$ --- two matrix--vector products
-with a dense $n \times n$ matrix, $J$ having lost its triangularity at the first
-update --- with $O(nk + k^2)$ for everything after. Re-deriving the factors for the
+The cost is $O(n^2)$, all of it in $x_u = J(J\T a)$: two matrix--vector products with
+a dense $n \times n$ matrix, $J$ having lost its triangularity at the first update.
+Everything after that is $O(nk + k^2)$. Re-deriving the factors for the
 same working set instead costs $k$ insertions at $O(n^2)$ each, so the saving is a
 factor of order $k$, largest exactly where it matters: a long-only optimum is a
 vertex at which most bounds bind.
@@ -56,8 +56,8 @@ same curve and either reading fits; holding $k$ fixed at $\qpSweepFixedK{}$ whil
 $n$ grows separates them, and the measured local exponent
 $d\log t/d\log n$ then runs from $\qpSweepSlopeLo$ at $n = \qpSweepNlo{}$ to
 $\qpSweepSlopeHi$ at $n = \qpSweepNhi{}$. Neither is $1$. The flat small-$n$ end is
-an overhead floor --- a hit there costs what its dozen array operations cost to
-dispatch --- and it ends where the $n^2$ overtakes dispatch.
+an overhead floor, a hit there costing what its dozen array operations cost to
+dispatch, and it ends where the $n^2$ overtakes dispatch.
 
 Whether $(x,u)$ from~\eqref{eq:recover} is the answer to the \emph{full} program
 is then one certificate away, and it is the same certificate as before: the
@@ -65,7 +65,7 @@ multipliers of the working-set inequalities must be non-negative and no constrai
 outside the working set may be violated. By
 Proposition~\ref{prop:sufficient} that is a proof. Note the asymmetry in cost: the
 recovery is $O(n^2)$ but the check must look at every constraint, so it is
-$O(nm)$ for a dense $C$ --- verification, not recovery, is what dominates a
+$O(nm)$ for a dense $C$, so verification and not recovery is what dominates a
 successful reuse on a dense problem.
 
 \subsection{Repair rather than restart}
@@ -94,7 +94,7 @@ preserving it.
 \end{proof}
 
 From such a state the iteration of Section~\ref{sec:iteration} cannot tell a
-resumed solve from a cold one --- the invariant is all it reads --- so the resumed
+resumed solve from a cold one, the invariant being all it reads, so the resumed
 walk needs only to drive the remaining primal infeasibility to zero. In the worst
 case everything is dropped and the resumed walk is a cold solve, so the repair is
 never worse than restarting up to the cost of the drops themselves.

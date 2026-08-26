@@ -7,7 +7,7 @@ implementation reaches them through a triangular factor held as packed columns
 addressed by hand and through library calls writing in place into a view of $J$'s
 own buffer, correct only while that view stays contiguous. A sign error in the
 packed indexing would leave every proposition above true and the running solver
-wrong --- quietly, since the invariants are maintained across a run rather than
+wrong, and wrong quietly: the invariants are maintained across a run, not
 recomputed, and a solver drifting from $J\T G J = I$ still returns a vector that is
 very nearly right. The second is the set of quantities the paper reasons about but
 cannot predict: how often a guessed active set is certifiable, how many repairs it
@@ -20,10 +20,10 @@ distributed with this paper's sources.
 
 Section~\ref{sec:pdas} makes two claims only measurement settles: that the block
 exchange converges in a number of repairs independent of $n$, and that losing the
-$P$-matrix property for general $C$ is a real exposure rather than a technicality.
+$P$-matrix property for general $C$ is a real exposure and not a technicality.
 Figure~\ref{fig:pdas} addresses both over \qpPdasFamilies{} constraint families,
 \qpPdasInstances{} instances each, at $n \in \{\qpPdasSizes\}$, instrumenting the
-shipped routines rather than reimplementing them.
+shipped routines instead of reimplementing them.
 
 \begin{figure}[ht]
 \centering
@@ -32,12 +32,12 @@ shipped routines rather than reimplementing them.
 to convergence. Four families are certified without exception at every size and
 settle in \qpPdasRepairsLo{} to \qpPdasRepairsHi{} repairs while the exact walk's
 outer iterations grow linearly in $n$. The fifth is constructed so that a guessed
-set can be linearly dependent, and it fails --- which is the point.}
+set can be linearly dependent, and it fails.}
 \label{fig:pdas}
 \end{figure}
 
-On the four well-posed families --- bounds, budget-plus-bounds, dense $C$, and
-$C$ with equalities --- every guess is certified at every size, and the repair
+On the four well-posed families (bounds, budget-plus-bounds, dense $C$, and $C$
+with equalities) every guess is certified at every size, and the repair
 count rises only from \qpPdasRepairsLo{} to \qpPdasRepairsHi{} across a
 sixteen-fold range of $n$, never exceeding \qpPdasRepairsMax{}. The comparison
 that matters is against the exact walk on the same instances: on
@@ -47,7 +47,7 @@ nearly flat. That is the trade Section~\ref{sec:pdas} describes, measured.
 
 \paragraph{The rank-deficient guess is real, and invisible by accident.} Over
 \qpPdasInstances{} instances at each of five sizes, not one guess on those four
-families produced a rank-deficient working-set system --- from which a reader might
+families produced a rank-deficient working-set system, from which a reader might
 conclude the exposure is theoretical. It is not, merely invisible in random data,
 where a dense $C$ almost never has a dependent subset the guess happens to name.
 The fifth family makes it reachable in the most elementary way, by repeating
@@ -55,8 +55,8 @@ columns of $C$, so that naming both copies induces a singular system: there the
 rank test fires on \qpPdasSingularDup\% of attempts and the certified fraction
 collapses from \qpPdasCertSmall\% at $n = \qpPdasNsmall{}$ to \qpPdasCertBig\% at
 $n = \qpPdasNbig{}$, against \qpPdasSingularBox\% on the others. Duplicated
-constraints are not exotic --- they arise whenever a model is assembled
-programmatically from overlapping rules --- and this is the concrete form of the
+constraints are not exotic, arising whenever a model is assembled programmatically
+from overlapping rules, and this is the concrete form of the
 structural point in Section~\ref{sec:pdas}: for bounds the system is a principal
 submatrix of $G^{-1}$ and cannot be singular, and nothing about general $C$
 preserves that.
@@ -64,7 +64,7 @@ preserves that.
 \paragraph{Where the failures are caught.} Of the candidates reaching the
 certificate, \qpPdasAccepted{} were accepted with a worst KKT
 residual~\eqref{eq:certificate} of $\qpPdasAcceptWorst$, and \qpPdasRejected{}
-were rejected. We report that asymmetry rather than smoothing it: on these
+were rejected. We report that asymmetry instead of smoothing it: on these
 families the certificate never had to reject a converged candidate, because the
 failures were caught earlier and more cheaply by the Cholesky factorisation
 refusing a dependent guess. The certificate remains the guarantee, but on this
@@ -78,7 +78,7 @@ that it is implemented correctly and says nothing about whether the method is wo
 using. Table~\ref{tab:compare} and Figure~\ref{fig:compare} answer that against
 four alternatives. Two are outside the family: an operator-splitting method (OSQP)
 and an interior-point method (Clarabel). Two are inside it, and are the
-informative ones --- the reference C implementation of this exact algorithm, and
+informative ones: the reference C implementation of this exact algorithm, and
 DAQP~\cite{arnstrom2022daqp}, which walks the same dual active set but carries it
 on recursive $LDL^\top$ updates of the working-set system rather than on the
 $(J,R)$ pair of Section~\ref{sec:factorisation}.
@@ -89,7 +89,7 @@ method stops at a tolerance, and an interior-point method approaches the boundar
 without reaching it. Every solver is therefore asked for $\qpCmpTol$ and the
 residual it \emph{achieves} is reported beside its time, in the scaled sup-norm
 of~\eqref{eq:certificate}. Multipliers are recovered from the returned iterate by
-least squares rather than read from the solver, so none is charged for reporting
+least squares and not read from the solver, so none is charged for reporting
 them in another convention.
 
 \begin{table}[ht]
@@ -116,7 +116,7 @@ Solver & ms & resid. & ms & resid. & ms & resid. & ms & resid. \\
 \includegraphics[width=0.86\textwidth]{graphs/quadprog_compare.pdf}
 \caption{Time per solve against $n$ on three constraint shapes. The reference
 implementation of the same algorithm wins at the small end, where cost is
-interpreter dispatch rather than arithmetic, and loses at the large end, where it
+interpreter dispatch and not arithmetic, and loses at the large end, where it
 is arithmetic.}
 \label{fig:compare}
 \end{figure}
@@ -135,7 +135,7 @@ by-product, the crossover the implementation is designed around.
 
 \paragraph{Accuracy is where the interior-point method pays.} Clarabel is asked
 for $\qpCmpTol$ and delivers between $10^{-9}$ and
-$\qpCmpResidClarabel$, against $\qpCmpResidExact$ for the active-set method ---
+$\qpCmpResidClarabel$, against $\qpCmpResidExact$ for the active-set method,
 several orders of magnitude, and not a defect of the solver. The optima here are
 vertices of the feasible polyhedron, with many constraints active, and a vertex is
 exactly the case an interior-point method approaches asymptotically. OSQP reaches
@@ -146,8 +146,9 @@ combinatorially structured optima an active-set method returns an answer the
 others can only approach, and comparing times without residuals hides that.
 
 \paragraph{A different factorisation of the same walk crosses over too.} Both
-in-family solvers behave the same way: fastest of everything at $n = 50$ --- the C
-reference on bounds and on budget-plus-bounds, DAQP on dense $C$ --- and behind at
+in-family solvers behave the same way. Both are fastest of everything at $n = 50$,
+the C reference on bounds and on budget-plus-bounds and DAQP on dense $C$, and both
+are behind at
 $n = \qpCmpNhi{}$, where DAQP is $\qpCmpVsDaqp\times$ slower on bounds and
 $\qpCmpVsDaqpDense\times$ on dense $C$. Accuracy is indistinguishable from ours
 throughout ($\qpCmpResidDaqp$ at worst), as one expects of methods in the same
@@ -162,7 +163,7 @@ implementation.
 \paragraph{Guessing the active set is worth more than the language.} The
 \texttt{fast} path is the quickest of everything measured at
 $n = \qpCmpNhi{}$ on every family, and it beats the exact walk by roughly a
-factor of two to three --- more than the gap between the two implementations of the
+factor of two to three, more than the gap between the two implementations of the
 exact walk at the same size. Iterations, not the cost of an iteration, are what
 dominate at these sizes, which is the argument of Section~\ref{sec:pdas} arriving
 from a different direction.
@@ -180,8 +181,8 @@ all about anyone else's.
 \label{ssec:limits}
 
 Three limits. These verify agreement between the code and the identities proved
-here, not the absence of defects elsewhere --- in constraint selection, the
-infeasibility verdict, or degenerate input --- for which a differential comparison
+here, not the absence of defects elsewhere, in constraint selection or the
+infeasibility verdict or degenerate input, for which a differential comparison
 of complete trajectories against an independent implementation would be the
 instrument. They say nothing about conditioning: problems use
 $G = BB\T + nI$, and the residuals would grow with $\kappa(G)$. That choice also

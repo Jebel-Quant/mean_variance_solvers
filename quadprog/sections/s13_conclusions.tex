@@ -8,7 +8,7 @@ are a $G$-orthonormal basis of $\R^n$, arranged so that the trailing block spans
 the working set's feasible subspace. Every quantity the iteration needs is then one
 matrix--vector product or one triangular solve away, and every quantity it
 \emph{consumes} has a closed form in $(G, A, n_*)$ alone
-(Proposition~\ref{prop:invariance}) --- which is why the representation may be
+(Proposition~\ref{prop:invariance}), which is why the representation may be
 chosen for speed, and why two implementations holding different factors compute
 the same step.
 
@@ -28,7 +28,7 @@ The first is that linear dependence among the working-set normals is unreachable
 the step rules exclude it (Proposition~\ref{prop:rank}), so no rank test is
 needed anywhere. Guessing the active set forfeits exactly that protection, which
 is the real reason a primal--dual active-set fast path admits no
-finite-termination theorem for general constraints --- there is no $P$-matrix
+finite-termination theorem for general constraints: there is no $P$-matrix
 structure to appeal to once the working-set system stops being a principal
 submatrix. The second is that the factors depend on $G$ and the working set but
 not on the linear term, which is what makes a family of programs differing only in
@@ -37,16 +37,16 @@ disposable.
 
 Both extensions are unguaranteed and both are safe, for the same reason: strict
 convexity makes the KKT conditions sufficient (Proposition~\ref{prop:sufficient}),
-so a candidate can be certified rather than trusted. The strict convexity that
+so a candidate can be certified instead of trusted. The strict convexity that
 buys it is a choice of scope rather than a boundary of the approach: the dual
 method extends to semidefinite $G$, with finite termination, by
 Boland~\cite{boland1997}, and by proximal regularisation in the solver
 of~\cite{arnstrom2022daqp}. That is the idea here which
-travels furthest --- a method that may fail, but that can recognise its own
-success, needs a certificate rather than a convergence theory.
+travels furthest. A method that may fail, but that can recognise its own success,
+needs a certificate and not a convergence theory.
 
 One observation generalises past this solver. Below a few hundred variables a
-solve costs what its array operations cost to dispatch rather than what its
+solve costs what its array operations cost to dispatch, not what its
 arithmetic costs, so halving the flop count buys nothing and halving the
 \emph{iteration} count buys everything: the fast path of Section~\ref{sec:pdas}
 beats the exact walk by more than the gap between two implementations of that walk

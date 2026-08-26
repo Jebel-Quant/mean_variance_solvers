@@ -35,9 +35,9 @@ the lower block of~\eqref{eq:inv2} reads $J_2\T A = 0$.
 
 At the cold start $\Active = \emptyset$, so~\eqref{eq:inv2} is vacuous and
 $J = J_0$ serves. The updates of Section~\ref{sec:updates} maintain both
-invariants by post-multiplying $J$ with orthogonal matrices --- which preserves
+invariants by post-multiplying $J$ with orthogonal matrices, which preserves
 \eqref{eq:inv1} exactly because $J\T G J = I$ is invariant under $J \mapsto JW$
-for $W\T W = I$ --- while restoring the triangular shape of~\eqref{eq:inv2}.
+for $W\T W = I$, while restoring the triangular shape of~\eqref{eq:inv2}.
 
 \begin{proposition}[What the blocks mean]\label{prop:blocks}
 Suppose \eqref{eq:inv1}--\eqref{eq:inv2} hold with $R$ nonsingular. Then
@@ -90,8 +90,7 @@ products.
 
 \begin{remark}[Why fold the two factorisations together]\label{rem:fold}
 An alternative state is $R_G$ together with an explicit orthogonal factor $Q$ of
-the QR factorisation of $R_G^{-\top} A$. That holds the same information --- $J$
-is $J_0 Q$ --- and stores no more numbers. But every use of $J$ in
+the QR factorisation of $R_G^{-\top} A$. That holds the same information, $J$ being $J_0 Q$, and stores no more numbers. But every use of $J$ in
 Section~\ref{sec:iteration} would become a triangular solve followed by an
 orthogonal transformation, two operations where the folded form has one, and the
 solve is the shape that does not reach a tuned kernel. The folded form has $J$
@@ -127,7 +126,7 @@ $n_* \in \R^n$ the quantities
   d = J\T n_*, \qquad z = J_2 d_2, \qquad r = R^{-1} d_1
   \label{eq:dzr}
 \end{equation}
---- with $d = (d_1,d_2)$ split at $k$ --- satisfy $\hat z = z$ and $\hat r = r$.
+, with $d = (d_1,d_2)$ split at $k$, satisfy $\hat z = z$ and $\hat r = r$.
 Moreover, if the two representations are related by~\eqref{eq:freedom} with
 $V = I$, the equalities hold exactly in IEEE~754 arithmetic.
 \end{proposition}
@@ -155,15 +154,15 @@ same argument applies to $\hat z = \sum_{j>k}(s_j J_{\cdot j})(s_j d_j)$.
 
 \begin{remark}[What the proposition does and does not settle]
 It settles that the substitution is exact in the sense that matters: the
-iteration's decisions --- which constraint is most violated, whether the step is
-full or partial, which constraint is dropped --- are functions of $z$ and $r$
+iteration's decisions (which constraint is most violated, whether the step is full
+or partial, which constraint is dropped) are functions of $z$ and $r$
 alone, and those are functions of $(G,A,n_*)$ alone. It does not settle that two
 implementations follow the same trajectory in finite precision, because the
 rounding \emph{within} the reductions differs and the decisions are
 discontinuous functions of the computed values. That is an empirical question,
 and settling it properly needs two independent implementations to compare
-trajectories against each other. What is checkable against one --- and is checked,
-see the Reproducibility note --- is the weaker
+trajectories against each other. What is checkable against one, and is checked in the Reproducibility note, is the
+weaker
 statement that is checkable against one: that the $z$ and $r$ the solver computes
 agree with the representation-free closed forms~\eqref{eq:zclosed}
 and~\eqref{eq:rclosed} to machine precision.
