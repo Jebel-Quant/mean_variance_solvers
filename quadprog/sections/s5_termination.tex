@@ -58,7 +58,7 @@ step then adds one without changing $x$, $u$ or the objective, the ascent argume
 goes silent, and a cycle is not excluded. Goldfarb and Idnani~\cite{goldfarb1983}
 discuss this; the classical remedies are lexicographic or least-index rules. In
 finite precision the question changes character, since a slack of exactly zero is
-not what one observes --- see Section~\ref{sec:arithmetic}.
+not what one observes.
 \end{remark}
 
 \subsection{Infeasibility is a certificate, not a failure}
@@ -111,8 +111,25 @@ Remark~\ref{rem:reverse} --- an equality violated from above --- follows by
 applying the proposition to the constraint $-n_*\T x \ge -b_*$, which the equality
 implies.
 
-Hypothesis (a) is $t_2 = \infty$ and (b) is $t_1 = \infty$, so the condition the
+Hypothesis (a) is $t_2 = \infty$ and (b) is $t_1 = \infty$, so the condition an
 implementation tests --- neither step limit finite --- is literally the hypothesis
-of Proposition~\ref{prop:farkas}. One caveat: it also needs the entering
-constraint to be genuinely violated, which exact arithmetic gives free and finite
-precision does not (Section~\ref{sec:arithmetic}).
+of Proposition~\ref{prop:farkas}.
+
+\begin{remark}[The remaining hypothesis is not free in floating point]
+\label{rem:spurious}
+Proposition~\ref{prop:farkas} also needs the entering constraint to be genuinely
+violated. Exact arithmetic gives that: a constraint is selected only when
+$v_{i_*} > 0$. Floating point does not, and the gap is reachable by the very
+substitution Section~\ref{ssec:insert} argues for --- a Householder reflection and
+a Givens chain leave the iterate at slightly different points, so a constraint one
+implementation leaves inside its boundary by a few multiples of the machine
+epsilon, another can leave the same distance outside. Reaching the stuck state with
+such a constraint selected, a solver must neither enforce it, there being nothing
+to enforce, nor conclude infeasibility, the conclusion not following; the
+implementation studied here sets it aside for the current iterate and takes the
+next candidate, discarding that judgement as soon as the iterate moves. The test
+separating rounding from a real violation is comparatively easy to set, because it
+need only separate rounding from \emph{provable} infeasibility, and infeasibility
+is macroscopic: its size is set by the geometry of the constraints rather than by
+the arithmetic, so the two populations lie orders of magnitude apart.
+\end{remark}
