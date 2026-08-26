@@ -24,7 +24,7 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
   finite-termination guarantee and an operator abstraction that admits dense,
   Gram, factor/Woodbury, and regularised backends. It contains no finance
   material; the other two papers are, in its terms, two backends of one solver.
-- **The Mathematics of a Dual Active-Set Quadratic Programming Solver** — under
+- **Goldfarb–Idnani Revisited: Invariants, Implementation, and Certificates** — under
   [`quadprog/`](quadprog/). A derivation of the Goldfarb–Idnani dual active-set
   method in the form the [`cvx-quadprog`](https://github.com/Jebel-Quant/quadprog)
   package implements it: the two invariants the solver's single carried matrix

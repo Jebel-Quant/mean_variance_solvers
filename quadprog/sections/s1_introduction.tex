@@ -19,7 +19,7 @@ whose distinguishing property is that it needs no phase-one problem: the
 unconstrained minimiser $G^{-1}a$ is dual feasible for free, so the iteration can
 start there and drive primal infeasibility to zero.
 
-This note is a derivation of that method in the form the \texttt{cvx-quadprog}
+This paper is a derivation of that method in the form the \texttt{cvx-quadprog}
 package~\cite{cvxquadprog} implements it, together with the two extensions that
 package adds. Its aim is to state every identity the solver depends on, derive
 it, and name the degenerate cases --- and then, in
@@ -108,7 +108,7 @@ checks, worst relative residual $\qpIdentWorst$.
 \subsection{What is derived here}
 
 Section~\ref{sec:problem} fixes notation, records the optimality conditions, and
-establishes the two facts the rest of the note leans on: that~\eqref{eq:qp} has at
+establishes the two facts the rest of the paper leans on: that~\eqref{eq:qp} has at
 most one solution, and that its Karush--Kuhn--Tucker conditions are sufficient
 and not merely necessary. The second is what makes a certificate possible, and
 both of the extensions in Sections~\ref{sec:pdas} and~\ref{sec:sweep} are built
