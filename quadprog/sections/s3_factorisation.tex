@@ -126,7 +126,7 @@ $n_* \in \R^n$ the quantities
   d = J\T n_*, \qquad z = J_2 d_2, \qquad r = R^{-1} d_1
   \label{eq:dzr}
 \end{equation}
-, with $d = (d_1,d_2)$ split at $k$, satisfy $\hat z = z$ and $\hat r = r$.
+with $d = (d_1,d_2)$ split at $k$, satisfy $\hat z = z$ and $\hat r = r$.
 Moreover, if the two representations are related by~\eqref{eq:freedom} with
 $V = I$, the equalities hold exactly in IEEE~754 arithmetic.
 \end{proposition}
@@ -161,9 +161,8 @@ implementations follow the same trajectory in finite precision, because the
 rounding \emph{within} the reductions differs and the decisions are
 discontinuous functions of the computed values. That is an empirical question,
 and settling it properly needs two independent implementations to compare
-trajectories against each other. What is checkable against one, and is checked in the Reproducibility note, is the
-weaker
-statement that is checkable against one: that the $z$ and $r$ the solver computes
-agree with the representation-free closed forms~\eqref{eq:zclosed}
+trajectories against each other. What is checkable against one, and is checked in
+the Reproducibility note, is the weaker statement: that the $z$ and $r$ the solver
+computes agree with the representation-free closed forms~\eqref{eq:zclosed}
 and~\eqref{eq:rclosed} to machine precision.
 \end{remark}
