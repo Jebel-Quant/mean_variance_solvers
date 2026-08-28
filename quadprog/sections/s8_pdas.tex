@@ -96,6 +96,82 @@ instead of returning something plausible, and the least-index rule as a way of
 making progress where block exchange oscillates, and not as a termination proof.
 Neither substitutes for the guarantee. The certificate does.
 
+\subsection{The same program in other coordinates}
+
+There is a symmetry here worth making explicit, because it settles what kind of
+property the $P$-matrix argument is and, as Section~\ref{ssec:transform} uses it,
+supplies problems whose answer is known at any conditioning. It is a different
+invariance from Proposition~\ref{prop:invariance}, which fixes what the
+factorisation is free to choose; this one fixes what the coordinates are.
+
+\begin{proposition}[Reparametrisation invariance]\label{prop:reparam}
+Let $T \in \R^{n \times n}$ be invertible and substitute $x = Ty$, which carries
+the data to
+\begin{equation}
+  G' = T\T G T, \qquad a' = T\T a, \qquad C' = T\T C, \qquad b' = b .
+  \label{eq:reparam}
+\end{equation}
+Then for every index set $\Active$,
+\begin{equation}
+  C'_\Active{}\T G'^{-1} C'_\Active = C_\Active\T G^{-1} C_\Active,
+  \qquad
+  C'_\Active{}\T x'_u = C_\Active\T x_u,
+  \qquad
+  \operatorname{rank} C'_\Active = \operatorname{rank} C_\Active ,
+  \label{eq:invdual}
+\end{equation}
+where $x'_u = G'^{-1}a'$. Consequently the transformed program has the same
+feasible slacks at corresponding points, the same optimal active set and the same
+multipliers, its solution is $y^\star = T^{-1}x^\star$, and both the walk of
+Algorithm~\ref{alg:gi} and the repair rule~\eqref{eq:repair} visit the same sets
+in the same order.
+\end{proposition}
+
+\begin{proof}
+$G'^{-1} = T^{-1}G^{-1}T^{-\top}$, so
+$C'_\Active{}\T G'^{-1}C'_\Active
+ = C_\Active\T T\,T^{-1} G^{-1} T^{-\top}\,T\T C_\Active
+ = C_\Active\T G^{-1} C_\Active$, and $x'_u = T^{-1}G^{-1}T^{-\top}T\T a
+= T^{-1}x_u$ gives $C'_\Active{}\T x'_u = C_\Active\T T\,T^{-1}x_u
+= C_\Active\T x_u$. The rank claim is immediate from $T\T$ being invertible.
+Slacks are invariant, since $C'{}\T y - b = C\T Ty - b = C\T x - b$; so
+therefore is every sign test in \eqref{eq:repair}. For the multipliers,
+$G'y - a' = C'\lambda$ reads $T\T(Gx - a - C\lambda) = 0$, which holds exactly
+when $Gx - a = C\lambda$. Both the coefficient matrix and the right-hand side
+of~\eqref{eq:pdassolve} being invariant by \eqref{eq:invdual}, so is
+$\lambda_\Active$, and $x = x_u + G^{-1}C_\Active\lambda_\Active$ maps to
+$T^{-1}x$ by the same identity. The quantities the iterations branch on are thus
+the same in both coordinate systems, and so are the sequences of sets.
+\end{proof}
+
+Two things follow, in opposite directions.
+
+\begin{remark}[Rank deficiency is geometric, not a matter of coordinates]
+Because $\operatorname{rank}C_\Active$ is preserved, no change of variables can
+create a dependent guess where there was none, and none can remove one. The
+exposure of this section is therefore a property of the constraint geometry and
+not of how $C$ happens to be written. That cuts both ways. A dense $C'$ carrying
+no visible structure may be a set of bounds in disguise --- $C' = T\T$ for some
+$T$, in which case $C'_\Active{}\T G'^{-1}C'_\Active$ is a principal submatrix of
+$G^{-1}$ for the untransformed $G$ and the $P$-matrix argument applies in full,
+which nothing in the entries of $C'$ reveals. And the duplicated columns of
+Section~\ref{ssec:pdas}'s fifth family cannot be transformed away.
+\end{remark}
+
+\begin{remark}[There is nothing here to precondition]
+Proposition~\ref{prop:reparam} holds for every invertible $T$, in particular
+for the whitening $T = L^{-\top}$ with $G = LL\T$, which makes $G' = I$. So the
+iteration count cannot be improved by a change of variables, and the conditioning
+of $G$ --- which a Krylov method's iteration count answers to directly --- does
+not enter this one's at all. That is not a coincidence but a restatement of
+\eqref{eq:inv1}: the factor $J$ with $J\T G J = I$ \emph{is} the whitening
+transformation, computed once and carried by the iteration, so a caller who
+applies one first has the solver do the same work twice.
+Section~\ref{ssec:transform} measures both halves of this, and the arithmetic
+loses either way, since the only thing a transformation can change is the
+structure of the data and dense is the worst it can be.
+\end{remark}
+
 \subsection{The certificate}
 
 Because the method may fail, and may fail by stabilising on a set that is simply not
@@ -127,5 +203,42 @@ is bimodal: a candidate constructed from a well-conditioned working set satisfie
 \eqref{eq:certificate} to a few multiples of the machine epsilon, and one built on
 a set that is not has no reason to come close. Section~\ref{ssec:pdas} measures
 the accepted population, whose worst residual is $\qpPdasAcceptWorst$, and reports
-what it did and did not observe on the rejecting side.
+what it did and did not observe on the rejecting side. The separation is not
+unconditional, and Section~\ref{ssec:transform} closes it deliberately: the
+accepted residuals rise with the conditioning, reaching $\qpTfAcceptWorst$ --- four
+orders above the figure just quoted --- before candidates begin landing on the far
+side of the threshold.
 \end{remark}
+
+\subsection{When not to guess}
+\label{ssec:whennot}
+
+The certificate makes a rejected guess safe, not free: its cost is paid and
+discarded, and the exact walk then runs from the beginning. So there is a
+question of policy that the correctness argument does not answer, namely whether
+to guess at all, and it turns on an asymmetry. On a problem where the guess would
+have been certified, declining to try it forfeits the whole speedup;
+on one where it will be rejected, trying costs one guess. At $n = \qpTfTimeN{}$
+those two mistakes are worth $\qpTfFalseSkipCost{}$\,ms and
+$\qpTfMissedSkipCost{}$\,ms respectively, a factor of $\qpTfCostRatio$
+(Section~\ref{ssec:transform}), so a policy should decline only on strong
+evidence.
+
+Conditioning is the obvious evidence and turns out to be the wrong kind. It
+predicts rejection well in aggregate, but the ratio
+$\max_i L_{ii}^2 / \min_i L_{ii}^2$ from the Cholesky factor of $G$ --- free,
+since that factorisation is performed regardless --- does not separate the two
+populations even ordinally, reading $\qpTfEstGood$ at the worst accepted guess
+and $\qpTfEstBad$ at the best rejected one. With the errors that badly ordered
+and priced at $\qpTfCostRatio{}$ to one, no threshold on it is worth having.
+
+What is worth having needs no estimate. Across a family of programs sharing $G$
+in the sense of Section~\ref{sec:sweep}, a rejection is evidence about the rest
+of the family, and it is evidence after the fact rather than a prediction: guess
+until the certificate rejects once, and walk thereafter. On the family measured
+in Section~\ref{ssec:transform} that recovers $\qpTfFamilySaving$\% of the wasted
+work and lands within a percent of the floor set by never guessing at all, while
+on a family where guessing works it declines nothing, because the first
+rejection never comes. The rule is not a tolerance, so it joins the other two of
+this section in not being delicate: it can only cost one guess per family, and it
+cannot affect an answer.

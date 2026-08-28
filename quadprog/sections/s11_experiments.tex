@@ -70,6 +70,85 @@ failures were caught earlier and more cheaply by the Cholesky factorisation
 refusing a dependent guess. The certificate remains the guarantee, but on this
 evidence the rank test does the work in practice.
 
+\subsection{The same program in worse coordinates}
+\label{ssec:transform}
+
+Proposition~\ref{prop:reparam} makes an experiment available that the rest of
+this section cannot run. Substituting $x = Ty$ for a random invertible $T$ leaves
+the active set, the multipliers and the sequence of working sets exactly where
+they were, while $\kappa(G') \approx \kappa(G)\kappa(T)^2$ becomes whatever
+$\kappa(T)$ is asked to make it. The transformed program therefore has a known
+answer at an arbitrarily bad conditioning, obtained from a solve at a good one
+rather than from a second implementation, which is what
+Section~\ref{ssec:limits} otherwise has to do without. Two base problems, bounds
+and dense $C$, at $n = \qpTfN{}$, with $\qpTfInstances{}$ instances at each of
+eight values of $\kappa(T)$ up to $\qpTfKappaTHi$: $\qpTfSolves{}$ transformed
+solves in all, reaching $\kappa(G') = \qpTfKappaHi$.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.86\textwidth]{graphs/quadprog_transform.pdf}
+\caption{Left: the error in $x$ against the conditioning the transformation
+produces, against the $\kappa(G')\varepsilon$ a backward-stable solve is
+entitled to, with the band in which the certificate begins to reject shaded. The
+active set is the reference's in every one of these solves, including those at
+the right-hand end. Right: three policies on a family of
+$\qpTfFamilyTerms{}$ programs sharing an ill-conditioned $G$.}
+\label{fig:transform}
+\end{figure}
+
+\paragraph{The invariance survives the arithmetic; the coordinates do not.} The
+active set agreed with the reference's on \qpTfSetAgree\% of the
+$\qpTfSolves{}$ solves and the outer iteration count on \qpTfIterAgree\%, which
+is the proposition reproduced --- and reproduced well past the point where the
+answer itself has decayed. At the worst conditioning measured the error in $x$
+is $\qpTfErrHi$ and in $\lambda$ is $\qpTfLamErrHi$, some two or three correct
+digits, and the set of binding constraints is still exactly right. Combinatorial
+output is the robust part of what this method returns, which for a long-only
+portfolio is the statement that the holdings are identified long after their
+sizes are not.
+Figure~\ref{fig:transform} also confirms that the errors sit at or below
+$\kappa(G')\varepsilon$ throughout: this is the transformation degrading the
+problem, not the solver degrading with it.
+
+\paragraph{The certificate's rejecting population, at last.} Section~\ref{ssec:pdas}
+had nothing to report on the rejecting side, because on well-conditioned data the
+rank test caught every failure first. Here the other case appears, and it
+appears as a band rather than at a threshold: the rejected fraction across the
+grid runs $\qpTfRates$\%, the first rejection arriving at
+$\kappa(G') = \qpTfFirstBad$ while guesses are still being certified as far out
+as $\qpTfLastGood$, a majority failing only from $\qpTfMajority$, and the two
+bases disagreeing throughout the transition. The accepted candidates keep the
+residual the certificate demands of them, $\qpTfAcceptWorst$ at worst. What is
+being rejected is not a wrong active set, since the set is right throughout, but
+a primal--dual pair the certificate cannot verify to tolerance, and it is right
+to refuse: past this band the walk's own answer is no better, and nothing in
+double precision recovers what the transformation has destroyed.
+The remark of Section~\ref{sec:pdas} on the two tolerances should be read with
+this in view. The separation it relies on is real, and it is a property of
+well-conditioned data rather than of the certificate.
+
+\paragraph{What a rejected guess costs.} At $n = \qpTfTimeN{}$ on the
+well-conditioned end the fast path takes $\qpTfFastWell$\,ms against the exact
+walk's $\qpTfWalkWell$\,ms, a margin of $\qpTfWellSpeedup\times$ on this
+family and size, and of the same character as the ones
+Section~\ref{ssec:compare} reports. Inside the rejecting band it takes
+$\qpTfFastIll$\,ms against $\qpTfWalkIll$\,ms: $\qpTfIllPenalty$\% \emph{slower}
+than not guessing, the guess being paid for and thrown away. So the ordering
+Section~\ref{ssec:compare} reports has a conditioning boundary, and
+Section~\ref{ssec:whennot} asks what to do about it. The two mistakes cost
+$\qpTfFalseSkipCost$\,ms and $\qpTfMissedSkipCost$\,ms, and the free conditioning
+estimate does not order them: $\qpTfEstGood$ at the worst accepted guess against
+$\qpTfEstBad$ at the best rejected one. Remembering a rejection works where
+predicting one does not. On a family of $\qpTfFamilyTerms{}$ linear terms over
+one ill-conditioned $G$, where $\qpTfFamilyRejected{}$ of the
+$\qpTfFamilyTerms{}$ guesses are rejected, guessing every time costs
+$\qpTfFamilyAlways$\,ms, stopping after the first rejection costs
+$\qpTfFamilyCached$\,ms, and never guessing costs $\qpTfFamilyNever$\,ms: the
+rule recovers $\qpTfFamilySaving$\% of the waste and leaves a percent of the
+floor on the table, in exchange for keeping the whole speedup on families where
+guessing works.
+
 \subsection{Against other solvers, and against the same method done differently}
 \label{ssec:compare}
 
@@ -164,7 +243,10 @@ $n = \qpCmpNhi{}$ on every family, and it beats the exact walk by roughly a
 factor of two to three, more than the gap between the two implementations of the
 exact walk at the same size. Iterations, not the cost of an iteration, dominate
 at these sizes; Section~\ref{sec:pdas}'s argument arrives here from a different
-direction.
+direction. This ordering is the well-conditioned one, and it reverses:
+Section~\ref{ssec:transform} locates the conditioning at which the certificate
+begins rejecting the guess, past which the \texttt{fast} path is the slowest of
+the four in-family rows rather than the quickest.
 
 \paragraph{What this comparison is not.} These are dense problems of small to
 moderate size whose optima are vertices, which is the territory
@@ -204,8 +286,10 @@ These experiments verify agreement between the code and the identities proved
 here, not the absence of defects elsewhere, in constraint selection or the
 infeasibility verdict or degenerate input, for which a differential comparison
 of complete trajectories against an independent implementation would be the
-instrument. They say nothing about conditioning: problems use
-$G = BB\T + nI$, and the residuals would grow with $\kappa(G)$. That choice also
+instrument. Conditioning is no longer among the gaps, since
+Section~\ref{ssec:transform} varies it over ten orders of magnitude at a fixed
+answer, but it is varied there and nowhere else: every other measurement here
+draws $G = BB\T + nI$ and so reports one conditioning. That choice also
 biases Section~\ref{ssec:pdas}, in the direction that works against the conclusion
 drawn there, since a well-conditioned $G$ spreads the minimiser so few bounds bind
 where a realistic covariance concentrates it and binds many;

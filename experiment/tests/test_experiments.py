@@ -83,6 +83,10 @@ SCRIPTS = {
         "graphs/quadprog_pdas.pdf",
         "tables/quadprog_pdas_defs.tex",
     ],
+    "quadprog_note.experiment_qp_transform": [
+        "graphs/quadprog_transform.pdf",
+        "tables/quadprog_transform_defs.tex",
+    ],
     "quadprog_note.experiment_qp_sweep": [
         "graphs/quadprog_sweep.pdf",
         "tables/quadprog_sweep_defs.tex",
