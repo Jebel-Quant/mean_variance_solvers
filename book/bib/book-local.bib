@@ -1,0 +1,14 @@
+% Entries the book needs that no source bibliography defines.
+%
+% The merge in scripts/merge_bib.py pulls three databases from the companion
+% papers, and those papers cite each other -- but none of them cites the
+% Goldfarb--Idnani mathematics note itself, so no source defines a key for it.
+% Entries here are appended by the merge and survive `make bib`; a key defined
+% by a source database wins, so this file can never silently shadow one.
+
+@unpublished{schmelzer2026quadprog,
+  author = {Schmelzer, Thomas and Stoll, Martin},
+  title  = {Goldfarb--Idnani Revisited: Invariants, Certificates, and the Limits of Guessing},
+  year   = {2026},
+  note   = {Companion working paper},
+}

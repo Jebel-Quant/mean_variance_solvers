@@ -63,15 +63,22 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# (2) Spaced ` -- ` dash asides in sections/. En-dash ranges (6--18) have no
-#     surrounding spaces and are not matched; full-line comments are ignored.
+# (2) Spaced ` -- ` dash asides in a document's prose. En-dash ranges (6--18)
+#     have no surrounding spaces and are not matched; full-line comments are
+#     ignored. A paper keeps its prose in sections/; the book keeps its own in
+#     chapters/ and frontmatter/, so both directory names are checked and a
+#     document is skipped only when it has neither.
 # ---------------------------------------------------------------------------
-echo "[2/4] Spaced -- dash asides in sections/"
+echo "[2/4] Spaced -- dash asides in prose"
 for d in "${papers[@]}"; do
-	[ -d "$d/sections" ] || continue
-	hits=$(grep -rnE '[^%]* -- ' "$d"/sections/*.tex | grep -vE '^[^:]+:[0-9]+:[[:space:]]*%')
+	prose_dirs=()
+	for sub in sections chapters frontmatter; do
+		[ -d "$d/$sub" ] && prose_dirs+=("$d/$sub"/*.tex)
+	done
+	[ "${#prose_dirs[@]}" -eq 0 ] && continue
+	hits=$(grep -rnE '[^%]* -- ' "${prose_dirs[@]}" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*%')
 	if [ -n "$hits" ]; then
-		report "$d: dash asides in sections/:"
+		report "$d: dash asides in prose:"
 		echo "$hits" | sed 's/^/         /'
 	fi
 done

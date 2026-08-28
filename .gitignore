@@ -23,6 +23,12 @@ out/
 *.fls
 *.fdb_latexmk
 *.thm
+# index and float-list artifacts (book/ only; see `make -C book clean`)
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
 
 # coverage artifacts
 .coverage

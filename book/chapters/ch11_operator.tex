@@ -1,0 +1,321 @@
+\chapter{The Quadratic Form as an Operator}
+\label{ch:operator}
+
+The point that does the most work in practice is the easiest to miss, because every
+textbook presentation hides it. The reader is trained to see a \emph{matrix}: a
+covariance in finance, a Gram matrix in regression, a kernel in learning---formed,
+stored, and factored.
+
+None of the algorithms in this book sees that matrix. Inspecting them,
+the quadratic form enters only through a short list of linear \emph{actions}. So the
+quadratic form is, for the algorithm, an \emph{operator}: defined by what it does to a
+vector, not by a table of $n^2$ numbers. That change of model is what turns one
+algorithm into a method for many problems, because the operator may be supplied in
+whatever form is cheapest.
+
+This chapter states the contract, gives the four backends that recur, works out the
+cost of the most important one, and says where the crossover falls.
+
+\section{The contract}
+
+\begin{definition}[Quadratic-form operator]
+\label{def:qform}
+\index{operator!quadratic-form contract}
+An implementation of the quadratic form $H$ supplies three linear actions:
+\begin{enumerate}
+\item \texttt{matvec}: $v \mapsto Hv$;
+\item \texttt{solve\_free}: $R \mapsto H_{\Free\Free}^{-1}R$ for a multi-column
+      right-hand side $R$ and a given free set $\Free$;
+\item \texttt{cross}: $x_\Bound \mapsto H_{\Free\Bound}\,x_\Bound$.
+\end{enumerate}
+\end{definition}
+
+That is the whole interface, and it is worth checking against the algorithms already
+seen. The dual method of Chapter~\ref{ch:walking} carries $J$ with $JJ\T = G^{-1}$ and
+consumes it only through products---so its needs are a superset of \texttt{matvec} but
+the same in kind. The block-pivoting loop of Chapter~\ref{ch:guessing} needs
+\texttt{solve\_free} for the inner system and \texttt{cross} for the reduced gradient
+at bound indices; Section~\ref{sec:operator-two} of Chapter~\ref{ch:krylov} named
+exactly those two. The homotopy of Chapter~\ref{ch:parametric} needs all three: the
+bordered solve is \texttt{solve\_free}, the blocked contribution
+$H_{\Free\Bound}x_\Bound$ on the right-hand side is \texttt{cross}, and the reduced
+gradients that drive the $\mathrm{D}_1$ events are \texttt{matvec}.
+
+\emph{One interface serves the whole book.} That is not a coincidence; it is what the
+active-set structure permits, and it is the technical content of the claim in
+Chapter~\ref{ch:homotopy} that one engine traces five literatures' paths.
+
+\section{Four backends}
+
+\subsection{Dense}
+
+An explicit symmetric $n\times n$ array. \texttt{matvec} is a matrix--vector product;
+\texttt{cross} is an off-diagonal block product; \texttt{solve\_free} is a Cholesky
+factorisation of the principal submatrix $H_{\Free\Free}$, falling back to a general
+solve on the rare block that is not numerically positive definite. This is the
+reference backend and the one against which the others are validated.
+
+Cost: $O(n^2)$ storage, $O(n_\Free^3)$ per free-block solve.
+
+\subsection{Incremental dense}
+
+The same explicit matrix, but \emph{maintaining} $H_{\Free\Free}^{-1}$ rather than
+refactorising at every step. Because an active-set method changes the free set by one
+index between consecutive solves, a rank-one bordered update (on entry) or a symmetric
+deletion (on exit) modifies the stored inverse in place at $O(n_\Free^2)$, against
+$O(n_\Free^3)$ for a fresh solve.
+
+The trade is numerical, and it is worth stating plainly because it is the recurring
+shape of this decision. A maintained inverse accumulates floating-point error over the
+$O(n)$ updates of a trace, whereas a fresh solve is clean at every step. A guard is
+needed---a non-positive or non-finite pivot, or any free-set change that is not a
+single-index flip, triggers a full refactorisation---and even with it, on
+ill-conditioned or near-degenerate inputs the plain dense backend is the safer choice.
+So this is an opt-in fast path, not a default. Roughly a factor of two on a
+well-conditioned dense problem of a few hundred variables.
+
+\subsection{Factor: diagonal-plus-low-rank}
+\label{sec:factor}
+
+\begin{equation}
+\label{eq:factor}
+H \;=\; \diag(d) \;+\; U\,\Delta\,U\T,
+\qquad d \in \R^{n}_{>0},\; U \in \R^{n\times k},\; \Delta \in \R^{k\times k},
+\end{equation}
+with $k \ll n$. This is the form taken by a factor risk model \cite{sharpe1963}, by a
+random-matrix-cleaned covariance (Chapter~\ref{ch:conditioning}), by an approximate
+factor model \cite{chamberlain1983} and its modern estimators
+\cite{fan2013poet}, and by a low-rank kernel approximation. One object, arrived at
+independently by finance, statistics, and machine learning.
+\index{factor model}
+
+The free-block solve never forms $H_{\Free\Free}$. By Proposition~\ref{prop:woodbury},
+\begin{equation}
+\label{eq:woodbury}
+H_{\Free\Free}^{-1} \;=\; D_\Free^{-1} - D_\Free^{-1} U_\Free\, W^{-1}\, U_\Free\T D_\Free^{-1},
+\qquad
+W \;=\; \Delta^{-1} + U_\Free\T D_\Free^{-1} U_\Free \;\in\;\R^{k\times k},
+\end{equation}
+so a solve costs $O(n_\Free k^2 + k^3)$ rather than $O(n_\Free^3)$, and no $n\times n$
+matrix is ever allocated: memory and per-solve cost scale as $O(nk)$ instead of
+$O(n^2)$. The cross product contributes only through the low-rank part, the diagonal
+having no off-diagonal block:
+$H_{\Free\Bound}x_\Bound = U_\Free\Delta(U_\Bound\T x_\Bound)$.
+
+\subsection{Gram: straight from the data matrix}
+\label{sec:gram}
+
+A sample covariance \emph{is} a Gram matrix. If $X_c \in \R^{T\times n}$ is the
+column-centred data,
+\begin{equation}
+\label{eq:gram}
+H \;=\; \frac{1}{T-1}\,X_c\T X_c,
+\end{equation}
+and the contract is implemented straight from $X_c$: \texttt{matvec} is the pair of
+thin products $X_c\T(X_c v)/(T-1)$, \texttt{cross} restricts those products to free
+and blocked columns, and \texttt{solve\_free} works on $X_{c,\Free}$ alone. Memory is
+$O(Tn)$ rather than $O(n^2)$. This is the backend Chapter~\ref{ch:krylov} runs CG
+against.
+
+The catch is rank: $X_c\T X_c$ has rank at most $T-1$. When $T \ge n$ with full column
+rank, $H \succ 0$ and this is the dense reference at lower memory. In the
+short-sample regime $T < n$---a covariance estimated from far fewer periods than
+assets---$H$ is singular and the free block becomes unsolvable once the free set
+outgrows the data rank. An optional ridge $\delta I$ restores positive definiteness,
+and the free-block solve is then \eqref{eq:woodbury} carried out in the
+$T$-dimensional observation space, at $O(n_\Free T^2 + T^3)$. \emph{This is precisely a
+factor model whose factors are the observations themselves}, with $U = X_c\T$ and
+$k = T$.
+
+\begin{remark}[A memory benefit, not an unconditional speed-up]
+When $T \ge n$ and the dense matrix fits in memory, the dense backend is faster per
+step: it slices a precomputed $H_{\Free\Free}$, whereas the Gram backend re-forms
+$X_{c,\Free}\T X_{c,\Free}$ at each solve. The same caveat governs the factor backend:
+a structured solve pays only while $k$ (or here $T$) stays well below $n$. At full
+rank the structured route is \emph{slower} than the plain dense matrix. State this
+clearly in any benchmark you report.
+\end{remark}
+
+\subsection{Kernels, and sparse designs}
+
+Two more, briefly, because they cost nothing to add. A kernel Gram matrix is given
+implicitly by its kernel function; the support-vector-machine path of
+Chapter~\ref{ch:homotopy} touches it only through the same actions, so the kernel trick
+enters unchanged and the feature space may be infinite-dimensional without the
+algorithm noticing. And when $X$ is sparse, the action $v \mapsto X\T(Xv)$ costs the
+number of nonzeros rather than $n^2$; the operator inherits the data's sparsity with no
+special handling.
+
+\section{The crossover}
+
+When is the structured solve actually cheaper? The question has a clean answer for the
+scalar-identity-plus-low-rank case, which is the one Chapter~\ref{ch:conditioning}
+produces.
+
+\begin{proposition}[Woodbury versus assemble-and-factor]
+\label{prop:crossover}
+\index{crossover!Woodbury versus Cholesky}
+Assembling $H_{\Free\Free}$ by a rank-$k$ update and factoring it costs
+$n_a^2 k + n_a^3/3$ flops, where $n_a = |\Free|$; forming and factoring the $k\times k$
+correction $W$ of~\eqref{eq:woodbury} costs $n_a k^2 + k^3/3$. Writing $x = k/n_a$, the
+Woodbury solve is cheaper per step iff
+$n_a k^2 + \tfrac{k^3}{3} < n_a^2 k + \tfrac{n_a^3}{3}$, which on dividing by $n_a^3$
+factors as $(x-1)(x^2 + 4x + 1) < 0$, i.e.\ iff $x < 1$, that is $k < n_a$.
+\end{proposition}
+
+The condition $k < n_a$ is embarrassingly mild, and it holds across essentially the
+whole of a long-only frontier. On S\&P~500 data, $k = 17$ signal factors against
+$n_a = 46$ assets held at the minimum-variance solution, so $x \approx 0.37$. On a
+synthetic frontier $x$ runs from about $0.33$ at the high-return end down to about $1$
+at the tightest point, where the number of holdings dips to roughly $k$ itself. Only at
+that extreme are the two comparable; elsewhere the flop advantage applies, and the
+measured gap is larger still---consistent with the $k\times k$ working set fitting in
+lower cache levels than an assembled $n_a \times n_a$ system.
+
+Two practical notes. When $n_a \le k$ a solver should fall back to the assemble branch.
+And the Woodbury solve itself remains \emph{valid} for all $n_a \ge 1$, since
+$W = \Delta^{-1} + \bar\mu^{-1}U_\Free\T U_\Free$ is a positive definite diagonal plus
+a positive semidefinite matrix, hence always invertible; only its cost advantage
+disappears.
+
+\begin{remark}[Sharing a factorisation across right-hand sides]
+The $p+1$ right-hand sides of an equality-augmented solve
+(Chapter~\ref{ch:krylov}, Section~3) all share the single factorisation of $W$, so each
+right-hand side beyond the first costs only $O(n_a k)$. Structure the code so that
+$W$ is factored once per outer step and the solves are applied to a block, not looped.
+This is the difference between $p+1$ solves and one solve with $p+1$ columns, and on a
+factor model it is the whole of the cost.
+\end{remark}
+
+\section{Regularisation through the operator}
+\label{sec:reg-operator}
+
+A regularised objective is supported whenever the penalty is \emph{quadratic}, and for
+exactly the reason the bare algorithms work: a quadratic penalty changes only the
+Hessian, so the systems stay linear and---in the parametric case---the path stays
+piecewise linear. Ridge is the canonical case,
+\begin{equation}
+\label{eq:ridge}
+\tfrac12\, w\T H\, w - \lambda\,\mu\T w + \tfrac{\gamma}{2}\,\norm{w}_2^2
+\;=\;
+\tfrac12\, w\T(H + \gamma I)\, w - \lambda\,\mu\T w,
+\end{equation}
+which is the substitution $H \mapsto H + \gamma I$; more generally $H + \gamma M$ for
+any $M \succeq 0$---a factor-exposure penalty, a deviation-from-benchmark term, a
+quadratic turnover penalty $\norm{w - w_{\mathrm{prev}}}_2^2$.
+
+Because the algorithms reach the quadratic form only through
+Definition~\ref{def:qform}, the regularised form is just another operator: the penalty
+is supplied by the \emph{backend} and the loop is untouched. The result is the exact
+solution, or the exact path, of the regularised objective. Two backends already realise
+this: the Gram backend takes a ridge directly, and the factor
+form~\eqref{eq:factor} is itself a structured ridge, positive definite by the
+idiosyncratic floor $d > 0$.
+
+The boundary follows from the same requirement, and is worth knowing.
+
+\begin{itemize}
+\item Shrinkage toward a \emph{nonzero} target $w_0$ is still quadratic but adds a
+      $\lambda$-independent linear term $-\gamma w_0\T w$, which an interface whose
+      linear term is exactly $-\lambda\mu$ does not expose. Fixable, but not free.
+\item A nonsmooth $\ell_1$ penalty is not a term in this objective at all. For the
+      long-only fully invested book it is vacuous
+      (Proposition~\ref{prop:hinge}); where it bites, it is traced by the LASSO
+      homotopy of Chapter~\ref{ch:homotopy}; and a gross-exposure \emph{constraint}
+      $\norm{w}_1 \le c$ is polyhedral and expressible as inequality rows.
+\item Genuinely non-quadratic penalties---entropy, a log barrier---break the structure
+      and lie outside the method.
+\end{itemize}
+
+\section{What the operator reading is for}
+
+Two claims, and they are the reason this chapter exists.
+
+\paragraph{Cost.} In every case the algorithm is the same loop and returns the
+identical answer; only the cost of a step changes, from $O(n^2)$ to $O(nk)$ or to the
+number of nonzeros. That is how a method designed in 1956 for a dense covariance
+reaches universe sizes its dense formulation could not.
+
+\paragraph{Transfer.} Seeing the members as one says that the factor risk model and the
+kernel trick are the \emph{same device}---an operator standing in for a matrix---so
+either field's machinery for it is immediately available to the other. And the traffic
+is asymmetric, because each field has matured a tool the others under-use. In finance
+the quadratic form is almost always a \emph{modelled} object, a diagonal-plus-low-rank
+risk model being the industry default, since forming and trusting a dense covariance at
+scale is infeasible; sparse regression, kernels aside, takes the Gram matrix as whatever
+the design delivers and seldom models it as structured. The habit of replacing the
+quadratic form by a cheap structured operator is one that regression can import
+wholesale from finance. The traffic runs the other way too: inequality constraints and
+the path's inferential apparatus are routine in statistics and absent from the canonical
+portfolio codes.
+
+Handed a factor covariance together with $X\T y$, the same engine traces a least angle
+regression path in $O(nk)$ per step; under a linear inequality it traces a constrained
+path that standard LARS implementations do not provide. These are the under-occupied
+cells of the design space of Section~\ref{sec:taxonomy}: the same engine with a
+different operator and one extra event type, not new algorithms.
+
+\begin{notes}
+The operator contract of Definition~\ref{def:qform} is the \texttt{QuadraticForm}
+protocol of the \texttt{cvxcla} package \cite{cvxcla}, whose four backends are those of
+Section~2; the reading of it as a cross-field device is
+\cite{schmelzer2026perspective}. Proposition~\ref{prop:crossover} and its empirical
+crossover values are from \cite{schmelzer2026rmt}. The Woodbury identity is standard
+\cite{golub2013}; the diagonal-plus-low-rank covariance goes back to Sharpe's
+single-index model \cite{sharpe1963} and the approximate factor model of Chamberlain
+and Rothschild \cite{chamberlain1983}, with POET \cite{fan2013poet} a modern estimator
+returning the same form.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+For each algorithm in Chapters~\ref{ch:walking}, \ref{ch:guessing}, \ref{ch:krylov},
+and~\ref{ch:parametric}, list exactly which of the three actions of
+Definition~\ref{def:qform} it uses and where.
+\end{exercise}
+
+\begin{exercise}
+Verify~\eqref{eq:woodbury} directly by multiplying out
+$H_{\Free\Free}\,H_{\Free\Free}^{-1}$, and check that $W \succ 0$ whenever
+$\Delta \succ 0$ and $d > 0$.
+\end{exercise}
+
+\begin{exercise}
+Show that the Gram backend with a ridge is the factor form~\eqref{eq:factor} with
+$U = X_c\T$, $k = T$, $\Delta = I/(T-1)$, $d = \delta\onevec$. What does
+Proposition~\ref{prop:crossover} then say about when it pays?
+\end{exercise}
+
+\begin{exercise}
+Count the flops of the two branches in Proposition~\ref{prop:crossover} for
+$n_a = 500$ and $k \in \{5, 50, 200, 500, 800\}$, and confirm the crossover at $k = n_a$.
+\end{exercise}
+
+\begin{exercise}
+Show that $(H_{\Free\Free})^{-1} \ne (H^{-1})_{\Free\Free}$ in general, and give a
+$2\times2$ counterexample. Which of the three actions does this fact complicate, and
+why does it matter for preconditioning (Chapter~\ref{ch:conditioning})?
+\end{exercise}
+
+\begin{exercise}
+Explain why a quadratic turnover penalty $\norm{w - w_{\mathrm{prev}}}_2^2$ is
+expressible through the operator but shrinkage to a nonzero target is not, given the
+interface's fixed linear term.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Implement Definition~\ref{def:qform} as an interface with the dense and factor
+backends. Verify that a solver written against the interface returns identical answers
+from both when the factor backend is handed $\diag(d) + U\Delta U\T$ and the dense
+backend is handed the same matrix formed explicitly. Report the agreement.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Time both backends over a path trace for $n \in \{200, 500, 1000, 2000\}$ with $k = 20$
+fixed, and plot per-step cost against $n$. Then hold $n = 500$ and vary $k$ to locate
+the crossover empirically. Does it fall where Proposition~\ref{prop:crossover} predicts,
+and if not, why not?
+\end{exercise}
+
+\end{exercises}

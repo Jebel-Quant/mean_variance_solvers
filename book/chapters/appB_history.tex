@@ -1,0 +1,181 @@
+\chapter{A Short History}
+\label{app:history}
+
+The methods in this book were invented four times, in four fields, over fifty years,
+largely without cross-reference. This appendix tells that story, because knowing it
+changes how one reads the literature: a graduate student who meets least angle
+regression as a statistical innovation and the Critical Line Algorithm as a piece of
+finance folklore will not think to look for the third and fourth copies.
+
+The account is a sketch, not a survey. Each of the four literatures has a history deep
+enough to fill an article of its own.
+
+\section{The 1950s: optimization and finance}
+
+The active-set treatment of the parametric quadratic program is a creation of the
+1950s, and the Critical Line Algorithm is its earliest fully worked instance.
+
+The decade was the founding one for operations research, and its founding algorithm was
+Dantzig's simplex method \cite{dantzig1951}, whose vertex-to-vertex walk along the edges
+of a polyhedron the homotopy of Chapter~\ref{ch:parametric} still rides---the ratio test
+and the Bland tie-break of that chapter are literally the simplex method's. The same
+decade supplied the optimality conditions on which everything in this book rests:
+Kuhn and Tucker \cite{kuhntucker1951}, anticipated by Karush \cite{karush1939},
+characterised the constrained optimum by the stationarity and complementary-slackness
+relations whose parametric solution is the bordered system of
+Lemma~\ref{lem:affine}.
+
+Markowitz worked alongside Dantzig at the RAND Corporation and took the method as his
+starting point. Having posed mean--variance selection \cite{markowitz1952}, he
+recognised that the efficient set is obtained by solving a quadratic program
+\emph{parametrically} in the risk--return trade-off, and \cite{markowitz1956} gave the
+Critical Line Algorithm, developed in full in the 1959 monograph \cite{markowitz1959}.
+
+The idea did not appear in a vacuum. Gass and Saaty \cite{gasssaaty1955} introduced
+\emph{parametric} linear programming, the direct linear ancestor: follow the optimal
+vertices as a cost coefficient varies, make the objective quadratic, and that trajectory
+becomes the critical line. Frank and Wolfe \cite{frankwolfe1956}, Beale
+\cite{beale1959}, and Wolfe \cite{wolfe1959} gave general quadratic-programming
+algorithms over the same years, several appearing in the same journal as Markowitz's---
+the Critical Line Algorithm contemporary with, and independent of, the general theory
+that would later be seen to contain it.
+
+Two threads then ran from this beginning for half a century, both inside finance. On the
+modelling side, Sharpe \cite{sharpe1963}, again at Markowitz's suggestion, introduced the
+single-index model, writing the covariance as a diagonal matrix plus a rank-one term---
+precisely the structure Chapter~\ref{ch:operator} exploits, and the ancestor of every
+modern multi-factor risk model. On the algorithmic side the CLA was re-derived, refined,
+and scaled across decades, almost always from within portfolio theory
+\cite{perold1984,hirschberger2010,niedermayer2010,markowitz2000,stein2008,bailey2013,markowitz2021}.
+The lineage is unbroken; what it never asked was whether the algorithm belonged to a
+family larger than portfolio selection.
+
+\begin{remark}[Why the method never travelled]
+One can only speculate, but the honest reading is that it was easy to do without. A
+single efficient point is a quadratic program a generic solver dispatches in
+milliseconds, and one approximates the frontier by re-solving as the return tilt is
+varied. The parametric machinery that returns the whole frontier exactly bought little
+that a loop over a black-box solver did not.
+
+The surviving implementations bear this out: the canonical reference codes support
+neither a factor risk model in place of a dense covariance nor inequality constraints
+beyond simple bounds---precisely the generality Chapter~\ref{ch:operator} draws out.
+
+The neglect cuts close to home. Markowitz's 1952 paper is among the most-cited articles
+in all of economics, while the 1956 paper that actually gave the algorithm is
+comparatively forgotten, with no clean citation record of its own, references scattering
+across the journal article, its 1955 RAND memorandum, and later reprints. If finance
+largely overlooked its own computational contribution, it can hardly fault statistics for
+later arriving at the same homotopy without reference to it.
+\end{remark}
+
+\section{The 1990s and 2000s: statistics}
+
+Statistics arrived at the same device around forty years later, by a different door, and
+at first without reference to any of this.
+
+The door was variable selection and shrinkage, not optimization. The question was not how
+to trace a frontier but how the LASSO of Tibshirani \cite{tibshirani1996} chooses, as its
+penalty relaxes, which coefficients to admit---and the discovery was that it does so
+along a piecewise-linear path. Osborne, Presnell and Turlach \cite{osborne2000} gave the
+homotopy explicitly; Efron, Hastie, Johnstone and Tibshirani \cite{efron2004} gave least
+angle regression, read the path's corners as the events of a single forward procedure,
+and made the piecewise-linear path famous well beyond the LASSO itself. Hastie et al.\
+\cite{hastie2004svm} carried the construction to the support vector machine; Tibshirani
+and Taylor \cite{tibshirani2011} extended it to the generalized lasso, with the fused
+lasso and trend filtering among its special cases, by a dual path of the same kind.
+
+What had been an optimization fact about parametric quadratic programs was being rebuilt,
+theorem by theorem, as a native part of regularised estimation.
+
+The statistical development reached even the governing principle. Rosset and Zhu
+\cite{rosset2007} characterised, within statistics, exactly when a regularised solution
+path is piecewise linear---a quadratic loss against a polyhedral penalty or
+constraint---which is the criterion the parametric-programming literature had carried
+since the 1950s, now restated in the field's own vocabulary. Tibshirani
+\cite{tibshirani2013} settled when the LASSO solution, and so the path, is unique.
+
+None of this leaned on the optimization lineage, and there was little reason it should
+have: the statistical versions answered statistical questions---about selection, degrees
+of freedom, and prediction---that the portfolio and control literatures had never posed.
+That the underlying object was the same went unremarked because no one had occasion to
+remark it.
+
+The bridge back was late and partial. Brodie et al.\ \cite{brodie2009} observed that a
+gross-exposure-constrained Markowitz problem \emph{is} a LASSO---the special case of
+Theorem~\ref{thm:identity} without general constraints---and Gaines, Kim and Zhou
+\cite{gaines2018} later traced the constrained LASSO path directly, under arbitrary
+linear equalities and inequalities, by an active-set homotopy on the same KKT system.
+Even so, the observation travelled as a curiosity rather than as the statement that two
+large algorithmic literatures describe one structure.
+
+\section{The 2000s: control, and a partial crossing}
+
+The same device was found once more, in control, and this time the crossing was partly
+deliberate.
+
+Through the 2000s the constrained linear-quadratic regulator was being solved
+\emph{explicitly}, as a function of the state rather than afresh at each sampling
+instant. Bemporad et al.\ \cite{bemporad2002} showed that the optimal control law is
+piecewise affine over a polyhedral partition of the state space, and Tøndel, Johansen and
+Bemporad \cite{tondel2003} gave the multi-parametric quadratic-programming algorithm
+computing it by traversing those regions. This is the common scheme carrying a
+\emph{vector} parameter (Remark~\ref{rem:vector}).
+
+Roll \cite{roll2008} then made the link to the scalar case plain, tracing
+single-parameter piecewise-linear solution paths in the control setting and explicitly
+generalising the LARS/LASSO construction. Control thus arrived at both the scalar
+homotopy and its multi-parameter form, and arrived---in Roll's case---already aware of
+where statistics had been: the lone instance in this story of a field reaching the device
+knowing the others had been there.
+
+\section{The single-point solvers}
+
+The parametric story is the striking one, but the single-point methods of Part~II have
+their own chronology and it is worth recording.
+
+The dual active-set method is Goldfarb and Idnani
+\cite{goldfarb1982,goldfarb1983}. Its restriction to positive definite Hessians was
+lifted by Boland \cite{boland1997}; Forsgren, Gill and Wong \cite{forsgren2016} proved
+finite termination for paired primal and dual active-set methods more generally; and
+Arnström, Bemporad and Axehill \cite{arnstrom2022daqp} rebuilt the same dual walk on
+recursive $LDL\T$ updates for embedded model predictive control---the point at which the
+control and optimization threads of this appendix rejoin. Arnström and Axehill
+\cite{arnstrom2022certification} additionally compute exact worst-case iteration counts
+for parametric QP families.
+
+The complementarity thread is older and separate. Non-negative least squares is Lawson
+and Hanson \cite{lawson1974}; principal pivoting and the least-index rule are Murty
+\cite{murty1988}; block principal pivoting with the anti-cycling guard of
+Theorem~\ref{thm:termination} is Júdice and Pires \cite{judice1994}, with
+\cite{cottle1992} the standard reference for linear complementarity. The primal--dual
+active set strategy read as semismooth Newton is Hintermüller, Ito and Kunisch
+\cite{hintermuller2002}. The Krylov side is Hestenes and Stiefel \cite{hestenes1952},
+and the feasible-point family that Remark~\ref{rem:feasible} contrasts runs from
+Bertsekas \cite{bertsekas1982} through Moré and Toraldo \cite{moretoraldo1991} to
+Dostál \cite{dostal1997,dostalschoberl2005}.
+
+\section{One structure, four disconnected literatures}
+
+Stand back and the shape is the same in each account: a parametric convex quadratic, an
+active set, a piecewise-linear path traced by a ratio test.
+
+Optimization has, all along, had the general language for this---parametric programming,
+continuation and homotopy methods, active-set sensitivity analysis---within which every
+instance is a special case. In that precise sense none of the device is new. What is
+striking is not that the structure existed but that the literatures using it stayed
+largely disconnected. The portfolio, regression, kernel, and control versions were
+developed, taught, and implemented in parallel, each with its own vocabulary
+(Appendix~\ref{app:notation}), its own canonical references, and its own software, and
+the general framework that subsumes them was seldom the frame in which any one of them
+was presented. A practitioner of one could, and routinely did, work a career without
+meeting the others.
+
+It is that disconnection, rather than any depth hidden in the mathematics, that kept the
+shared structure from view. And it is a reason to be suspicious, in one's own field, of
+any method presented as native to it.
+
+\begin{quote}
+That an idea is reached more than once, independently, is less an oversight to correct
+than a measure of how good it is.
+\end{quote}

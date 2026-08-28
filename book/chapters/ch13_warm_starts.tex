@@ -1,0 +1,267 @@
+\chapter{Warm Starts and Families of Problems}
+\label{ch:warmstart}
+
+Solvers are usually studied one problem at a time. Applications almost never present
+them that way. An efficient frontier is a family of QPs differing only in a return
+tilt. A rolling rebalance is a family differing only in the data. A scenario grid, a
+cross-validation sweep, a sensitivity study, a resampled cloud: each is dozens or
+hundreds of instances that are nearly the same.
+
+Solved independently, each instance rediscovers an active set it almost always
+already had. This chapter is about not doing that. It has three parts: what can be
+\emph{reused} exactly, what must be \emph{repaired}, and why neither can change the
+answer.
+
+\section{What does not depend on the linear term}
+
+Start with an observation about the invariants of Chapter~\ref{ch:walking} that is
+easy to read past.
+\begin{equation*}
+  J\T G J = I_n, \qquad J\T A = \begin{bmatrix} R \\ 0 \end{bmatrix}.
+\end{equation*}
+\emph{Neither factor depends on $a$.} $J$ depends on $G$ alone, through
+$J\T GJ = I$, and on the working set through the orthogonal transformations
+accumulated into it; $R$ depends on $G$ and the working set. The linear term enters
+only through $x_u = G^{-1}a$ and the right-hand sides.
+
+So across a family of programs in which $G$, $C$, $b$ are fixed and only $a$ varies,
+\emph{both factors are reusable verbatim}, and the entire solution can be recovered
+from them.
+
+\begin{proposition}[Recovery from cached factors]
+\label{prop:recover}
+\index{warm start!recovery}
+Let $(J,R)$ satisfy the invariants for a working set $\Active$ of size $k$ with
+normals $A$. For a new linear term $a$, set
+\begin{equation}
+  x_u = J\,(J\T a),
+  \qquad
+  \rho = b_\Active - A\T x_u,
+  \qquad
+  R\T y = \rho,
+  \qquad
+  x = x_u + J_1 y,
+  \qquad
+  R\,u = y .
+  \label{eq:recover}
+\end{equation}
+Then $(x,u)$ is the solution and multiplier pair of the working-set
+subproblem~\eqref{eq:sub}.
+\end{proposition}
+
+\begin{proof}
+$x_u = JJ\T a = G^{-1}a$ by the first invariant. By
+Proposition~\ref{prop:blocks}(i), $u = R^{-1}y = (R\T R)^{-1}\rho = (A\T G^{-1}A)^{-1}\rho$,
+the multiplier of~\eqref{eq:subsol}. For the iterate, $Ru = y$ gives
+$J_1 y = J_1 R u = G^{-1}Au$ by Proposition~\ref{prop:blocks}(iii), so
+$x = x_u + G^{-1}Au$, again as in~\eqref{eq:subsol}.
+\end{proof}
+
+\subsection{What the recovery costs, and a correction worth making}
+
+The cost is $O(n^2)$, \emph{all of it in $x_u = J(J\T a)$}: two matrix--vector products
+with a dense $n\times n$ matrix, $J$ having lost its triangularity at the first update.
+Everything after that is $O(nk + k^2)$. Re-deriving the factors for the same working
+set instead costs $k$ insertions at $O(n^2)$ each, so the saving is a factor of order
+$k$---largest exactly where it matters, since a long-only optimum is a vertex at which
+most bounds bind.
+
+The exponent is easy to get wrong, and the reason is instructive.
+
+\begin{remark}[The natural experiment cannot see the exponent]
+\label{rem:exponent}
+On a box-constrained family the active set grows with $n$, so $k = \Theta(n)$ and the
+predictions $O(nk)$ and $O(n^2)$ describe the \emph{same curve}. Either reading fits
+the data, and a paper can report ``linear in $nk$'' without anything looking wrong.
+
+Separating them requires holding $k$ \emph{fixed} while $n$ grows. Doing so, the
+measured local exponent $d\log t/d\log n$ runs from well below one at small $n$ to
+close to two at large $n$---and neither end is $1$. The flat small-$n$ end is not a
+different asymptotic; it is an \emph{overhead floor}, where a solve costs what its
+dozen array operations cost to dispatch, and it ends where the $n^2$ arithmetic
+overtakes dispatch.
+
+The general lesson is one Chapter~\ref{ch:measurement} develops: \emph{a benchmark
+family in which two candidate exponents coincide cannot distinguish them}, and
+designing the family that breaks the tie is part of the work.
+\end{remark}
+
+There is also an asymmetry in cost between recovering and \emph{checking}. The recovery
+is $O(n^2)$, but the certificate must look at every constraint, so it is $O(nm)$ for a
+dense $C$. On a dense problem with many constraints, \emph{verification and not
+recovery dominates a successful reuse}. That is a slightly deflating fact and a useful
+one: it tells you where to spend optimisation effort.
+
+\section{Repair rather than restart}
+
+When the certificate fails, the cached working set is stale---but it remains a far
+better starting point than the unconstrained minimum. What blocks resuming from it is
+the dual method's invariant~\eqref{eq:invariant}: the iteration requires dual
+feasibility, and a stale set typically has one or more negative multipliers. Those are
+precisely the constraints that no longer belong.
+
+\begin{proposition}[Repair terminates in a resumable state]
+\label{prop:repair}
+\index{warm start!repair}
+Iterate the following from the cached set: recover $(x,u)$ by~\eqref{eq:recover}; if
+every inequality multiplier is non-negative, stop; otherwise drop one constraint with a
+negative multiplier, downdate $(J,R)$, and repeat. The loop stops after at most $k$
+passes, in a state satisfying~\eqref{eq:invariant}.
+\end{proposition}
+
+\begin{proof}
+Each pass that does not stop shrinks the working set by one, so there are at most $k$;
+with an empty set the sign condition is vacuous, which is the cold start of
+Remark~\ref{rem:cold}. On exit $(x,u)$ solves the subproblem by
+Proposition~\ref{prop:recover} and the sign conditions hold, which
+is~\eqref{eq:invariant}; full column rank is inherited, deleting columns preserving it.
+\end{proof}
+
+From such a state \emph{the iteration cannot tell a resumed solve from a cold one}, the
+invariant being all it reads, so the resumed walk needs only to drive the remaining
+primal infeasibility to zero. In the worst case everything is dropped and the resumed
+walk is a cold solve, so repair is never worse than restarting up to the cost of the
+drops themselves.
+
+\section{Warm starts in the other two strategies}
+
+The same idea appears in each of the book's strategies, with a different mechanism.
+
+\paragraph{Block pivoting (Chapter~\ref{ch:guessing}).} The warm start is the previous
+problem's \emph{free set} as the initial guess. Since the repair rule needs no dual
+feasibility to begin---it reads signs and toggles---no repair loop is required at all;
+a stale set simply costs an extra exchange or two.
+
+\paragraph{Krylov inner solves (Chapter~\ref{ch:krylov}).} Two distinct warm starts are
+available and they are worth distinguishing, because only one is available to a direct
+solver. The \emph{outer} warm start is the free set, which cuts the number of outer
+steps. The \emph{inner} warm start is the previous solution as CG's initial iterate,
+which cuts inner iterations---and by Proposition~\ref{prop:warm} the inner count then
+scales with $\log\norm{\delta}$, the logarithm of the \emph{parameter step}, so a finer
+grid is cheaper per point. A direct inner solver profits only from the first, having no
+analogue of an initial guess. That is where warm-started parametric sweeps obtain their
+largest speed-ups.
+
+\paragraph{The homotopy (Chapter~\ref{ch:parametric}).} Here warm starting is not an
+optimisation but the algorithm itself: every step is a warm start from the previous
+breakpoint. Which is one way of saying that the parametric method is what you get when
+you take warm starting to its limit and let the parameter vary continuously.
+
+\begin{remark}[Why active-set methods warm-start and interior-point methods do not]
+An active-set method terminates \emph{at} a face of the polyhedron, with the face
+recorded as a discrete object---a set of indices. That object is exactly what transfers
+to a neighbouring problem. An interior-point method approaches a face asymptotically
+from the interior and holds no such object; restarting it near a previous solution puts
+the iterate close to the boundary, where the barrier is badly behaved, and the standard
+remedy is to back off toward the centre---discarding most of the information one hoped
+to reuse. This asymmetry, not raw speed at a single solve, is the main reason
+parametric and rolling applications are built on active-set methods.
+\end{remark}
+
+\section{Structural continuity: why the active set barely moves}
+
+Warm starting works because consecutive solutions share almost all of their active set.
+For a parametric family that is not a hope but a theorem, and it is
+Chapter~\ref{ch:parametric}'s.
+
+Along a frontier the solution is piecewise linear in $\lambda$ with generically
+\emph{single-index} breakpoint changes. So adjacent solves on a fine grid share all but
+a few active constraints, and a warm solver typically terminates in one to two outer
+steps. \emph{This is a structural property of parametric quadratic programming, not an
+artefact of the data.}
+
+When the family varies in the data rather than in a parameter---a rolling window, a
+resampled draw---no such theorem is available, and the empirical picture takes over: the
+warm-started outer count tracks the support drift $|\Free \triangle \Free'|$ and
+collapses to one whenever the drift is zero. That is the honest statement, and it is
+worth keeping the two cases separate rather than claiming the theorem covers both.
+
+\section{Why none of this can change the answer}
+
+Neither reuse nor repair introduces an approximation, and the argument is the
+certificate principle of Chapter~\ref{ch:certificate} once more.
+
+Reuse returns a point \emph{only when it carries a certificate}: the working-set
+inequalities' multipliers must be non-negative and no constraint outside the working set
+may be violated, which by Proposition~\ref{prop:sufficient} is a proof. Repair merely
+chooses a different starting state for an iteration whose output is determined
+independently of where it started.
+
+What \emph{does} change is the reported iteration count, which counts working-set edits
+actually performed and is therefore not comparable with a cold solve's. A benchmark
+table mixing warm and cold iteration counts in one column is meaningless, and
+Chapter~\ref{ch:measurement} says what to report instead.
+
+\begin{example}[A frontier sweep, end to end]
+Fifty points on a long-only efficient frontier for a few hundred assets. Cold, each
+point is an independent solve: fifty Cholesky factorisations, fifty walks of tens of
+steps. Warm, the first point is a cold solve and each subsequent point recovers from the
+cached factors, verifies, and---on the minority of points where the active set has
+moved---repairs and resumes for one or two steps. The measured advantage of the warm
+sweep over an assemble-and-factor baseline is roughly fivefold, and roughly fifteenfold
+against a cold baseline, growing with $n$. Against a general-purpose modelling layer
+called once per point, the end-to-end gap is three orders of magnitude---but that figure
+mostly measures the modelling layer, and Chapter~\ref{ch:measurement} explains why one
+should say so.
+\end{example}
+
+\begin{notes}
+Propositions~\ref{prop:recover} and~\ref{prop:repair}, and the corrected cost exponent
+of Remark~\ref{rem:exponent}, are from the Goldfarb--Idnani note \cite{schmelzer2026quadprog}; the warm-start analysis for
+the block-pivoting loop with Krylov inner solves is \cite{schmelzer2026nncg}
+(Proposition~\ref{prop:warm}); the frontier-sweep measurements are from
+\cite{schmelzer2026rmt} and \cite{schmelzer2026matrixfree}. Parametric warm starting of
+active-set QP solvers is treated generally in \cite{nocedal2006}; combining it with a
+matrix-free Krylov inner solver on a changing active set is more recent.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Verify Proposition~\ref{prop:recover} by substituting~\eqref{eq:recover}
+into~\eqref{eq:subsol} directly, without using Proposition~\ref{prop:blocks}.
+\end{exercise}
+
+\begin{exercise}
+Show that the recovery~\eqref{eq:recover} is $O(n^2)$ and identify precisely which two
+operations carry the $n^2$. Why does $J$ lose its triangularity after the first update?
+\end{exercise}
+
+\begin{exercise}
+Prove that the repair loop of Proposition~\ref{prop:repair} preserves full column rank
+of the working-set normals, and explain why the corresponding claim would fail for an
+\emph{addition} loop.
+\end{exercise}
+
+\begin{exercise}
+Suppose the cached working set is optimal for the new problem. How many operations does
+a successful reuse cost, in terms of $n$, $m$, $k$? Which term dominates for
+$m \approx n$, and for $m \approx n^2$?
+\end{exercise}
+
+\begin{exercise}
+Give a family of problems in which the cached active set is \emph{always} stale, so that
+repair drops everything and the warm start is pure overhead. What does this say about
+when to attempt reuse?
+\end{exercise}
+
+\begin{exercise}
+Explain why warm-started and cold iteration counts are not comparable, and propose two
+quantities that \emph{are} comparable across the two regimes.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Take your solver from Chapter~\ref{ch:walking} and add factor caching plus the recovery
+and repair of this chapter. Sweep the linear term over $50$ values and record, per
+point: whether reuse succeeded, how many constraints repair dropped, and how many steps
+the resumed walk took. Plot all three against the sweep index.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Reproduce Remark~\ref{rem:exponent}. Time a warm recovery on a box family where $k$
+grows with $n$, fit a power law, and record the exponent. Then hold $k$ fixed at a small
+value while $n$ grows and refit. Report both exponents and the $n$ at which the second
+family leaves its overhead floor.
+\end{exercise}
+
+\end{exercises}

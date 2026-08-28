@@ -36,6 +36,29 @@ Schmelzer (Jebel Quant Research), Martin Stoll (TU Chemnitz), and Michael Wolf
   handles `C^T x ≥ b` and shows precisely which structure is lost in doing so.
   The companion implementation paper lives in that package's own repository.
 
+### The textbook
+
+- **The Active Set: A Graduate Course in Convex Quadratic Optimization** — under
+  [`book/`](book/). A self-contained graduate textbook assembled from the four
+  papers above together with the two in the sibling
+  [`homotopy`](https://github.com/Jebel-Quant/homotopy) repository (the
+  Statistical-Science perspective paper and the `cvxcla` software paper). Fifteen
+  chapters in five parts, three appendices, 119 exercises. It is organised around
+  one question — how does a method find the active set? — and the four answers the
+  papers give: walk to it one constraint at a time (Goldfarb–Idnani), guess it and
+  repair from signs (block principal pivoting), trace it as a parameter moves (the
+  homotopy, which is at once the Critical Line Algorithm, LARS/LASSO, the SVM path
+  and explicit MPC), or never form the matrix and reach it through an operator
+  (matrix-free CG, Woodbury). Its through-line is that strict convexity makes the
+  KKT conditions sufficient, so the unguaranteed strategies are safe because a
+  candidate can be *certified* rather than trusted.
+
+  It cites a merged bibliography, `book/bib/refs.bib`, regenerated from the three
+  source databases by `make -C book bib`. Unlike the papers it does not include
+  `common.mk` (it has `chapters/` rather than `sections/`, and needs an index
+  pass), but it keeps the same target names, so the root `compile` and `pdfs`
+  targets pick it up with no change.
+
 All four papers share one bibliography
 ([`matrix_free/bib/refs.bib`](matrix_free/bib/refs.bib)). The two finance papers
 draw every figure and table from the same numerical experiments in
@@ -101,6 +124,13 @@ non_negative_cg/
                          https://github.com/Jebel-Quant/nncg
   graphs/                generated figure PDFs (committed; `make figures`)
   tables/                generated table + \newcommand fragments (committed)
+book/
+  Makefile               builds book.pdf (standalone: chapters/ + index pass)
+  book.tex               main file: preamble + \input of the chapters
+  chapters/              one .tex per chapter (ch01 ... ch15, appA ... appC)
+  frontmatter/preface.tex
+  bib/refs.bib           merged from the three source bibliographies
+  scripts/merge_bib.py   regenerates that merge (`make -C book bib`)
 experiment/              numerical experiments that generate graphs/ and tables/
   experiment*.py         PEP 723 scripts (real-data, synthetic, OOS, RMT)
   fetch_*.py             download the raw S&P 500 / FTSE 100 return data

@@ -1,0 +1,286 @@
+\chapter{One Problem, Four Answers}
+\label{ch:oneproblem}
+
+\section{The problem}
+
+Fix a symmetric positive definite matrix $G \in \R^{n\times n}$, a vector
+$a \in \R^n$, a matrix $C \in \R^{n \times m}$ whose columns $c_1,\dots,c_m$ are
+constraint normals, and a right-hand side $b \in \R^m$. The first
+$m_{\mathrm{eq}}$ constraints are equalities and the rest inequalities. The
+problem is
+\begin{equation}
+  \min_{x \in \R^n} \; f(x) := \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad
+  \begin{cases}
+    c_i\T x = b_i, & i \le m_{\mathrm{eq}},\\
+    c_i\T x \ge b_i, & i > m_{\mathrm{eq}},
+  \end{cases}
+  \label{eq:qp}
+\end{equation}
+which we will call \emph{the} quadratic program, or QP, throughout.
+\index{quadratic program!statement}
+
+Two conventions deserve a word, because they differ from some textbooks and are
+inherited from the solver this book's Part~II describes. The linear term is
+\emph{subtracted}, so that the unconstrained minimiser is $G^{-1}a$ rather than
+$-G^{-1}a$; and the constraints are held \emph{column-wise} in $C$, so the
+constraint system reads $C\T x \ge b$ rather than $Cx \le b$. Neither choice
+affects anything beyond signs, and both make the formulas in Part~II shorter.
+
+Everything in this book is downstream of two hypotheses in~\eqref{eq:qp}. The
+first is that $G \succ 0$, which makes $f$ strictly convex and coercive, so the
+problem has exactly one solution whenever it has any. The second is that the
+constraints are \emph{linear}, so the feasible set is a polyhedron: an
+intersection of finitely many half-spaces and hyperplanes, hence a set with
+finitely many faces. Together these give the problem a character that is worth
+stating before any algorithm appears.
+
+\begin{quote}
+\emph{The analysis is easy and the combinatorics is hard.}
+\end{quote}
+
+If an oracle told you which of the $m$ constraints hold with equality at the
+solution, you could finish in one linear solve; Chapter~\ref{ch:certificate}
+proves this. There are $2^{m-m_{\mathrm{eq}}}$ candidate answers the oracle might
+give, and the whole of algorithmic practice is a strategy for searching among
+them without enumerating them.
+
+\section{Where it comes from}
+
+The QP~\eqref{eq:qp} is not a mathematical curiosity to be motivated after the
+fact. It is solved a great many times a day, in at least four traditions that
+have historically not read one another's papers.
+
+\paragraph{Portfolio selection.} An investor spreads weights $w \in \R^n$ across
+$n$ assets with covariance $\Sig$ and expected returns $\mu$, subject to being
+fully invested, $\onevec\T w = 1$, and---under a long-only mandate---holding no
+short positions, $w \ge 0$. Minimising variance against a return tilt $\rho$,
+\[
+  \min_w \; w\T \Sig w - \rho\,\mu\T w
+  \qquad\text{subject to}\qquad \onevec\T w = 1, \quad w \ge 0,
+\]
+is~\eqref{eq:qp} with $G = 2\Sig$, $a = \rho\mu$, and $C = [\onevec, I]$. This is
+Markowitz's problem \cite{markowitz1952}, and it is the running application of
+Parts~III and~IV.
+\index{portfolio selection}
+
+\paragraph{Non-negative least squares.} Given $M \in \R^{m\times n}$ and
+$d \in \R^m$, minimise $\norm{Mx - d}_2^2$ over $x \ge 0$. Expanding the square
+gives~\eqref{eq:qp} with $G = 2M\T M$, $a = 2M\T d$, $C = I$, $b = 0$. This is
+the problem of Lawson and Hanson \cite{lawson1974}, and it is the setting in
+which Chapter~\ref{ch:krylov} works, because $G$ arrives as a factored
+Gram matrix and the whole method can be run without ever assembling it.
+\index{non-negative least squares}
+
+\paragraph{Model predictive control.} At each sampling instant a controller
+minimises a quadratic cost over a finite horizon of inputs subject to linear
+state and input constraints. The current state enters as a \emph{parameter} of
+the QP. Solving the family once, as a function of that parameter, rather than
+solving one instance per instant, is explicit model predictive control
+\cite{bemporad2002}, and it is the multi-parameter cousin of the theory in
+Part~III.
+\index{model predictive control}
+
+\paragraph{Regularised regression.} The LASSO
+\cite{tibshirani1996}, $\min_\beta \tfrac12\norm{y - X\beta}_2^2 +
+\lambda\norm{\beta}_1$, does not look like~\eqref{eq:qp}: its penalty is not
+smooth. But its subgradient condition is a sign pattern on a set of coordinates,
+which is an active set by another name, and under the substitution
+$G = X\T X$, $a = X\T y$ its solution path is the \emph{same} piecewise-linear
+curve as a portfolio frontier. Theorem~\ref{thm:identity} makes this exact. It is
+the sharpest illustration in the book of the claim that these are one subject.
+\index{LASSO}
+
+The four traditions arrived at the same algorithms independently, four decades
+apart in the two extreme cases. Appendix~\ref{app:history} tells that story;
+Appendix~\ref{app:notation} translates the vocabulary.
+
+\section{The active set}
+
+\begin{definition}[Active set, working set]
+\label{def:activeset}
+\index{active set!definition}
+For a feasible $x$, the \emph{active set} at $x$ is
+$\Active(x) = \{i : c_i\T x = b_i\}$, the constraints holding with equality
+there. A \emph{working set} is any index set $\Active \subseteq \{1,\dots,m\}$
+that an algorithm is currently \emph{holding} as equalities, whether or not it
+is the active set at the current iterate or at the solution.
+\end{definition}
+
+The distinction between the two matters and is a frequent source of confusion.
+The active set is a property of a point; the working set is a piece of algorithm
+state. At a solution the working set of a correct algorithm is a subset of the
+active set, and the two coincide except in the degenerate case of
+Chapter~\ref{ch:geometry}.
+
+Given a working set $\Active$ of size $k$ with normals $A = C_{\cdot\Active}$, the
+\emph{working-set subproblem} drops every constraint outside $\Active$ and
+promotes every constraint inside it to an equality:
+\begin{equation}
+  \min_{x} \; \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad A\T x = b_\Active .
+  \label{eq:sub}
+\end{equation}
+This is an equality-constrained problem, and equality-constrained problems are
+linear algebra. Chapter~\ref{ch:certificate} solves~\eqref{eq:sub} in closed
+form, Chapter~\ref{ch:freeblock} shows how to solve it fast and how to update the
+solution when $\Active$ changes by one index, and the rest of the book is about
+choosing $\Active$.
+
+\section{Four answers}
+
+Here are the four strategies, stated in one paragraph each so that the reader
+knows where the book is going. Each gets a chapter, or three.
+
+\paragraph{Walk to it.} Start from a working set you can solve trivially, and
+move to the solution one index at a time, maintaining part of the optimality
+conditions exactly and driving the violated part to zero. The classical primal
+method maintains feasibility and works toward stationarity, which requires a
+feasible starting point and therefore a phase-one problem. The \emph{dual}
+method of Goldfarb and Idnani \cite{goldfarb1982,goldfarb1983} reverses the
+roles: it maintains stationarity and the multiplier signs, and works toward
+feasibility. Its starting point is free---with no constraint active, $x = G^{-1}a$
+satisfies everything the method asks---so one Cholesky factorisation replaces the
+phase-one problem entirely. Chapter~\ref{ch:walking} derives it, and shows that
+the whole method follows from two matrix identities.
+
+\paragraph{Guess it.} Solve the subproblem on a guessed working set, read the
+signs of the resulting multipliers and slacks, and let those signs tell you which
+indices to add and drop---\emph{all of them at once}. This is the primal--dual
+active set strategy \cite{hintermuller2002}, equivalently block principal
+pivoting on a linear complementarity problem \cite{judice1994,murty1988}. It
+converges in a handful of repairs almost independently of $n$, trading arithmetic
+(abundant) for iterations (not). Chapter~\ref{ch:guessing} develops it, proves
+finite termination in the bound-constrained case $C = I$, and shows exactly why
+that theorem does not survive the general constraint class.
+
+\paragraph{Trace it.} Attach a scalar parameter to the linear term,
+$a \mapsto \lambda d$, and ask how the solution moves as $\lambda$ varies. The
+answer is that it is \emph{piecewise linear}: on any interval where the active set
+is constant the optimiser is affine in $\lambda$, and the active set changes at
+finitely many breakpoints. So the whole family can be traced exactly, corner to
+corner, by a single finite algorithm. Part~III develops this, and shows that
+Markowitz's Critical Line Algorithm \cite{markowitz1956}, least angle regression
+\cite{efron2004}, the support-vector-machine path \cite{hastie2004svm}, and
+explicit model predictive control \cite{bemporad2002} are one algorithm with four
+fillings.
+
+\paragraph{Refuse to form the matrix.} Notice how little of $G$ any of the above
+actually touches. An active-set method needs a product $v \mapsto Gv$, a solve
+against the free block, and a cross product between free and blocked
+coordinates---three linear \emph{actions}, not $n^2$ stored numbers. Anything
+that supplies those actions can play the role of $G$: a factored Gram matrix
+$M\T M$ reached through two products with $M$, a diagonal-plus-low-rank factor
+model inverted by the Woodbury identity, a kernel given implicitly by its kernel
+function. Chapters~\ref{ch:krylov} and~\ref{ch:operator} develop this reading,
+which is where most of the practical speed in this book comes from.
+
+\section{Certificates, and why they are the point}
+
+Two of the four strategies come with finite-termination theorems and two do not.
+Guessing can cycle. A parametric trace can be derailed by degeneracy. It would be
+natural to conclude that the guaranteed methods are the serious ones and the rest
+are heuristics.
+
+That conclusion is wrong, and understanding why is the main methodological lesson
+of this book. Because $G \succ 0$, the Karush--Kuhn--Tucker conditions
+for~\eqref{eq:qp} are not merely necessary but \emph{sufficient}
+(Proposition~\ref{prop:sufficient}). A point equipped with multipliers passing
+four inequalities \emph{is} the answer, whatever produced it. So a method that
+produces candidates may be as unprincipled as one likes, provided each candidate
+is tested; and the test is cheap, being one matrix--vector product and a pass over
+the constraints.
+
+This turns the design question around. Instead of asking ``does this method
+converge?'' one asks ``can this method recognise its own success, and what does it
+do when it fails?'' A method with a certificate and a fallback is safe without
+being guaranteed. A guaranteed method whose guarantee rests on an assumption you
+cannot check---non-degeneracy, say---may be less safe in practice than an
+unguaranteed one that verifies its answer. Chapter~\ref{ch:certificate} proves the
+sufficiency; Chapters~\ref{ch:guessing}, \ref{ch:krylov}, and~\ref{ch:warmstart}
+each cash it in.
+
+\section{What this book does not cover}
+
+Honesty about scope. The book treats convex quadratic objectives over polyhedra,
+and stays there.
+
+\emph{Interior-point methods} are barely mentioned, and only for comparison. They
+are the right tool for large sparse problems and they are excellently covered
+elsewhere \cite{nocedal2006,boyd2004}. Their relationship to this book's methods is
+worth stating once: an interior-point method approaches a face of the polyhedron
+asymptotically, whereas an active-set method arrives at one exactly and in finitely
+many steps. That is why active-set methods warm-start almost perfectly and
+interior-point methods do not, and warm starts are what Part~III lives on.
+
+\emph{Non-convex quadratic programs} ($G$ indefinite) are a different subject:
+NP-hard, with local minima, and none of the sufficiency arguments here apply.
+\emph{Semidefinite $G$} is a middle case and is genuinely within reach---Boland
+\cite{boland1997} extends the dual method to it with finite termination, and the
+solver of \cite{arnstrom2022daqp} handles it by proximal regularisation---but the
+factorisation of Chapter~\ref{ch:walking} needs $G^{-1}$, so the book keeps
+$G \succ 0$ as a matter of scope. Where that restriction bites, the text says so.
+
+\emph{General nonlinear constraints} are out of scope, though the QP is not: a
+sequential quadratic programming method solves one instance of~\eqref{eq:qp} per
+outer iteration, so everything here is a subroutine of that larger subject.
+
+\begin{notes}
+The QP~\eqref{eq:qp} in this form, with its two conventions, is the signature of
+the \texttt{cvx-quadprog} package \cite{cvxquadprog}, whose mathematics
+Chapters~\ref{ch:walking} and~\ref{ch:guessing} follow. Nocedal and Wright
+\cite[Ch.~16]{nocedal2006} is the standard reference for quadratic programming
+generally and should be on the desk alongside this book; Boyd and Vandenberghe
+\cite{boyd2004} for the convex-analytic background. Golub and Van Loan
+\cite{golub2013} is the linear-algebra reference used throughout.
+
+The claim that four fields developed one algorithm independently is argued in
+full in \cite{schmelzer2026perspective} and retold in Appendix~\ref{app:history}.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Write the non-negative least squares problem $\min_{x\ge0}\norm{Mx-d}_2^2$ in the
+form~\eqref{eq:qp}, giving $G$, $a$, $C$, $b$, and $m_{\mathrm{eq}}$ explicitly.
+For which $M$ is the resulting $G$ positive definite rather than merely
+semidefinite?
+\end{exercise}
+
+\begin{exercise}
+Show that the long-only fully invested portfolio problem has a non-empty feasible
+set for every $n \ge 1$, and that the feasible set is compact. Deduce that the
+problem has a solution without appealing to coercivity of $f$.
+\end{exercise}
+
+\begin{exercise}
+The feasible set of~\eqref{eq:qp} with $m_{\mathrm{eq}} = 0$ and $C = I$, $b = 0$
+is the non-negative orthant. How many faces does it have? How many candidate
+active sets must an enumerating algorithm consider for $n = 50$? Compare with the
+number of atoms in the observable universe ($\approx 10^{80}$).
+\end{exercise}
+
+\begin{exercise}
+Let $x_u = G^{-1}a$ be the unconstrained minimiser. Show that if $x_u$ is
+feasible then it solves~\eqref{eq:qp}, and that the active set at the solution is
+then contained in $\{i : c_i\T x_u = b_i\}$. Why does this observation make a good
+starting heuristic for the guessing strategy of Chapter~\ref{ch:guessing}?
+\end{exercise}
+
+\begin{exercise}
+Consider~\eqref{eq:qp} with $n = 2$, $G = I$, $a = (0,0)\T$, and the single
+constraint $x_1 + x_2 \ge 1$. Solve it by hand, identify the active set at the
+solution, and verify that the solution lies on the constraint boundary. Now change
+$a$ to $(2,2)\T$ and repeat. What happened to the active set, and why?
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Implement a brute-force QP solver: enumerate every subset of the inequality
+constraints, solve the equality-constrained subproblem~\eqref{eq:sub} on each,
+discard the infeasible ones, and return the feasible point of least objective
+value. Test it on random instances with $n = 5$ and $m = 8$. Time it as $m$ grows
+to $16$. This solver is correct and useless, and the rest of the book explains
+why both halves of that sentence are true.
+\end{exercise}
+
+\end{exercises}

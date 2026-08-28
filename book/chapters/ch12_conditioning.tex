@@ -1,0 +1,374 @@
+\chapter{Conditioning the Problem}
+\label{ch:conditioning}
+
+Every iteration count in this book is governed by a condition number. CG needs
+$O(\sqrt\kappa)$ iterations (Proposition~\ref{prop:cg}); projected gradient needs
+$O(\kappa)$ (Proposition~\ref{prop:proj}); a direct solve loses digits in proportion
+to $\kappa$. So anything that compresses the spectrum shortens the solve, and this
+chapter is about the mechanisms that do.
+
+There are three, and they are usually taught in three different courses. \emph{
+Regularisation} moves the operator toward a target the application deems preferable.
+\emph{Preconditioning} accelerates the solve of the operator as given, leaving the
+answer untouched. \emph{Spectral cleaning} replaces the part of the spectrum that is
+estimation noise. The chapter's thesis is that on the problems of this book the three
+coincide in a useful way, and that a practitioner applying the first for statistical
+reasons is getting the second for free---a connection that appears not to have been
+made explicit in the application literature.
+
+The running example is a sample covariance matrix, because it is the most
+spectacularly ill-conditioned operator a reader is likely to meet: on five years of
+S\&P~500 daily returns, $\kappa(\hat\Sig) \approx 10^5$.
+
+\section{Regularisation}
+
+Replace $H$ by the convex combination
+\begin{equation}\label{eq:regsplit}
+  H_\alpha = (1-\alpha)\,H + \alpha\,R\T R, \qquad \alpha \in (0,1),\; R\T R \succ 0,
+\end{equation}
+a ridge/Tikhonov regularisation toward the SPD target $R\T R$.
+Proposition~\ref{prop:weyl} already gave the effect on the condition number, and for
+the scaled-identity target it is $\kappa(H_\alpha) = O((1-\alpha)/\alpha)$: doubling
+$\alpha$ roughly halves the bound, \emph{independently of how small the smallest
+eigenvalue of $H$ was}.
+\index{regularisation}
+
+Two features of the split matter beyond the bound.
+
+\paragraph{It is free in factored form.} When $H = M\T M$ the regularised operator is
+again a Gram matrix, of the stacked operator
+\[
+  \tilde{M} = \begin{pmatrix} \sqrt{1-\alpha}\,M \\ \sqrt{\alpha}\,R \end{pmatrix},
+  \qquad \tilde{M}\T\tilde{M} = H_\alpha,
+\]
+so it is simply the Gram backend of Chapter~\ref{ch:operator} applied to $\tilde M$,
+and every solver runs on it with no change. The augmented-matrix device is standard in
+ridge regression and Tikhonov regularisation \cite{golub2013,lawson1974}; what is worth
+noticing is that it keeps the method \emph{matrix-free}.
+
+\paragraph{It restores the $P$-matrix property.} Because $H_\alpha \succ 0$ strictly
+whenever $\alpha > 0$, every principal submatrix is invertible even when $H$ is only
+positive semidefinite---a rank-deficient least-squares operator with fewer rows than
+columns, say. So the split simultaneously conditions the inner solve and
+\emph{licenses the finite-termination proof} of Theorem~\ref{thm:termination}, which
+needs the $P$-matrix property of Chapter~\ref{ch:geometry}. A strictly positive
+$\alpha$ is therefore the natural setting for the active-set loop, and the two
+motivations for it are independent.
+
+\section{Preconditioning}
+
+Regularisation lowers $\kappa$ by \emph{changing the operator}. When no modelling
+change is admissible and $H$ must be solved as given, the same reduction in iteration
+count is available through preconditioning, which leaves the minimiser untouched.
+
+An SPD preconditioner $P_\Free \approx H_{\Free\Free}$ turns the inner solve into
+preconditioned CG, equivalently CG on
+$P_\Free^{-1/2} H_{\Free\Free} P_\Free^{-1/2}$, whose spectrum coincides with that of
+$P_\Free^{-1}H_{\Free\Free}$. PCG realises this without ever forming
+$P_\Free^{-1/2}$: each iteration adds a single application of $P_\Free^{-1}$
+\cite{golub2013,benzi2005}. Proposition~\ref{prop:cg} then holds with $\kappa$
+replaced by $\kappa_P = \kappa(P_\Free^{-1}H_{\Free\Free})$, so a preconditioner helps
+exactly when $\kappa_P < \kappa(H_{\Free\Free})$, and is ideal when $P_\Free =
+H_{\Free\Free}$.
+\index{preconditioning}
+
+\subsection{Preconditioning on a \emph{changing} free set}
+
+Here the active-set setting imposes a constraint that a general treatment of
+preconditioning does not, and it sorts the standard choices sharply. The free set
+changes between outer steps, so a preconditioner is cheap only if it \emph{restricts}
+to the new free set at negligible cost.
+
+\paragraph{Jacobi restricts exactly.} $P = \diag(H)$ satisfies
+$(\diag H)_\Free = \diag(H_\Free)$, so $P_\Free$ is the free-set slice of a single
+vector computed once. For $H = M\T M$ that vector is the squared column norms of $M$,
+available without forming $H$, and its application is $O(|\Free|)$. It carries no
+per-step setup and is valid on every free set the loop visits---the natural default
+when $H$ has a widely varying diagonal.
+
+\paragraph{Incomplete Cholesky does not restrict.} In general
+$(P_\Free)^{-1} \ne (P^{-1})_\Free$, and the factor of the full $P$ is not a factor of
+$P_\Free$, so honouring $H_{\Free\Free}$ would require refactorising on each free set,
+reintroducing exactly the assembly the method avoids. Such preconditioners pay off here
+only once the free set stabilises---as it does near convergence, and across the
+support-stable warm starts of Proposition~\ref{prop:warm}---where one factor serves many
+outer steps.
+
+\paragraph{Low-rank-plus-diagonal sits between.} $P = \diag(d) + U\Delta U\T$ built
+from a few dominant eigenpairs \cite{saad2003iterative} restricts consistently in its
+\emph{application}, $P_\Free = \diag(d)_\Free + U_\Free\Delta U_\Free\T$, and is
+inverted matrix-free in $O(|\Free|r^2 + r^3)$ by Woodbury---precisely the direct
+free-block solve of Chapter~\ref{ch:operator}. It captures the leading spectral
+structure a diagonal misses. And when $H$ is \emph{itself} diagonal-plus-low-rank the
+preconditioner \emph{is} $H$, giving $\kappa_P = 1$ and a direct inner solve that
+bypasses CG altogether. Randomised Nyström sketching is the practical way to build one,
+in a resketch-per-block variant and a sketch-once-and-mask variant that trade setup
+cost against reuse.
+
+\begin{remark}[The stopping criterion must not drift]
+PCG naturally monitors the \emph{preconditioned} residual norm
+$(r\T P_\Free^{-1}r)^{1/2}$, whereas Lemma~\ref{lem:inexact}---the transfer of finite
+termination to inexact solves---is stated for the ordinary residual. The two differ by
+a factor between $\lambda_{\min}(P_\Free)^{1/2}$ and $\lambda_{\max}(P_\Free)^{1/2}$.
+To keep the guarantee intact, evaluate the inner stop on the unpreconditioned residual
+(or tighten the preconditioned tolerance by $\kappa(P_\Free)^{1/2}$). The lemma then
+applies word for word, because preconditioning changes only how fast the residual falls,
+leaving the operator, the residual itself, and the decision margin untouched.
+
+This is a small point with a general moral: when two guarantees are composed, check
+that they are stated in the same units.
+\end{remark}
+
+\begin{remark}[Preconditioning widens the Krylov advantage]
+A scaled gradient step minimises $f$ in the $P$-metric, but the orthant and simplex
+projections that make projected gradient cheap are closed-form only in the Euclidean
+norm, and become non-negative quadratic programs under a general $P$. So
+preconditioning is a lever the Krylov inner solver has that the first-order reference
+effectively lacks. It \emph{widens} the $\sqrt\kappa$ gap of
+Chapter~\ref{ch:krylov} rather than closing it.
+\end{remark}
+
+\section{Linear shrinkage, and conditioning as a by-product}
+\label{sec:shrinkage}
+
+Now the statistical instance, which is where the chapter's thesis lives.
+
+The sample covariance $\hat\Sig = X\T X/T$ is a poor estimator of $\Sig$ when $n$ is
+not small relative to $T$: its smallest eigenvalues are severely downward-biased and
+its condition number far exceeds that of $\Sig$. Ledoit and Wolf \cite{ledoit2004}
+propose \emph{linear shrinkage}---replace $\hat\Sig$ by a convex combination with an
+SPD target,
+\[
+  \hat\Sig_{\mathrm{LW}} = (1-\alpha)\,\hat\Sig + \alpha\, R\T R,
+\]
+which is exactly~\eqref{eq:regsplit}. The intensity $\alpha$ is chosen analytically by
+minimising a consistent estimator of the expected \emph{Frobenius} loss; the classical
+target is the scaled identity $\bar\lambda I$ with
+$\bar\lambda = \tr(\hat\Sig)/n$.
+\index{Ledoit--Wolf shrinkage}
+
+Here is the tension, and its resolution.
+
+\paragraph{The statistically optimal intensity barely helps conditioning.} On S\&P~500
+data with $n/T \approx 0.41$, the Ledoit--Wolf oracle gives
+$\alpha_{\mathrm{LW}} \approx 0.017$, and the Oracle Approximating Shrinkage
+estimator \cite{chen2010} gives $\approx 0.010$. Both are small, and the mechanism is
+structural rather than accidental. The oracle is $\alpha^\star = \beta^2/\delta^2$ with
+$\delta^2 = \norm{\hat\Sig - \bar\lambda I}_F^2$, and $\delta^2$ is \emph{dominated by
+the large, well-estimated eigenvalues}: the market factor alone contributes
+$(\lambda_1 - \bar\lambda)^2 \approx (0.067)^2$, while each near-zero noise eigenvalue
+contributes only $\bar\lambda^2 \approx 2\times10^{-7}$. The near-zero eigenvalues---the
+sole cause of $\kappa \approx 109{,}000$---receive negligible correction, because the
+Frobenius loss barely notices them. Corollary to Proposition~\ref{prop:weyl}: at
+$\alpha^\star \approx 0.017$ the bound gives $\kappa \lesssim 8{,}500$, barely below
+the unshrunk value.
+
+\paragraph{The intensity practitioners actually use does help, decisively.}
+Practitioners routinely apply $\alpha \approx 0.3$--$0.5$ for out-of-sample stability
+\cite{demiguel2009,ledoit2003jpm}. At $\alpha = 0.5$ the bound gives
+$\kappa \le \lambda_{\max}(\hat\Sig)/\bar\lambda + 1 \approx 147$, which matches the
+empirical value---the bound is near-tight because
+$\lambda_{\min}(\hat\Sig) \ll \alpha\bar\lambda$, so
+$\lambda_{\min}(\hat\Sig_{\mathrm{LW}}) \approx \alpha\bar\lambda$, precisely the
+denominator Weyl's inequality assumes. The measured effect on the solver is
+proportionate: CG iterations fall from $684$ to $82$, and the outer active-set loop
+contracts from $18$ steps to $6$, because a lower condition number moves the
+unconstrained portfolio toward equal weights so fewer assets receive negative weights
+in the primal step.
+
+\paragraph{Is there a statistics-versus-speed trade-off?} The Frobenius surrogate and
+the condition number are minimised at different $\alpha$, which looks like one. A
+rolling-window out-of-sample study says there is none: realised out-of-sample variance
+is minimised at $\alpha \approx 0.3$, inside the heavy-shrinkage range that gives the
+conditioning benefit, while turnover falls monotonically in $\alpha$. \emph{The
+intensity that makes the solver fast is also the intensity a risk-conscious
+practitioner would choose}, and the apparent tension is an artefact of the Frobenius
+surrogate rather than a property of the problem.
+
+\paragraph{Factor targets.} The scaled identity is not the only choice. A structured
+target $T_0 = BB\T + D$, with $B$ holding the loadings of $k \ll n$ risk factors and
+$D$ a diagonal idiosyncratic variance, is a drop-in replacement in the stacked-matrix
+construction: take $R = (B\T; D^{1/2})$. Because the factor structure clusters
+eigenvalues more tightly than a scaled identity, Proposition~\ref{prop:weyl} yields a
+smaller bound at the same $\alpha$. The product cost is unchanged, the factor and
+diagonal terms costing $O(nk)$ and $O(n)$ against the data term's $O(nT)$.
+
+\section{Spectral cleaning: Marchenko--Pastur}
+
+Shrinkage moves every eigenvalue toward the target. Random-matrix theory offers
+something sharper: identify \emph{which} eigenvalues are noise and replace only those.
+\index{Marchenko--Pastur law}
+
+Work with the sample \emph{correlation} $C = D^{-1/2}\hat\Sig D^{-1/2}$, where
+$D = \diag(\hat\Sig)$. This matters: individual variances are well estimated even in
+high dimensions, and the noise that destabilises the problem lives in the correlation
+structure. The covariance mixes the well-estimated variances into the spectrum, so its
+bulk is not a clean band and its edge has no scale-free form.
+
+The Marchenko--Pastur law \cite{marchenko1967} describes the limiting spectral
+distribution of a sample correlation of standardised series when $n, T \to \infty$
+with $n/T \to c \in (0,1)$: under the null of no correlation structure the bulk is
+supported on $[\lambda_-,\lambda_+]$ with $\lambda_\pm = (1 \pm \sqrt{c})^2$. In
+finite samples the empirical upper edge is $\hat\lambda_+ = (1 + \sqrt{n/T})^2$.
+Correlation eigenvalues above it carry genuine factor structure; those below are
+consistent with noise. Write $k$ for the number above. On S\&P~500 data with $n = 494$,
+$T = 1213$: $\hat\lambda_+ \approx 2.28$ and $k = 17$.
+
+\subsection{The constant-residual-eigenvalue estimator}
+
+Let $C = U\Lambda U\T$, partition by the edge into signal $U_k, \Lambda_k$ and noise
+$U_0$, and replace the bulk eigenvalues by their average
+\[
+  \bar\mu = \frac{1}{n-k}\sum_{j>k}\lambda_j = \frac{n - \sum_{j\le k}\lambda_j}{n-k},
+\]
+which preserves the trace $\tr(C) = n$. The resolution of the identity
+$U_kU_k\T + U_0U_0\T = I$ then gives the \emph{constant residual eigenvalue} (CRE), or
+eigenvalue-clipping, cleaned correlation \cite{laloux1999,bun2017,lopezdeprado2018}
+\begin{equation}
+  C_0 = U_k\Lambda_k U_k\T + \bar\mu\,U_0U_0\T = \bar\mu\,I + U_k\Delta_k U_k\T,
+  \qquad \Delta_k = \Lambda_k - \bar\mu I,
+  \label{eq:cre}
+\end{equation}
+which is \emph{scalar-identity-plus-low-rank}, with $\delta_j = \lambda_j - \bar\mu > 0$.
+
+\begin{proposition}[Spectral properties of $C_0$]
+\label{prop:rmt_spectrum}
+$C_0 \succ 0$ with eigenvalues $\{\lambda_1,\dots,\lambda_k,\bar\mu,\dots,\bar\mu\}$
+and $\tr(C_0) = n$; $\kappa(C_0) = \lambda_{\max}(C)/\bar\mu$; $C_0$ differs from $C$
+only in the noise subspace; and $C_0 v = \bar\mu v + U_k(\Delta_k(U_k\T v))$ costs
+$O(nk)$ with $O(nk)$ storage.
+\end{proposition}
+
+\begin{proof}
+All four from the eigendecomposition
+$C_0 = [U_k\ U_0]\diag(\Lambda_k,\bar\mu I)[U_k\ U_0]\T$, the positivity of
+$\delta_j$, and the definition of $\bar\mu$.
+\end{proof}
+
+Cleaning lifts the noise floor to $\bar\mu$ while preserving the signal, so
+$\kappa(C_0) \approx 313$ against $\kappa(C) \approx 91{,}000$: an improvement of
+roughly $290\times$, and decisively better than what heavy shrinkage achieves.
+
+\subsection{Two design decisions worth understanding}
+
+\begin{remark}[Why solve in standardised coordinates]
+\label{rem:standardised}
+Solve the problem in $y = D^{1/2}w$, posing it against $C_0$ rather than rebuilding the
+covariance $\Sig_0 = D^{1/2}C_0D^{1/2}$. The reason is arithmetic, not aesthetic: the
+rebuilt covariance is \emph{far worse conditioned} ($\kappa(\Sig_0) \approx 1{,}400$ on
+the same data), inflated by the spread of asset variances---a factor of about $49$
+between largest and smallest. The change of variables is exact, and it also puts the
+tolerance on an $O(1)$ scale with noise floor $\bar\mu \approx 0.5$, removing the
+dependence on the raw data scale that a covariance formulation carries.
+\end{remark}
+
+\begin{remark}[Why clipping, and not a better estimator]
+\label{rem:rie}
+CRE clipping is the simplest rotationally invariant estimator and is \emph{not}
+loss-optimal: nonlinear shrinkage \cite{ledoit2012,ledoit2020} and the oracle RIE
+\cite{ledoitpeche2011,bun2017}, which reshape \emph{every} eigenvalue, dominate it in
+Frobenius loss. We nevertheless use it for a \emph{structural} reason: clipping is the
+only member of the family whose cleaned correlation is
+scalar-identity-plus-low-rank---the spiked form \cite{johnstone2001} that admits the
+closed-form Woodbury solve of Chapter~\ref{ch:operator}. A full-rank RIE modification
+would require a general factorisation and forfeit it.
+
+Whether the statistical gap matters for the application is an empirical question, and
+on long-only minimum-variance data it is small. But note the shape of the reasoning:
+a slightly worse estimator that is $O(nk)$ to invert may dominate a slightly better one
+that is $O(n^3)$, once one is computing hundreds of paths rather than one point.
+\emph{Statistical optimality and computational structure are both objectives, and they
+are traded, not ranked.}
+\end{remark}
+
+Two further notes. A blend $(1-\alpha)C + \alpha C_0$ would re-introduce a fraction of
+the bulk eigenvalues, and---the algebraic point---only at $\alpha = 1$ does the
+restricted system retain the scalar-identity-plus-low-rank form; for
+$\alpha \in (0,1)$ the residual structure is full rank and no $k\times k$ correction
+exists. And the solver applies for \emph{any} choice of $k$: a practitioner with an
+external risk model, or a PCA with $k$ fixed by cross-validation, can supply the
+eigenpairs directly. What the solve requires is not the source of $k$ but the
+replacement of the remaining $n-k$ eigenvalues by a single scalar.
+
+\subsection{Is $k$ a delicate hyperparameter?}
+
+No, and it is worth knowing why one can say so. Two biases perturb the threshold:
+finite-$T$ Tracy--Widom fluctuations of the largest noise eigenvalue, at scale
+$O(T^{-2/3})$ \cite{johnstone2001,elkaroui2008}, and diffuse sector structure just below
+the edge. Both move $k$ by at most an eigenvalue or two. An audit at $k-1$, $k$, $k+1$
+costs one extra solve per audit point and reveals the sensitivity directly, which is
+small over the bulk of a frontier.
+
+That is the right way to treat a threshold in general: rather than argue that it is
+correct, measure what changes when it moves by the amount it could plausibly be wrong
+by.
+
+\begin{notes}
+Ledoit and Wolf's linear shrinkage is \cite{ledoit2004}, with OAS \cite{chen2010} and
+nonlinear shrinkage \cite{ledoit2020}. Section~\ref{sec:shrinkage} follows
+\cite{schmelzer2026matrixfree}, whose contribution is the identification of the
+shrinkage intensity as a preconditioning parameter through the $\alpha$-dependent
+bound, and the out-of-sample study reconciling the two objectives. The RMT material is
+\cite{schmelzer2026rmt}; Marchenko--Pastur is \cite{marchenko1967}, eigenvalue clipping
+\cite{laloux1999}, and the modern treatment \cite{bun2017}. Preconditioning on a
+changing free set, including the Nyström constructions, is from
+\cite{schmelzer2026nncg}; Benzi \cite{benzi2005} and Saad \cite{saad2003iterative} are
+the general references.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Prove Proposition~\ref{prop:weyl} from Weyl's inequality, and verify the
+scaled-identity corollary.
+\end{exercise}
+
+\begin{exercise}
+Verify that $\tilde M\T\tilde M = H_\alpha$ for the stacked matrix of Section~1, and
+explain why this keeps the method matrix-free where forming $H_\alpha$ would not.
+\end{exercise}
+
+\begin{exercise}
+Show that Jacobi preconditioning restricts exactly, $(\diag H)_\Free = \diag(H_\Free)$,
+and that incomplete Cholesky does not, by exhibiting a $3\times3$ example.
+\end{exercise}
+
+\begin{exercise}
+Given $\lambda_{\max}(\hat\Sig) = 0.07$, $\bar\lambda = 4.6\times10^{-4}$, and
+$\lambda_{\min}(\hat\Sig) = 6\times10^{-7}$, evaluate the bound of
+Proposition~\ref{prop:weyl} at $\alpha \in \{0.017, 0.1, 0.3, 0.5\}$ and confirm the
+numbers quoted in Section~\ref{sec:shrinkage}.
+\end{exercise}
+
+\begin{exercise}
+Explain, using $\delta^2 = \norm{\hat\Sig - \bar\lambda I}_F^2$, why the Ledoit--Wolf
+oracle intensity is insensitive to the near-zero eigenvalues. Construct a spectrum for
+which it would not be.
+\end{exercise}
+
+\begin{exercise}
+Verify Proposition~\ref{prop:rmt_spectrum}, and compute $\bar\mu$ and $\kappa(C_0)$ for
+a spectrum with $n = 100$, $k = 3$, $\lambda_{1,2,3} = (20, 8, 4)$ and the remaining
+trace spread over the bulk.
+\end{exercise}
+
+\begin{exercise}
+Show that a blend $(1-\alpha)C + \alpha C_0$ is scalar-identity-plus-low-rank only for
+$\alpha \in \{0,1\}$, confirming Section~5.2.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Download or simulate a $T\times n$ return matrix with $n/T \approx 0.4$. Compute
+$\kappa$ of the sample covariance, of the correlation, of the CRE-cleaned correlation,
+and of the rebuilt cleaned covariance. Confirm the ordering claimed in
+Remark~\ref{rem:standardised}.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Solve the long-only minimum-variance problem with matrix-free CG under
+$\alpha \in \{0, 0.017, 0.1, 0.3, 0.5\}$ and record CG iterations and outer active-set
+steps for each. Reproduce the qualitative shape of the $684 \to 82$ collapse, and
+explain why the outer count falls too.
+\end{exercise}
+
+\end{exercises}

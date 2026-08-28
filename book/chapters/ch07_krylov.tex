@@ -1,0 +1,389 @@
+\chapter{Iterating Inside It: Krylov Methods on the Free Block}
+\label{ch:krylov}
+
+Chapters~\ref{ch:walking} and~\ref{ch:guessing} took the inner linear solve for
+granted. This chapter takes it seriously.
+
+The observation that organises the chapter is this. Once a free set $\Free$ is
+fixed, the bound-constrained problem reduces to the unconstrained SPD system
+$A_\Free x_\Free = b_\Free$---and the canonical solver for an SPD system is the
+conjugate gradient method of Hestenes and Stiefel \cite{hestenes1952}. CG needs
+only the action $v \mapsto A_\Free v$, never the matrix. So if $A$ arrives in
+factored form---$A = M\T M$ for a data matrix $M$, which is exactly what a Gram
+matrix or a sample covariance is---then the whole method can run without ever
+assembling an $n \times n$ object.
+
+CG solves linear systems; it does not, unaided, respect $x \ge 0$. Wrapping it in
+the active-set loop of Chapter~\ref{ch:guessing} supplies the missing layer. The
+composition is not free: the loop's termination theorem assumes exact inner solves
+and CG returns an approximation. Section~\ref{sec:inexact} closes that gap, and it
+is the most instructive argument in the chapter.
+
+\section{Conjugate gradients, in one page}
+
+For SPD $A$ and right-hand side $b$, CG builds its $k$-th iterate as the minimiser
+of the energy $\tfrac12 x\T A x - b\T x$ over the Krylov subspace
+$\Krylov_k(A,b) = \mathrm{span}\{b, Ab, \dots, A^{k-1}b\}$, and does so with one
+matrix--vector product, a handful of vector operations, and $O(n)$ storage per
+iteration. That it can optimise over a growing subspace at constant cost per step
+is the content of the three-term recurrence, and any of
+\cite{golub2013,greenbaum1997,trefethenbau1997} derives it.
+\index{conjugate gradient method}
+
+\begin{proposition}[CG convergence]
+\label{prop:cg}
+Let $A_\Free$ be SPD with condition number $\kappa = \kappa(A_\Free)$, and let $x_k$
+be the $k$-th CG iterate for $A_\Free x_\Free = b_\Free$. Then
+\[
+  \frac{\norm{e_k}_{A_\Free}}{\norm{e_0}_{A_\Free}}
+  \;\le\;
+  2\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{\!k},
+\]
+where $\norm{e}_{A_\Free} = (e\T A_\Free e)^{1/2}$ and
+$e = x_\Free - x_k$.
+\end{proposition}
+
+Reaching a fixed relative energy-norm tolerance therefore costs $O(\sqrt\kappa)$
+iterations, and clustered spectra do better still---the superlinear phase that a
+Chebyshev bound cannot see. Two consequences frame the rest of the chapter.
+
+First, by Proposition~\ref{prop:interlace} the bound applies \emph{uniformly over
+every free set the loop might visit}, since $\kappa(A_\Free) \le \kappa(A)$. One
+does not need to know which free sets those are.
+
+Second, $\sqrt\kappa$ is the whole reason to keep a Krylov method rather than a
+simpler iteration. Section~\ref{sec:projgrad} makes the comparison precise.
+
+\section{The matrix-free operator}
+\label{sec:operator-two}
+
+CG needs only $v \mapsto A_\Free v$. When $A = M\T M$ this is
+\[
+  A_\Free v = M_\Free\T(M_\Free\,v), \qquad M_\Free = M_{:,\Free},
+\]
+two products at $O(m\,|\Free|)$ with \emph{no} $O(n^2)$ storage---the standard
+CG-on-the-normal-equations arrangement \cite{golub2013,paige1975}, on a column
+subset that changes between outer steps.
+\index{matrix-free}
+
+The whole method needs exactly two operations of $A$, and it is worth naming them
+because Chapter~\ref{ch:operator} builds an abstraction on precisely this list.
+
+\begin{enumerate}
+\item \textbf{The free-block application} $v \mapsto A_\Free v$, which is all CG
+      needs to solve the inner system.
+\item \textbf{The cross product}
+      $x_\Free \mapsto A_{\Bound,\Free}\,x_\Free$, which supplies the reduced
+      gradient $s_i = (Ax)_i - b_i$ at the bound indices (where $x_\Bound = 0$),
+      and hence the dual-feasibility test.
+\end{enumerate}
+
+Any implementation realising these two runs the loop, its termination proof, and its
+convergence analysis unchanged. A dense $A$ slices them directly. The Gram operator
+$A = M\T M$ evaluates them from $M$ without forming $A$. A diagonal-plus-low-rank
+operator $A = \diag(d) + U\Delta U\T$ inverts the free block by the Woodbury
+identity---a \emph{direct} inner solve that bypasses CG entirely, which is what
+Chapter~\ref{ch:operator} exploits.
+
+\section{Adding a linear equality}
+
+Many applications carry a linear balance system alongside the bounds:
+\begin{equation}
+  \min_{x}\; \tfrac12 x\T A x - b\T x
+  \quad\text{subject to}\quad Bx = c,\; x \ge 0,
+  \qquad B \in \R^{p\times n} \text{ of full row rank}.
+  \label{eq:eqp}
+\end{equation}
+The budget constraint $\onevec\T x = \beta$ is the case $p = 1$; group budgets,
+factor neutralities, and netting rules are $p > 1$ at the same cost structure.
+
+Naively this makes the free-set system the indefinite saddle system
+of~\eqref{eq:saddle}, which CG cannot touch. The remedy is the Schur elimination of
+Chapter~\ref{ch:freeblock}, and it is worth writing out because it is what keeps
+every solve SPD.
+
+Stationarity gives $x_\Free = A_\Free^{-1}(b_\Free + B_\Free\T\lambda) = v_0 + V_1\lambda$
+in terms of the SPD solves
+\[
+  v_0 = A_\Free^{-1} b_\Free,
+  \qquad
+  V_1 = A_\Free^{-1} B_\Free\T \quad(\text{its $p$ columns, one CG solve each}).
+\]
+Imposing $B_\Free x_\Free = c$ fixes the multiplier through the $p\times p$ system
+\[
+  S\,\lambda = c - B_\Free v_0,
+  \qquad
+  S = B_\Free V_1 = B_\Free A_\Free^{-1} B_\Free\T \succ 0,
+  \qquad
+  x_\Free = v_0 + V_1\lambda .
+\]
+So each outer step costs $p+1$ matrix-free CG solves sharing one operator, plus a
+$p\times p$ dense Cholesky of negligible cost. \emph{The multipliers are recovered
+analytically and never appear in the linear solve}, so every inner system stays SPD
+and Proposition~\ref{prop:cg} applies to each.
+
+For $p = 1$, $B = \onevec\T$, $c = \beta$ this collapses to two solves
+$v_0, v_1 = A_\Free^{-1}\onevec$ with the scalar
+$\lambda = (\beta - \onevec\T v_0)/(\onevec\T v_1)$; and the pure-normalisation case
+$b = 0$, $\beta = 1$ collapses further to the single solve
+$x_\Free = v_1/(\onevec\T v_1)$. That last formula is the entire long-only
+minimum-variance portfolio, and Chapter~\ref{ch:operator} returns to it.
+
+\begin{remark}[What this buys over feasible-point methods]
+\label{rem:feasible}
+There is a well-developed family of \emph{feasible-point} bound-constrained
+solvers---Bertsekas' projected Newton method \cite{bertsekas1982}, Moré and
+Toraldo's GPCG \cite{moretoraldo1991}, Dostál's proportioning and MPRGP algorithms
+\cite{dostal1997,dostalschoberl2005}---in which every iterate satisfies the bounds
+and the working face changes through gradient projections. They are excellent
+methods and their rates are stated in $\kappa$ as well.
+
+The distinction that matters here is the equality $Bx = c$. Those methods rely on a
+closed-form projection onto the feasible set, which the orthant supplies but
+$\{x\ge0 : Bx=c\}$ does not; they reach a general linear equality only by wrapping
+an outer augmented-Lagrangian loop \cite{dostal2006smalbe}, at the price of an extra
+level of iteration and of the exact certificate. The loop of this chapter takes
+$Bx = c$ directly through the Schur elimination above.
+
+The trade runs the other way too, and honesty requires stating it: this loop treats
+only the non-negative orthant $x \ge 0$, not the general two-sided box
+$\ell \le x \le u$ that those methods support. A two-state complementary basis
+cannot express two-sided bounds; that would need a mixed-complementarity
+formulation.
+\end{remark}
+
+\section{The projected-gradient reference}
+\label{sec:projgrad}
+
+To see what the Krylov subspace buys, compare against a method that forgoes it.
+Projected gradient iterates
+\[
+  x_{k+1} = \Pi_\Omega\!\left(x_k - \tau\,\nabla f(x_k)\right),
+  \qquad \nabla f(x) = A x - b,
+\]
+with $\tau = 1/L$, $L = \lambda_{\max}(A)$. For the orthant
+$\Pi_\Omega(y) = \max(y,0)$ componentwise; for the simplex slice
+$\{x \ge 0 : \onevec\T x = \beta\}$ the projection is $O(n\log n)$ by a single
+sort-and-threshold pass \cite{duchi2008,condat2016}. There is no outer loop and no
+linear solve.
+\index{projected gradient}
+
+\begin{proposition}[Projected-gradient convergence]
+\label{prop:proj}
+Let $A \succ 0$, so $f$ is $\mu$-strongly convex and $L$-smooth with
+$\mu = \lambda_{\min}(A)$, $L = \lambda_{\max}(A)$. Projected gradient with
+$\tau = 1/L$ satisfies
+$\norm{x_k - x^\star}^2 \le (1 - 1/\kappa(A))^{k}\norm{x_0 - x^\star}^2$.
+\end{proposition}
+
+\begin{proof}[Sketch]
+$x^\star$ is a fixed point; non-expansiveness of $\Pi_\Omega$ and co-coercivity of
+the $L$-smooth gradient give
+$\norm{x_{k+1}-x^\star}^2 \le \norm{x_k-x^\star}^2 -
+\tau(2-\tau L)\inner{\nabla f(x_k)-\nabla f(x^\star)}{x_k-x^\star}$; setting
+$\tau = 1/L$ and applying strong convexity gives the claim.
+\end{proof}
+
+So the iteration count is $O(\kappa)$ against $O(\sqrt\kappa)$ for CG, at the same
+per-step cost of one operator application. On ill-conditioned problems that
+$\sqrt\kappa$ gap is a runtime gap. Nesterov acceleration \cite{nesterov2004,beck2009}
+would lift the projected-gradient rate to $O(\sqrt\kappa)$, but CG attains that rate
+\emph{optimally} within the Krylov subspace: each CG iterate minimises $f$ over
+$\Krylov_k$, a strictly richer search space than two-point momentum, and typically
+with a smaller constant.
+
+The trade is otherwise in the other direction, and the honest summary is that
+projected gradient is loop-free, needs no complementarity certificate, and is the
+simpler method when $\kappa$ is small or moderate accuracy suffices. It also loses
+its per-step simplicity the moment $p > 1$: projecting onto
+$\{x\ge0 : Bx=c\}$ for general $B$ is itself a non-negative quadratic program.
+
+\section{Inexactness: composing the two guarantees}
+\label{sec:inexact}
+
+We now close the gap flagged at the end of Chapter~\ref{ch:guessing}.
+
+\begin{lemma}[Inexact inner solves]
+\label{lem:inexact}
+\index{decision margin}
+Fix the bound-constrained problem~\eqref{eq:bqp}. For a free set $\Free$ let
+$\hat x(\Free)$ be the exact solution of the inner system extended by zeros, and
+$\hat s(\Free) = A\hat x(\Free) - b$. Let $\Free_0 = \{1,\dots,n\}, \dots, \Free_T$
+be the free-set trajectory of Algorithm~\ref{alg:elim} run with \emph{exact} inner
+solves, finite by Theorem~\ref{thm:termination}. Define the \emph{decision margin}
+\[
+  \mu = \min_{0 \le t \le T} \min\Bigl(
+    \{ |\hat x_i(\Free_t)| : i \in \Free_t,\ \hat x_i \ne 0 \}
+    \cup
+    \{ |\hat s_i(\Free_t)| : i \notin \Free_t,\ \hat s_i \ne 0 \}
+  \Bigr) > 0,
+\]
+the smallest nonzero magnitude any primal or dual test encounters along the exact
+trajectory. Suppose $0 < \varepsilon < \mu$ and every inner CG call is stopped at a
+residual $\rho = \norm{b_\Free - A_\Free\tilde x_\Free}_2$ obeying
+\begin{equation}
+  \rho\left(\frac{1 + \lambda_{\max}(A)}{\lambda_{\min}(A)}\right)
+  \;<\; \min\bigl(\varepsilon,\ \mu - \varepsilon\bigr).
+  \label{eq:inexactcond}
+\end{equation}
+Then at every outer step the violator sets computed from the CG iterate coincide
+with those computed from the exact solve on the same free set. The inexact loop
+therefore traverses exactly the trajectory $\Free_0,\dots,\Free_T$,
+Theorem~\ref{thm:termination} applies verbatim, and
+$\norm{\tilde x - x^\star}_\infty \le \rho/\lambda_{\min}(A)$.
+\end{lemma}
+
+\begin{proof}
+Write $r = b_\Free - A_\Free\tilde x_\Free$, so
+$\tilde x_\Free - \hat x_\Free = -A_\Free^{-1}r$. By Cauchy interlacing
+(Proposition~\ref{prop:interlace}), $\lambda_{\min}(A_\Free) \ge \lambda_{\min}(A)$,
+hence
+$\delta_x := \norm{\tilde x_\Free - \hat x_\Free}_2 \le \rho/\lambda_{\min}(A)$,
+which also bounds each coordinate. For $i \notin \Free$,
+$\tilde s_i - \hat s_i = A_{i,\Free}(\tilde x_\Free - \hat x_\Free)$, so by
+Cauchy--Schwarz $\delta_s \le \lambda_{\max}(A)\delta_x$. Both are bounded by
+$\delta := \rho(1+\lambda_{\max}(A))/\lambda_{\min}(A) < \min(\varepsilon,\mu-\varepsilon)$.
+
+Fix $i \in \Free_t$. If $\hat x_i \ge 0$ then $\hat x_i = 0$ or $\hat x_i \ge \mu$;
+either way $\tilde x_i \ge -\delta > -\varepsilon$ and the inexact test does not flag
+$i$, matching the exact test. If $\hat x_i < 0$ then $\hat x_i \le -\mu$, so
+$\tilde x_i \le -\mu + \delta < -\varepsilon$ and both tests flag $i$. The same
+argument with $\hat s_i, \tilde s_i, \delta_s$ covers the dual test at every bound
+index. Hence the violator sets agree at step $t$; since both loops start from the
+same $\Free_0$ and the counters are deterministic functions of the violator
+sequence, induction on $t$ gives the same trajectory and the same stopping step. At
+termination the exact iterate is $x^\star$, so
+$\norm{\tilde x - x^\star}_2 = \delta_x \le \rho/\lambda_{\min}(A)$.
+\end{proof}
+
+Read the structure of that argument, because it generalises. One does not prove a
+new termination theorem for the approximate method. One proves that the approximate
+method makes the \emph{same decisions} as the exact method, and then inherits the
+exact method's theorem unchanged. Whenever an algorithm's control flow depends on
+finitely many sign tests, and those tests have a margin, this is the argument
+available.
+
+The corresponding statement for the equality-augmented problem~\eqref{eq:eqp} needs
+one extra step, because the multiplier $\lambda$ is itself recovered from $p+1$
+inexact solves through the Schur complement rather than read off a single residual.
+Propagating the perturbation through $\tilde S^{-1}$ by a Neumann series gives a
+bound of the same shape, and the sign-test argument then runs verbatim.
+
+\begin{remark}[The guarantee attaches to the outer loop]
+Nothing in Theorem~\ref{thm:termination} mentions CG. A \emph{direct} factorisation
+may replace the Krylov inner solve unchanged, and then no inexactness condition
+needs verifying at all. Chapter~\ref{ch:operator} does exactly this with a Woodbury
+solve. The separation is worth naming: the outer loop owns the combinatorics and the
+certificate; the inner solver owns the linear algebra; and Lemma~\ref{lem:inexact} is
+the interface contract between them.
+\end{remark}
+
+\section{Warm starts}
+
+For a parametric family---a sequence of right-hand sides $b(\theta_1), b(\theta_2),
+\dots$, or a swept normalisation $\beta$---consecutive minimisers usually differ in
+only a few active constraints. Passing the previous problem's $(\Free, x)$ as the
+initial state reduces both counts: the outer count, because the free set needs fewer
+adjustments, and the inner count, because CG starts from a small initial residual.
+
+\begin{proposition}[Warm starts across a support-stable step]
+\label{prop:warm}
+Let $b' = b + \delta$ and suppose the free set $\Free$ returned for $b$ is also
+optimal for $b'$. Then Algorithm~\ref{alg:elim} started from $\Free$ terminates in a
+\emph{single} outer step, and its one CG solve, warm-started at the previous
+solution, reaches energy-norm accuracy $\tau$ in at most
+\[
+  k \;\le\; \left\lceil \frac{\sqrt{\kappa}+1}{2}\,
+  \ln\!\frac{2\,\norm{\delta}_2}{\tau\sqrt{\lambda_{\min}(A)}} \right\rceil
+  \text{ iterations.}
+\]
+\end{proposition}
+
+\begin{proof}
+The single solve returns $\hat x_\Free \ge 0$ with $s \ge 0$ on the bound set, so
+both violator sets are empty and the loop exits, certified by Step~2 of
+Theorem~\ref{thm:termination}'s proof. The warm start's initial error is
+$e_0 = A_\Free^{-1}\delta_\Free$, whose energy norm is
+$(\delta_\Free\T A_\Free^{-1}\delta_\Free)^{1/2} \le \norm{\delta}_2/\sqrt{\lambda_{\min}(A)}$
+by interlacing. Proposition~\ref{prop:cg} with
+$\rho_{\mathrm{cg}} = (\sqrt\kappa-1)/(\sqrt\kappa+1)$ and
+$\ln(1/\rho_{\mathrm{cg}}) \ge 2/(\sqrt\kappa+1)$ gives the bound.
+\end{proof}
+
+The interesting feature is that the inner count scales with the logarithm of the
+\emph{parameter step} $\norm{\delta}$, not of the solution norm: a finer grid is
+cheaper per point. When the support drifts, no comparable a-priori bound is
+available---the loop is not monotone in the free set---but empirically the
+warm-started outer count tracks the support drift $|\Free \triangle \Free'|$ and
+collapses to one whenever the drift is zero, exactly as the proposition prescribes.
+
+Note also which solver profits from what. A \emph{direct} inner solver profits only
+from the warm free set, having no analogue of an initial guess. A matrix-free CG
+inner solver profits from both. That is where warm-started parametric sweeps obtain
+their largest speed-ups, and Chapter~\ref{ch:warmstart} develops the theme.
+
+\begin{notes}
+The construction of this chapter is \cite{schmelzer2026nncg}, released as the
+open-source \texttt{nncg} package; Lemma~\ref{lem:inexact} and its
+equality-augmented corollary are its contribution, the exact-solve termination count
+being Júdice and Pires' \cite{judice1994}. CG is \cite{hestenes1952};
+\cite{greenbaum1997} and \cite{trefethenbau1997} are the textbook treatments of its
+convergence, and \cite{golub2013} of the normal-equations arrangement. On the NNLS
+side, Bro and De Jong's fast NNLS \cite{brodejong1997} accelerates Lawson--Hanson
+\cite{lawson1974} by caching normal-equations cross-products, but still assembles
+$M\T M$; the method here forms neither.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Show that $A = M\T M$ is positive definite iff $M$ has full column rank, and that
+the free-block operator $v \mapsto M_\Free\T(M_\Free v)$ is SPD for every $\Free$
+when it is.
+\end{exercise}
+
+\begin{exercise}
+Derive the $p = 1$ specialisation of the Schur elimination, and verify that
+$b = 0$, $\beta = 1$ gives $x_\Free = v_1/(\onevec\T v_1)$.
+\end{exercise}
+
+\begin{exercise}
+Show $S = B_\Free A_\Free^{-1} B_\Free\T \succ 0$ whenever $A_\Free \succ 0$ and
+$B_\Free$ has full row rank. For $p = 1$, when can $B_\Free$ fail to have full row
+rank?
+\end{exercise}
+
+\begin{exercise}
+Prove that CG applied to $A_\Free x = b_\Free$ from $x_0 = 0$ produces iterates in
+$\Krylov_k(A_\Free, b_\Free)$, and deduce that the exact solution is reached in at
+most $|\Free|$ iterations in exact arithmetic. Why is this fact of limited practical
+use?
+\end{exercise}
+
+\begin{exercise}
+The decision margin $\mu$ of Lemma~\ref{lem:inexact} is defined along the exact
+trajectory, which one does not know in advance. Explain why the lemma is
+nevertheless useful, and propose a practical stopping rule that respects its spirit.
+\end{exercise}
+
+\begin{exercise}
+Compare the total work of CG and projected gradient to reach relative accuracy
+$10^{-8}$ on a problem with $\kappa = 10^{4}$, assuming one operator application per
+step in both. Now repeat for $\kappa = 10^2$ and comment.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Implement Algorithm~\ref{alg:elim} with a matrix-free CG inner solver on
+$A = M\T M$. On a synthetic NNLS problem with a planted non-negative solution, plot
+total CG iterations against the inner residual tolerance and locate the point at
+which the outer trajectory changes---i.e.\ where~\eqref{eq:inexactcond} fails.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Sweep the normalisation $\beta$ over a grid of $50$ values with and without warm
+starting. Plot outer steps and total inner iterations for both, and check
+Proposition~\ref{prop:warm}'s prediction that the inner count scales with
+$\log\norm{\delta}$ by refining the grid.
+\end{exercise}
+
+\end{exercises}

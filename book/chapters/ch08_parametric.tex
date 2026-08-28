@@ -1,0 +1,400 @@
+\chapter{Parametric Quadratic Programming}
+\label{ch:parametric}
+
+So far a QP has been a single problem with a single answer. This chapter changes
+the question. Attach a scalar parameter to the linear term and ask how the solution
+moves as the parameter varies:
+\begin{equation}
+\label{eq:pqp}
+\begin{aligned}
+x(\lambda) = \argmin_{x \in \R^n}\ &\tfrac12\, x\trans H x - \lambda\, d\trans x \\
+\text{s.t.}\quad &A x = b,\ \ G x \le h,\ \ \ell \le x \le u .
+\end{aligned}
+\end{equation}
+We have switched to the symbols the parametric literature uses---$H$ for the
+quadratic form, $A$ and $G$ for equality and inequality systems, $\ell,u$ for
+bounds---because Part~III is where this book meets four other literatures and
+Appendix~\ref{app:notation} has to translate somewhere.
+
+The answer is remarkable and is the foundation of everything in Part~III:
+\emph{the solution map is piecewise linear}. On any interval of $\lambda$ where the
+active set is constant, $x(\lambda)$ is an affine function of $\lambda$; the active
+set changes at finitely many \emph{breakpoints}; and the entire family can therefore
+be computed \emph{exactly}, corner to corner, by one finite algorithm. Not
+approximated on a grid. Computed.
+
+\section{The standing assumption}
+
+We require only that $H \succeq 0$ and that the \emph{reduced} Hessian
+$H_{\Free\Free}$ on the free block is positive definite at every active set the path
+visits. This is weaker than the $H \succ 0$ used in Parts~I and~II, and deliberately
+so: it is exactly what the regression instance of Chapter~\ref{ch:homotopy} needs.
+There $H = X\T X$ is singular whenever the design has more columns than rows---the
+very regime the LASSO exists for---yet the free block $X_\Free\T X_\Free$ is positive
+definite as soon as the active columns are linearly independent, which holds in
+general position. The finance instance has $H = \Sig \succ 0$ outright, so the
+condition is automatic there.
+
+\begin{remark}[Where the assumption bites]
+\label{rem:rank}
+This is an assumption and not a formality, and it is worth saying where it fails
+rather than burying it. When $H_{\Free\Free}$ is singular at some visited active set,
+the bordered system~\eqref{eq:border} below no longer determines the segment, and
+what the path even \emph{is} becomes a question of which minimiser one selects.
+Existing treatments divide on the answer. Tibshirani and Taylor \cite{tibshirani2011}
+for the generalized lasso, and Gaines, Kim and Zhou \cite{gaines2018} for the
+constrained LASSO, both restore strong convexity by adding a small ridge, so the
+algorithms they analyse are those of a perturbed problem. Tibshirani
+\cite{tibshirani2013}, by contrast, gives a LASSO path algorithm valid for
+\emph{arbitrary} designs with no general-position hypothesis: it succeeds by tracing
+the minimum-$\ell_2$-norm solution specifically, and turns on an
+insertion--deletion property of that particular selection rather than on the segment
+structure alone. That is a genuinely different argument.
+
+No counterpart is known for the generalized or constrained problem. Whether the
+bordered system admits a canonical selection playing the same role is, as far as we
+know, open, and Chapter~\ref{ch:reading} returns to it as one of the subject's
+genuine unsolved questions.
+\end{remark}
+
+\section{Affine segments}
+
+\begin{lemma}[Affine segments and the bordered solve]
+\label{lem:affine}
+\index{affine segment}
+On any maximal interval of $\lambda$ on which the active set is constant, the
+optimiser of \eqref{eq:pqp} is affine,
+\begin{equation}
+\label{eq:affine}
+x(\lambda) = \alpha + \lambda\,\beta ,
+\end{equation}
+and $(\alpha,\beta)$ come from a single bordered linear solve~\eqref{eq:border}
+whose matrix is constant on the interval. An active inequality row enters that solve
+identically to an equality row.
+\end{lemma}
+
+\begin{proof}
+Fix $\lambda$ in the interior of the interval and name the active set: the
+equalities $A$ (always active); the active inequality rows
+$\mathcal{S} \subseteq \{1,\dots,p\}$, those held at $g_i\T x = h_i$, the remainder
+carrying a zero multiplier by complementarity; and the blocked variables $\Bound$
+pinned at a bound, with free set $\Free = \Bound^c$. Stack the active linear
+constraints as $C = [A; G_{\mathcal{S}}]$ with right-hand side
+$r = (b; h_{\mathcal{S}})$.
+
+Because \eqref{eq:pqp} is convex with linear constraints, the KKT conditions are
+necessary and sufficient. Stationarity is $Hx - \lambda d + C\T\zeta + \rho = 0$,
+with $\zeta$ the equality and active-inequality multipliers and $\rho$ the bound
+multipliers, supported on $\Bound$. Read the $\Free$ rows, where $\rho_\Free = 0$,
+and split $(Hx)_\Free = H_{\Free\Free}x_\Free + H_{\Free\Bound}x_\Bound$ with
+$x_\Bound$ fixed at its bound values. Primal feasibility of the active rows is
+$C_\Free x_\Free + C_\Bound x_\Bound = r$. Collecting the unknowns
+$(x_\Free,\zeta)$,
+\begin{equation}
+\label{eq:border}
+\begin{bmatrix} H_{\Free\Free} & C_\Free\T \\[2pt] C_\Free & 0 \end{bmatrix}
+\begin{bmatrix} x_\Free \\[2pt] \zeta \end{bmatrix}
+=
+\begin{bmatrix} \lambda\, d_\Free - H_{\Free\Bound}\,x_\Bound \\[2pt]
+                r - C_\Bound\,x_\Bound \end{bmatrix}.
+\end{equation}
+The coefficient matrix is nonsingular by exactly the argument of
+Proposition~\ref{prop:saddlenonsing}, using $H_{\Free\Free}\succ0$ and full row rank
+of $C_\Free$. It depends only on $H$ and the active normals, hence is constant on
+the interval, while the right-hand side is affine in $\lambda$---the only $\lambda$
+term being $\lambda d_\Free$. So $(x_\Free(\lambda),\zeta(\lambda))$ is affine, and
+appending the $\lambda$-independent blocked entries gives \eqref{eq:affine} with
+$\beta_\Bound = 0$.
+
+Finally, $G_{\mathcal{S}}$ enters~\eqref{eq:border} only as extra rows of $C$,
+indistinguishable from the equality rows, and the box bounds are carried by the
+partition $(\Free,\Bound)$ rather than folded into $C$. A polyhedral penalty
+$\lambda\norm{x}_1$ is the same statement with $d$ replaced, on each segment, by the
+constant subgradient sign pattern of the support---the only change needed to
+read~\eqref{eq:border} as the LASSO segment solve.
+\end{proof}
+
+Each homotopy step is therefore \emph{one solve} of~\eqref{eq:border}: a
+factorisation of $H_{\Free\Free}$ bordered by the active normals through its Schur
+complement, which is exactly the block elimination~\eqref{eq:blockelim} of
+Chapter~\ref{ch:freeblock}. In practice one solves it for two right-hand sides at
+once against a single factorisation, obtaining $\alpha$ and $\beta$ together.
+
+\section{How the active set evolves}
+\label{sec:events}
+
+A representation is not an algorithm. Lemma~\ref{lem:affine} says what a segment
+\emph{is}; it does not say how one segment gives way to the next. That second half
+is where each field's paper does its technical work, and where the instances of
+Chapter~\ref{ch:homotopy} are least recognisable to one another. We write it once.
+
+Fix the current breakpoint $\lambda_k$, the current active set, and a direction of
+travel $\sigma \in \{+1,-1\}$; write $\lambda = \lambda_k + \sigma t$ and call
+$t \ge 0$ the step. Solving \eqref{eq:border} twice against one factorisation gives
+the segment $x_\Free(\lambda) = \alpha_\Free + \lambda\beta_\Free$ and the
+multipliers $\zeta(\lambda) = \zeta^0 + \lambda\zeta^1$; the bound multipliers follow
+from stationarity as $\rho(\lambda) = \lambda d - Hx(\lambda) - C\T\zeta(\lambda)$,
+affine in $\lambda$ like everything else. Write $\dot\phi = \sigma\phi_1$ for the
+rate of change of any affine $\phi(\lambda) = \phi_0 + \lambda\phi_1$ along the
+direction of travel.
+
+\emph{Four things, and only four, can end a segment}: a primal quantity can reach a
+bound it must respect, or a dual quantity can reach the edge of the cone it must lie
+in.
+\index{events!the four families}
+
+\paragraph{$\mathrm{P}_1$: a free variable reaches a bound.} For $i \in \Free$ the
+coordinate must stay in $[\ell_i,u_i]$, so
+\[
+t^{\mathrm{P}_1}_i =
+\begin{cases}
+(u_i - x_i)/\dot x_i, & \dot x_i>0,\\
+(\ell_i - x_i)/\dot x_i, & \dot x_i<0,\\
++\infty, & \dot x_i=0,
+\end{cases}
+\]
+and the event moves $i$ from $\Free$ to $\Bound$, pinned at the bound it met.
+
+\paragraph{$\mathrm{P}_2$: an inactive inequality becomes active.} For
+$j \notin \mathcal{S}$ the slack $h_j - g_j\T x$ must stay non-negative, giving
+$t^{\mathrm{P}_2}_j = (h_j - g_j\T x)/(g_j\T\dot x)$ when $g_j\T\dot x>0$ and
+$+\infty$ otherwise; the event adjoins $j$ to $\mathcal{S}$, adding a row to $C$.
+
+\paragraph{$\mathrm{D}_1$: a blocked variable releases.} For $i \in \Bound$ dual
+feasibility confines $\rho_i(\lambda)$ to an interval
+$[\underline\rho_i(\lambda), \overline\rho_i(\lambda)]$ whose endpoints are
+themselves affine in $\lambda$. Both margins $e^-_i = \rho_i - \underline\rho_i$ and
+$e^+_i = \overline\rho_i - \rho_i$ are affine and non-negative at $\lambda_k$, and
+the step is the first zero of either,
+\[
+t^{\mathrm{D}_1}_i = \min\bigl\{ -e^-_i/\dot e^-_i \ \text{if}\ \dot e^-_i<0,\ \
+-e^+_i/\dot e^+_i \ \text{if}\ \dot e^+_i<0 \bigr\},
+\]
+and the event moves $i$ from $\Bound$ to $\Free$.
+
+This is the family worth pausing on. For a genuine box the interval is
+$[0,\infty)$ at an upper bound and $(-\infty,0]$ at a lower one, and the event is
+simply $\rho_i = 0$. For an $\ell_1$ penalty it is $[-\lambda,\lambda]$, and the
+event is $|\rho_i| = \lambda$: an affine function meeting a \emph{moving} threshold
+rather than a fixed one. \emph{That single generalisation---a feasibility boundary
+that travels with $\lambda$---is the whole of what separates an ``induced'' active
+set from an ``imposed'' one at the level of the algorithm.}
+
+\paragraph{$\mathrm{D}_2$: an active inequality releases.} For $j \in \mathcal{S}$
+the multiplier must satisfy $\zeta_j \ge 0$, so
+$t^{\mathrm{D}_2}_j = -\zeta_j/\dot\zeta_j$ when $\dot\zeta_j<0$ and $+\infty$
+otherwise; the event deletes $j$ from $\mathcal{S}$. Equality rows never generate
+this event, their multipliers being unsigned.
+
+\medskip
+The step is $t^\star = \min t$ over the four families, the event attaining it is
+applied, and the walk continues. This is the simplex method's ratio test, and it
+inherits the simplex method's degeneracy hazard---ties at $t^\star = 0$ and
+cycling---together with its remedy: a lowest-index (Bland) tie-break, which makes
+the walk deterministic and finite. Because exactly one index changes status per
+step, the factorisation of the bordered matrix is \emph{updated} rather than
+rebuilt, by Section~\ref{sec:updating} of Chapter~\ref{ch:freeblock}.
+
+\begin{table}[ht]
+\centering
+\footnotesize
+\caption{The four events as two literatures name them. The algorithms differ in
+which families are populated, not in the families.}
+\label{tab:events}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Event & LASSO\,/\,LARS & Critical Line Algorithm \\
+\midrule
+$\mathrm{P}_1$ & a coefficient crosses zero (the ``leave'' move)
+               & an asset reaches a bound and leaves the free set \\
+$\mathrm{P}_2$ & a linear inequality on $\beta$ becomes tight
+               & a group or turnover constraint becomes tight \\
+$\mathrm{D}_1$ & an inactive coordinate's correlation reaches $\lambda$ (``enter'')
+               & an asset's reduced cost changes sign and it re-enters \\
+$\mathrm{D}_2$ & an active inequality's multiplier hits zero
+               & a constraint stops binding at a turning point \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:events} reads the catalogue back into two dialects. Forward least
+angle regression has $\mathrm{D}_1$ only, which is exactly what makes its active set
+monotone; the LASSO modification restores $\mathrm{P}_1$ and with it the leave move;
+the Critical Line Algorithm runs $\mathrm{P}_1$ and $\mathrm{D}_1$ against genuine
+box bounds, with fixed rather than moving feasibility intervals; the constrained
+LASSO adds $\mathrm{P}_2$ and $\mathrm{D}_2$. Chapter~\ref{ch:homotopy} completes
+the table.
+
+\section{The homotopy}
+
+Continuity of $x(\lambda)$ across breakpoints---the free block is uniquely
+determined on each segment, and adjacent segments agree at the breakpoint---lets a
+\emph{homotopy} recover the whole path: from a vertex with known active set, follow
+\eqref{eq:affine} to the first event, update the active set by that one event,
+repeat.
+\index{homotopy}
+
+\begin{algorithmbox}[The parametric active-set homotopy]
+\label{alg:homotopy}
+\begin{enumerate}
+\item Compute a starting vertex and its active set (Section~\ref{sec:first} below).
+\item While $\lambda$ has not reached its terminal value:
+  \begin{enumerate}
+  \item solve \eqref{eq:border} for two right-hand sides against one factorisation,
+        obtaining $\alpha$, $\beta$, and the affine multipliers;
+  \item compute every candidate step $t$ in the four families of
+        Section~\ref{sec:events}, discarding inadmissible ones;
+  \item take $t^\star = \min t$; if none is admissible, stop;
+  \item apply the single event attaining $t^\star$ (Bland tie-break), update
+        $(\Free,\Bound,\mathcal{S})$ and the factorisation, and record the
+        breakpoint $x(\lambda_k + \sigma t^\star)$.
+  \end{enumerate}
+\end{enumerate}
+\end{algorithmbox}
+
+\subsection{The first turning point}
+\label{sec:first}
+
+The walk needs a starting vertex. For the portfolio instance, at $\lambda = +\infty$
+variance is irrelevant and~\eqref{eq:pqp} degenerates into ``earn the most expected
+return the bounds and budget allow''. With a single all-ones budget row that vertex
+is computed greedily: initialise every weight at its lower bound, sort assets by
+descending expected return, and walk down that order raising each weight toward its
+upper bound until the budget is met. The last asset touched is only partially filled
+and is the single \emph{free} asset of the first turning point.
+
+Two details of that construction repay attention, because both are the kind of thing
+a derivation omits and an implementation cannot.
+
+First, the budget test needs a tolerance. The accumulated increment can only reach
+$1$ up to rounding, and without slack the loop skips past the genuinely interior
+asset and marks the next, zero-weight, asset as free.
+
+Second, marking the last asset \emph{free} even when it lands exactly on a bound is
+deliberate: it guarantees the first turning point has at least one free asset, so the
+reduced system is nonsingular from the outset. Otherwise every asset sits on a bound
+and the reduced solve degenerates.
+
+For a general equality system the greedy fill no longer applies, and the
+maximum-return vertex is instead the solution of a linear program,
+$\max_x d\T x$ subject to $Ax = b$, $\ell \le x \le u$, which a simplex code
+returns as a vertex. Only the first turning point needs the linear program; the loop
+that follows is unchanged.
+
+\subsection{Termination}
+
+\begin{proposition}[Finite termination of the homotopy]
+\label{prop:homotopy-finite}
+Under the standing assumption, with a lowest-index tie-break, the homotopy visits
+each active-set state at most once and terminates in finitely many steps.
+\end{proposition}
+
+\begin{proof}
+There are finitely many active-set states, at most $2^{n+p}$. The parameter
+$\lambda$ is monotone along the walk. The only failure mode is revisiting a state at
+the same $t^\star = 0$, and Bland's lowest-index rule excludes that exactly as it
+does for the simplex method.
+\end{proof}
+
+The bound $2^{n+p}$ is a finiteness statement, not an efficiency estimate. In
+practice the number of breakpoints is empirically $O(n)$, and
+Chapter~\ref{ch:reading} discusses what is and is not known about the gap.
+
+\section{Two readings of the parameter}
+
+Before Chapter~\ref{ch:homotopy} identifies the instances, one conceptual point.
+The parameter $\lambda$ in~\eqref{eq:pqp} multiplies the \emph{linear} term while
+the quadratic term carries no coefficient of its own. In the portfolio reading it is
+therefore a \emph{return tilt}, not a risk aversion; sweeping it from $0$ (minimum
+variance) to $\infty$ (maximum return) traces the whole efficient frontier. In the
+regression reading it is a penalty, and the sweep runs the other way, from
+$\lambda_{\max}$ (everything zero) to $0$ (the unpenalised fit).
+
+Either way it plays the role a statistician reserves for a regularisation
+parameter: a single knob weighing two competing goals, whose whole trajectory---not
+any one point of it---carries the information. That the trajectory happens to be
+computable exactly, rather than sampled, is what makes the subject worth a part of
+this book.
+
+\begin{remark}[Vector parameters]
+\label{rem:vector}
+Nothing forces $\lambda$ to be a scalar. If the parameter is a \emph{vector}---the
+state of a plant, in the control instance---then the interval of breakpoints becomes
+a polyhedral partition of parameter space into \emph{critical regions}, and the
+homotopy becomes region traversal. That is multi-parametric quadratic programming
+\cite{bemporad2002,tondel2003}. It is a genuine generalisation of the scalar device
+rather than another instance of it, and this book treats only its scalar slice;
+Chapter~\ref{ch:homotopy} says where the boundary falls.
+\end{remark}
+
+\begin{notes}
+The piecewise-linearity of the solution path under a quadratic loss and a polyhedral
+penalty was characterised within statistics by Rosset and Zhu \cite{rosset2007}; the
+same fact is the piecewise-affinity of the mpQP solution over critical regions in
+control \cite{bemporad2002}, and Roll \cite{roll2008} traces single-parameter paths
+in that setting, explicitly generalising the LARS construction. The bordered-solve
+presentation here follows \cite{schmelzer2026perspective}, and the first-turning-point
+construction and its two details follow the \texttt{cvxcla} software paper
+\cite{cvxcla}; the degenerate case in which every starting asset sits on a bound is
+not addressed by the otherwise thorough step-by-step review of Markowitz and
+Todd \cite{markowitz2021}.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Verify that the coefficient matrix of~\eqref{eq:border} is nonsingular under the
+standing assumption, adapting the proof of Proposition~\ref{prop:saddlenonsing}.
+Where exactly is $H_{\Free\Free} \succ 0$ used, and where is full row rank of
+$C_\Free$ used?
+\end{exercise}
+
+\begin{exercise}
+Show that $\beta_\Bound = 0$ on every segment, and interpret this: what does it say
+about a blocked variable as $\lambda$ moves?
+\end{exercise}
+
+\begin{exercise}
+Take $n = 2$, $H = I$, $d = (1,0)\T$, bounds $0 \le x \le 1$, and the single equality
+$x_1 + x_2 = 1$. Trace the path from $\lambda = \infty$ to $\lambda = 0$ by hand,
+identifying every breakpoint and which of the four event families produced it.
+\end{exercise}
+
+\begin{exercise}
+Show that for a genuine box bound the $\mathrm{D}_1$ event reduces to $\rho_i = 0$,
+and that for the $\ell_1$ penalty it is $|\rho_i| = \lambda$. Why does the second
+case make the active set ``induced'' rather than ``imposed''?
+\end{exercise}
+
+\begin{exercise}
+Prove that between consecutive breakpoints the objective value
+$\tfrac12 x(\lambda)\T H x(\lambda)$ is a quadratic function of $\lambda$, and that
+the parametric objective $\tfrac12 x\T Hx - \lambda d\T x$ is concave in $\lambda$
+along the path.
+\end{exercise}
+
+\begin{exercise}
+Explain why the first turning point of the greedy construction has at least one free
+asset, and construct data for which the naive version (no tolerance on the budget
+test) marks the wrong asset free.
+\end{exercise}
+
+\begin{exercise}
+Show that the number of breakpoints is at least the number of distinct active sets
+visited, and give an instance with $n = 3$ where an asset leaves the free set and
+later re-enters.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Implement Algorithm~\ref{alg:homotopy} for the box-and-budget case (events
+$\mathrm{P}_1$ and $\mathrm{D}_1$ only). Validate it against a general-purpose QP
+solver called at $50$ values of $\lambda$: the traced segment, evaluated at each
+value, should agree to solver precision. Report the largest discrepancy.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Extend your tracer to inequality rows ($\mathrm{P}_2$, $\mathrm{D}_2$) and validate a
+group-exposure cap the same way. How many extra breakpoints does one cap introduce?
+\end{exercise}
+
+\end{exercises}

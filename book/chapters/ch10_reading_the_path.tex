@@ -1,0 +1,260 @@
+\chapter{Reading the Path}
+\label{ch:reading}
+
+A single quadratic program returns one answer. Re-solving on a grid returns a
+scatter of them. The homotopy returns the whole curve exactly, and the curve carries
+readouts that no single optimum can. This chapter is about those readouts: what to
+plot, what it means, what a statistician already knows about it that a portfolio
+manager does not, and---the part that requires discipline---which of those meanings
+survive the translation of Section~\ref{sec:transfer} and which do not.
+
+It closes with the open problems, because a graduate reader is entitled to know
+where the subject stops.
+
+\section{The coefficient profile}
+
+Plot each coordinate of $x(\lambda)$ against $\lambda$. In regression this is the
+LARS/LASSO coefficient profile, the picture a statistician reads to see which
+variables a model admits and in what order. In finance the same plot, drawn as the
+frontier is traced from minimum variance to maximum return, shows exactly how each
+position enters, grows, and leaves, with the turning points as entry and exit events:
+a membership and turnover map of the efficient set.
+\index{coefficient profile}
+
+It is the same plot. Under Theorem~\ref{thm:identity} it \emph{is} the coefficient
+profile when $H = X\T X$. The kinks are breakpoints; a coordinate's segment slope is
+$\beta_i$ from Lemma~\ref{lem:affine}; a coordinate pinned at a bound is flat with
+$\beta_i = 0$.
+
+Two practical readings that the exactness makes trustworthy. First, an investor
+operates in a band of volatility rather than over the whole frontier, and the exact
+path lets one trace only that band and read the precise weights at every point inside
+it, paying only for the turning points the band contains. Second, because segments
+are affine in \emph{weight} space, any intermediate portfolio is an exact convex
+combination of its two bracketing turning points---no interpolation error, and no
+re-solving.
+
+\section{The support size}
+
+Count the coordinates held strictly between their bounds at each point of the path.
+In regression this is the number of nonzero coefficients; in finance it is the
+number of positions held. Again the same quantity.
+\index{support size}
+
+The count falls in a characteristic knee shape: many holdings shed for little added
+risk up to a corner, then a long flat tail of one or two concentrated names. An
+investor can read off, at any target volatility, how many names the optimum will
+hold, or invert the reading and ask what risk a given cardinality buys. That is a
+complexity profile of the efficient set, free from the exact path, and the portfolio
+literature had no occasion to define it because it had no exact path to read it from.
+
+Here the discipline of Section~\ref{sec:transfer} is required, and the temptation to
+be resisted is specific and attractive.
+
+\begin{remark}[Degrees of freedom: what transfers and what does not]
+\label{rem:df}
+\index{degrees of freedom}
+As a \emph{descriptive} complexity measure the count transfers immediately: the
+number of positions a frontier portfolio holds strictly between its bounds is a
+well-defined effective dimension for that portfolio, computed along the path at no
+cost.
+
+The \emph{distributional} statement is another matter. That the support size is an
+unbiased estimate of the degrees of freedom of the fit
+\cite{zou2007df,tibshirani2012df} is a theorem about the Lagrange-form estimator at a
+\emph{fixed penalty} $\lambda$, with the response Gaussian about $X\beta_0$. The
+efficient frontier as the Critical Line Algorithm traces it is indexed by the
+gross-exposure bound $c$ (equivalently by target return), which is the
+\emph{constrained} form; and $c(\lambda)$ depends on the response. So the unbiasedness
+does \emph{not} transfer to a frontier point at fixed $c$.
+
+Where it should transfer is the \emph{penalised} portfolio problem,
+$\min \tfrac12 w\T\Sig w - \mu\T w + \tau\norm{w}_1$ at fixed leverage penalty
+$\tau$---the Brodie et al.\ slice of Section~3.3 rather than the frontier itself:
+there the tuning parameter is held fixed as the data vary and the experiment is the
+right one. Even there the extension is not immediate, since the general-constraint
+case is outside what \cite{tibshirani2012df} establishes. \emph{The leverage axis, not
+the frontier, is where to look.}
+\end{remark}
+
+The same caution applies to model selection. Because the count is the LASSO's support
+size, its knee is recognisably a model-selection elbow, and the devices statistics
+uses to choose a penalty by the corner of a complexity-versus-fit curve---the L-curve
+criterion \cite{hansen1992}, information criteria on the degrees of freedom---suggest
+a principled rule for choosing where to sit on the frontier. \emph{Suggest} is the
+right verb: an information criterion needs the degrees-of-freedom statement, which
+holds for the penalised parametrisation and not for the bound-indexed frontier.
+Turning the elbow into a rule, in the parametrisation where the statistics is valid,
+is real work and not bookkeeping.
+
+\section{Selection as the choice of a corner}
+
+Post-selection inference conditions on the event that a particular model was
+selected, which for the LASSO is a polyhedron in the response space
+\cite{lee2016,tibshirani2016psi}. Under Theorem~\ref{thm:identity} that polyhedron is
+precisely the set of data for which a given corner portfolio is optimal, so each
+breakpoint of the frontier is a selection event of exactly the form the
+selective-inference machinery treats. This much is a statement about the geometry of
+the path, which the identity does license.
+
+The caveat is the same one and it is not cosmetic: the conditioning event must be
+described in the parametrisation in which the analysis is carried out, so conditioning
+on the selected support at fixed $\lambda$ and conditioning on it at a fixed
+gross-exposure cap are different events, and the second is the one a portfolio manager
+is in. The apparatus should carry over; the polyhedron it conditions on has to be
+rewritten first.
+
+We flag this as the most concrete of the transfers the unified view makes available,
+and as sketch rather than finished argument.
+
+\section{From one path to a cloud of them}
+
+Because a single path is now cheap---an exact whole curve from one homotopy, and
+cheaper still under the operator reading of Chapter~\ref{ch:operator}, where a factor
+or kernel form costs $O(nk)$ rather than $O(n^2)$ per step---one can afford to compute
+not one but hundreds.
+
+Resample the inputs: draw $(\mu,\Sig)$ from a bootstrap, a Bayesian posterior, or a
+rolling estimation window; trace the exact path for each. The ensemble is a
+\emph{cloud} of paths rather than a single curve.
+\index{resampled frontier}
+
+The exactness is what lets the cloud be read coherently. Each path is affine between
+its turning points, so evaluating all of them at a shared abscissa---a target
+volatility, or the $\ell_1$ budget of Theorem~\ref{thm:identity}---is \emph{exact}
+interpolation, and at each level one obtains a genuine cross-sectional distribution of
+weights and values across the draws, not the scatter a grid of separately solved
+programs would leave.
+
+Every readout of this chapter then lifts from a point to a distribution. The
+coefficient profile acquires a band showing how stable each holding is under
+estimation error. The support-size knee becomes a \emph{distribution} of elbows, a
+direct picture of how firmly the model-selection operating point is pinned. And the
+resampled median path sits systematically \emph{above} the true one in the finance
+instance, which is the in-sample optimism a single estimated frontier hides and the
+cloud exposes.
+
+The ensemble view of estimation error is itself old---it is Michaud's resampled
+efficiency \cite{michaud1999}. What the common scheme adds is that each member is
+exact and nearly free, so the cloud is affordable at factor-model scale, and that its
+readouts carry the regression meanings above through the identity: an estimation-error
+band on a frontier is a confidence statement about a LASSO path read in portfolio
+coordinates.
+
+\section{Why exactness is not a numerical nicety}
+
+It is tempting to regard the exact path as a refinement of a grid: nicer, but the
+grid would do. It would not, and the reason is specific.
+
+Gridding the parameter and interpolating between grid points cuts \emph{the very
+corners} that carry the model-selection information. The breakpoints are where the
+active set changes---where a variable enters, where a position is dropped---and they
+are precisely what a grid can miss. Coordinate-descent and proximal solvers on a
+$\lambda$-grid approximate the path in exactly this way; the homotopy returns the
+corners themselves.
+
+There is a numerical detail that makes the difference real rather than notional. The
+breakpoints of a large path crowd together, so the ratio test that orders them must
+use a tolerance \emph{relative} to the scale of $\lambda$. With it, the path comes back
+strictly monotone to floating-point precision; with a fixed absolute tolerance,
+distinct breakpoints eventually merge and the parameter steps backwards.
+Chapter~\ref{ch:numerics} generalises the lesson.
+
+\section{Open problems}
+
+The family poses its open problems once, which is one of the benefits of seeing it as
+one family.
+
+\paragraph{Path length.} The number of breakpoints is near-linear in the problem size
+in practice, which is the homotopy's reason for being. Yet Mairal and Yu
+\cite{mairal2012} construct LASSO paths whose length is \emph{exponential} in the
+dimension, the statistical mirror of the long-known exponential bounds on the critical
+regions of a multi-parametric QP \cite{tondel2003}. What separates the benign average
+from this worst case, when tracing the whole path beats solving at a single parameter,
+and whether the Bland tie-break can be replaced by a rule with a worst-case guarantee,
+are open in the shared form. One resolution would serve every instance.
+
+\paragraph{Rank deficiency.} Remark~\ref{rem:rank} set this up. The scheme assumes a
+positive-definite reduced Hessian at every visited active set, and for the plain LASSO
+that assumption can be removed \cite{tibshirani2013} by tracing the
+minimum-$\ell_2$-norm solution, on the strength of an insertion--deletion property of
+that selection rather than of the segment structure. No counterpart is known for the
+generalized or constrained problem, where the penalty matrix and the constraint system
+may be arbitrary but the design may not. Whether the bordered system admits a canonical
+selection playing the same role, or whether the arbitrary-design LASSO path is
+genuinely a different construction that the common scheme does not contain, is the most
+interesting question this material leaves open---and a caution against reading the
+scheme as more general than it is.
+
+\paragraph{Constraints and breakpoint counts.} Proposition~\ref{prop:reg} shows the
+penalty and constraint parametrisations agree except on flat segments, which are
+non-generic. Which constraint systems force them on a positive-measure set, and
+whether $p$ inequality rows can \emph{multiply} rather than merely add to the
+breakpoint count, are not known.
+
+These are questions about the shared object rather than about portfolios or
+regressions, which is the point of having identified it.
+
+\begin{notes}
+The readouts of Sections~1--4 follow \cite{schmelzer2026perspective}; the corrections
+of Remark~\ref{rem:df} are its own, and are worth reading as a case study in
+withdrawing an overreaching claim precisely rather than quietly. Resampled efficiency
+is \cite{michaud1999}; the L-curve criterion \cite{hansen1992}; degrees of freedom for
+the lasso \cite{zou2007df,tibshirani2012df}; selective inference
+\cite{lee2016,tibshirani2016psi}. The exponential path-length construction is
+\cite{mairal2012}.
+\end{notes}
+
+\begin{exercises}
+
+\begin{exercise}
+Show that on a segment the objective value is quadratic in $\lambda$ but the weight
+vector is affine, and explain why plotting the frontier in
+(variance, return) rather than (volatility, return) coordinates makes each segment an
+exact parabolic arc.
+\end{exercise}
+
+\begin{exercise}
+Prove that any portfolio between two adjacent turning points is an exact convex
+combination of them, and give the formula for its variance in terms of the two
+endpoints' variances and their cross term.
+\end{exercise}
+
+\begin{exercise}
+Explain in your own words why $c(\lambda) = \norm{\beta(\lambda)}_1$ being
+data-dependent blocks the transfer of a degrees-of-freedom statement, but not the
+transfer of a breakpoint-count bound.
+\end{exercise}
+
+\begin{exercise}
+The maximum-Sharpe portfolio maximises $\mu\T w / \sqrt{w\T\Sig w}$ along the
+frontier. Show that on an affine segment $w(t) = (1-t)w_0 + tw_1$ this is an affine
+numerator over the square root of a quadratic, and derive the single stationary point
+$t^\star$ in closed form. Why does unimodality along the frontier mean that checking
+the two segments bracketing the best turning point suffices?
+\end{exercise}
+
+\begin{exercise}
+Give an example where a grid of $50$ parameter values misses a breakpoint entirely,
+and quantify the resulting error in the support size.
+\end{exercise}
+
+\begin{exercise}
+Explain why a fixed absolute tolerance in the ratio test can make the traced parameter
+sequence non-monotone, and design a relative tolerance that prevents it.
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Trace an exact frontier for $n = 30$ and plot the coefficient profile and the support
+size against volatility. Mark the knee. Then re-solve at $50$ grid points with a
+general QP solver and overlay: how many corners does the grid miss?
+\end{exercise}
+
+\begin{exercise}[Implementation]
+Build a cloud: from a fixed population factor model, draw $300$ samples, re-estimate
+$(\mu,\Sig)$ from each, trace the exact frontier for every draw, and plot the
+percentile envelope of returns at each risk level together with the true frontier.
+Confirm that the resampled median sits above the truth, and explain why.
+\end{exercise}
+
+\end{exercises}
