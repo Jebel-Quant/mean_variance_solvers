@@ -330,6 +330,14 @@ def emit(results) -> None:
         theirs = results[(family, biggest, other)]["time"]
         return theirs / mine if np.isfinite(theirs) and np.isfinite(mine) else float("nan")
 
+    def fast_gain(family):
+        """Return how much the fast path beats the exact walk at the largest n."""
+        exact = results[(family, biggest, "cvx-quadprog")]["time"]
+        fast = results[(family, biggest, "cvx-quadprog, \\texttt{fast}")]["time"]
+        return exact / fast if np.isfinite(exact) and np.isfinite(fast) else float("nan")
+
+    gains = [fast_gain(f) for f in FAMILIES]
+
     worst_exact = max(results[(f, n, "cvx-quadprog")]["resid"]
                       for f in FAMILIES for n in SIZES)
     worst_osqp = max(results[(f, n, "OSQP")]["resid"]
@@ -348,6 +356,11 @@ def emit(results) -> None:
         fh.write(f"\\newcommand{{\\qpCmpResidOsqp}}{{{sci(worst_osqp)}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpResidClarabel}}{{{sci(worst_clarabel)}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpResidDaqp}}{{{sci(worst_daqp)}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastLo}}{{{min(gains):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastHi}}{{{max(gains):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastBudget}}"
+                 f"{{{fast_gain('budget + bounds'):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastBox}}{{{fast_gain('box'):.1f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsDaqp}}{{{speedup('box', 'DAQP'):.2f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsDaqpDense}}"
                  f"{{{speedup('dense $C$', 'DAQP'):.2f}}}\n")
@@ -357,7 +370,9 @@ def emit(results) -> None:
         fh.write(f"\\newcommand{{\\qpCmpVsClarabelDense}}{{{speedup('dense $C$', 'Clarabel'):.1f}}}\n")
         if quadprog_c is not None:
             ratio = speedup("box", "\\texttt{quadprog} (C)")
+            dense = speedup("dense $C$", "\\texttt{quadprog} (C)")
             fh.write(f"\\newcommand{{\\qpCmpVsRef}}{{{ratio:.1f}}}\n")
+            fh.write(f"\\newcommand{{\\qpCmpVsRefDense}}{{{dense:.1f}}}\n")
             fh.write("\\newcommand{\\qpCmpHasRef}{yes}\n")
         else:
             fh.write("\\newcommand{\\qpCmpHasRef}{no}\n")

@@ -443,7 +443,7 @@ wheels = [
 
 [[package]]
 name = "cvx-quadprog"
-version = "0.4.1"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -451,9 +451,9 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/79/8251fa9cbe273cd14b3870a845e6f1515356dbe1e4fa6ffb5fc31fce9659/cvx_quadprog-0.4.1.tar.gz", hash = "sha256:5a564a186f2c4f0bf531c5c9a7c95753037def52fa1c8d451bd160e2df666d5b", size = 120143, upload-time = "2026-08-25T13:21:51.958Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/fe/b90a14dfa41c60955ddf04497245f7a44b0d9a54053bd7cafb22693a4caa/cvx_quadprog-0.4.2.tar.gz", hash = "sha256:4baa06e54b446775993b2fa24cbd57d7e216fe7d59338548a74188dd223a81c9", size = 126449, upload-time = "2026-08-28T15:29:59.071Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/57/3b25ce95e27055f59036825e82f078a6aaa18ffcb80d007243616d2c83b4/cvx_quadprog-0.4.1-py3-none-any.whl", hash = "sha256:0a46144e9406512c3a63abf3198ffce0d1894420317ad1c5b93b1262d8b529d4", size = 61644, upload-time = "2026-08-25T13:21:50.838Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/57/673514134522ee6d7ce18c189d60a0ab052b42a41bb0df3aaaedf5ab9796/cvx_quadprog-0.4.2-py3-none-any.whl", hash = "sha256:b08342d7a6ef806856587d5969cee738d74c3ce43233855952b07f7800c3900c", size = 65999, upload-time = "2026-08-28T15:29:57.647Z" },
 ]
 
 [[package]]
@@ -1096,7 +1096,7 @@ dev = [
 requires-dist = [
     { name = "clarabel" },
     { name = "cvx-linalg" },
-    { name = "cvx-quadprog", specifier = ">=0.4.1" },
+    { name = "cvx-quadprog", specifier = ">=0.4.2" },
     { name = "cvxpy" },
     { name = "daqp" },
     { name = "lxml" },
