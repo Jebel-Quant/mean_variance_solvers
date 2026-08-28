@@ -34,3 +34,6 @@ out/
 .coverage
 .coverage.*
 htmlcov/
+
+# book (kept out of the repo)
+book/
