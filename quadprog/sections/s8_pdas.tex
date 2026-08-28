@@ -45,7 +45,7 @@ already the answer when it violates nothing. If $\Active' = \Active$ the
 conditions~\eqref{eq:pfeas}--\eqref{eq:comp} hold to the tolerance used, and
 \eqref{eq:pdassolve} supplies \eqref{eq:stat} by construction.
 
-The whole set is exchanged at once, which is what converges in a handful of
+The whole set is exchanged at once, and it converges in a handful of
 repairs almost independently of $n$, from \qpPdasRepairsLo{} to
 \qpPdasRepairsHi{} across every family and size measured in
 Section~\ref{ssec:pdas}. It trades arithmetic, which is abundant at these sizes,
@@ -61,9 +61,8 @@ specifically, and not active-set methods in general: the exact walk of
 Section~\ref{sec:iteration} is finite under nondegeneracy
 (Proposition~\ref{prop:ascent}), and for parametric families of QPs its worst-case
 iteration count can be certified exactly~\cite{arnstrom2022certification}. In the bound-constrained case that remedy comes with a
-theorem, and it is worth being precise about why the theorem does not survive the
-generalisation, because the reason is structural, not a gap in the
-argument.
+theorem. The theorem does not survive the generalisation, and the reason is
+structural, not a gap in the argument.
 
 Consider $\min_{x \ge 0} \tfrac12 x\T G x - a\T x$, so that $C = I$ and $m = n$.
 The system solved on a candidate set $\Active$ is then
@@ -86,10 +85,10 @@ None of it is available for general $C$. The matrix
 $C_\Active\T G^{-1} C_\Active$ is positive definite exactly when $C_\Active$ has
 full column rank, and that is a property of the guess, not of the data: a guessed
 set may name $k > n$ constraints, or $k \le n$ linearly dependent ones, and then
-the pivot is undefined, not just awkward. There is no $P$-matrix to
+the pivot is undefined. There is no $P$-matrix to
 appeal to, and correspondingly no theorem to inherit. Contrast
 Proposition~\ref{prop:rank}: the dual method's step rules make dependence
-unreachable, and it is exactly that protection which guessing forfeits.
+unreachable, and guessing forfeits that protection.
 
 The implementation treats the Cholesky factorisation of
 $C_\Active\T G^{-1}C_\Active$ as the rank test, where a dependent guess fails
@@ -100,8 +99,8 @@ Neither substitutes for the guarantee. The certificate does.
 \subsection{The certificate}
 
 Because the method may fail, and may fail by stabilising on a set that is simply not
-optimal, the trade is sound only because the answer is checked. This
-is where Proposition~\ref{prop:sufficient} earns its place: a candidate
+optimal, the trade is sound only because the answer is checked. Here
+Proposition~\ref{prop:sufficient} carries the argument: a candidate
 $(x,\lambda)$ satisfying
 \begin{equation}
   \norm{G x - a - C\lambda}_\infty \le \varepsilon,
@@ -111,7 +110,7 @@ $(x,\lambda)$ satisfying
   \label{eq:certificate}
 \end{equation}
 on the inequalities, with $\varepsilon$ scaled by the data, \emph{is} the answer to
-that tolerance, and not a plausible candidate awaiting a second opinion.
+that tolerance.
 Stationarity is checked against $G$ directly and not trusted from the
 construction, since the construction is what an ill-conditioned working set
 corrupts. A candidate that fails is discarded and the exact walk of

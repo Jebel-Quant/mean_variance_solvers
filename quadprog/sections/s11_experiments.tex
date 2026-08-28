@@ -20,7 +20,7 @@ distributed with this paper's sources.
 
 Section~\ref{sec:pdas} makes two claims only measurement settles: that the block
 exchange converges in a number of repairs independent of $n$, and that losing the
-$P$-matrix property for general $C$ is a real exposure and not a technicality.
+$P$-matrix property for general $C$ is a real exposure.
 Figure~\ref{fig:pdas} addresses both over \qpPdasFamilies{} constraint families,
 \qpPdasInstances{} instances each, at $n \in \{\qpPdasSizes\}$, instrumenting the
 shipped routines instead of reimplementing them.
@@ -43,7 +43,7 @@ sixteen-fold range of $n$, never exceeding \qpPdasRepairsMax{}. The comparison
 that matters is against the exact walk on the same instances: on
 budget-plus-bounds it takes \qpPdasBudgetOuter{} outer iterations at
 $n = \qpPdasRefN{}$, and its count grows linearly where the repair count is very
-nearly flat. That is the trade Section~\ref{sec:pdas} describes, measured.
+nearly flat. Section~\ref{sec:pdas} describes that trade; here it is measured.
 
 \paragraph{The rank-deficient guess is real, and invisible by accident.} Over
 \qpPdasInstances{} instances at each of five sizes, not one guess on those four
@@ -56,8 +56,8 @@ rank test fires on \qpPdasSingularDup\% of attempts and the certified fraction
 collapses from \qpPdasCertSmall\% at $n = \qpPdasNsmall{}$ to \qpPdasCertBig\% at
 $n = \qpPdasNbig{}$, against \qpPdasSingularBox\% on the others. Duplicated
 constraints are not exotic, arising whenever a model is assembled programmatically
-from overlapping rules, and this is the concrete form of the
-structural point in Section~\ref{sec:pdas}: for bounds the system is a principal
+from overlapping rules, and they give the structural point of
+Section~\ref{sec:pdas} its concrete form: for bounds the system is a principal
 submatrix of $G^{-1}$ and cannot be singular, and nothing about general $C$
 preserves that.
 
@@ -97,7 +97,7 @@ them in another convention.
 \small
 \caption{Time per solve in milliseconds and achieved KKT residual, at
 $n \in \{\qpCmpSizes\}$. The first four rows are active-set methods and the last
-two are not, which is what the residual column is there to show.}
+two are not, which the residual column is there to show.}
 \label{tab:compare}
 \begin{tabular}{lrrrrrrrr}
 \toprule
@@ -120,8 +120,6 @@ interpreter dispatch and not arithmetic, and loses at the large end, where it
 is arithmetic.}
 \label{fig:compare}
 \end{figure}
-
-Three things in the table are worth drawing out.
 
 \paragraph{The same algorithm in two languages crosses over.} The C reference is
 the fastest solver here at $n = 50$ and among the slowest at
@@ -154,7 +152,7 @@ $\qpCmpVsDaqpDense\times$ on dense $C$. Accuracy is indistinguishable from ours
 throughout ($\qpCmpResidDaqp$ at worst), as one expects of methods in the same
 family: all three terminate on a vertex rather than approaching one, which is
 exactly what separates them from the two rows below. The comparison is not
-apples to apples in one respect worth stating: DAQP is written in library-free C
+apples to apples in one respect: DAQP is written in library-free C
 for embedded targets and pays no interpreter cost, so at small $n$ it is measuring
 a different thing from us. What it shares is the shape of the crossover, and what
 it shows is that the shape is a property of the regime and not of any one
@@ -164,9 +162,9 @@ implementation.
 \texttt{fast} path is the quickest of everything measured at
 $n = \qpCmpNhi{}$ on every family, and it beats the exact walk by roughly a
 factor of two to three, more than the gap between the two implementations of the
-exact walk at the same size. Iterations, not the cost of an iteration, are what
-dominate at these sizes, which is the argument of Section~\ref{sec:pdas} arriving
-from a different direction.
+exact walk at the same size. Iterations, not the cost of an iteration, dominate
+at these sizes; Section~\ref{sec:pdas}'s argument arrives here from a different
+direction.
 
 \paragraph{What this comparison is not.} These are dense problems of small to
 moderate size whose optima are vertices, which is the territory
@@ -194,7 +192,7 @@ regularisation, its worst-case iteration count can be certified offline for a
 parametric family~\cite{arnstrom2022certification}, and it is library-free C sized
 for embedded targets. A reader with a toolchain, a real-time deadline and a
 semidefinite Hessian should use it. What the implementation studied here offers
-against that is narrower and worth naming plainly: no compiler and no build step, a
+against that is narrower: no compiler and no build step, a
 drop-in signature for code already written against the reference, and the arithmetic
 advantage above a few hundred variables. Whether that is the better trade is a
 property of the reader's situation and not of the method.
@@ -202,7 +200,7 @@ property of the reader's situation and not of the method.
 \subsection{What these experiments do not establish}
 \label{ssec:limits}
 
-Three limits. These verify agreement between the code and the identities proved
+These experiments verify agreement between the code and the identities proved
 here, not the absence of defects elsewhere, in constraint selection or the
 infeasibility verdict or degenerate input, for which a differential comparison
 of complete trajectories against an independent implementation would be the

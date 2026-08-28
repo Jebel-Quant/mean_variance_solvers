@@ -11,8 +11,8 @@ Write the program~\eqref{eq:qp} as
   \end{cases}
   \label{eq:qp2}
 \end{equation}
-with $G \succ 0$. Two conventions are worth flagging because they differ from the
-textbook ones and are inherited from the reference implementation's signature.
+with $G \succ 0$. Two conventions differ from the textbook ones and are inherited
+from the reference implementation's signature.
 The linear term is \emph{subtracted}, so that the unconstrained minimiser is
 $G^{-1}a$ rather than $-G^{-1}a$; and the constraints are held column-wise in
 $C$, so that $C\T x \ge b$ rather than $Cx \le b$. Neither affects anything
@@ -23,7 +23,7 @@ below beyond signs.
 Let $\Omega = \{x : c_i\T x = b_i \ (i \le m_{\mathrm{eq}}),\ c_i\T x \ge b_i \
 (i > m_{\mathrm{eq}})\}$ denote the feasible set, a closed convex polyhedron.
 
-Since $G \succ 0$ the objective is strictly convex and coercive, so \eqref{eq:qp2} has exactly one solution whenever $\Omega \neq \emptyset$; see~\cite[Ch.~16]{nocedal2006}. What the method needs beyond that is the converse of the usual necessary conditions, and that is worth proving because every certificate in this paper rests on it.
+Since $G \succ 0$ the objective is strictly convex and coercive, so \eqref{eq:qp2} has exactly one solution whenever $\Omega \neq \emptyset$; see~\cite[Ch.~16]{nocedal2006}. What the method needs beyond that is the converse of the usual necessary conditions, and we prove it because every certificate in this paper rests on it.
 
 The Lagrangian of~\eqref{eq:qp2} is
 $L(x,\lambda) = \tfrac12 x\T G x - a\T x - \lambda\T(C\T x - b)$, and the
@@ -62,10 +62,9 @@ $f(\tilde x) \ge f(x)$ with equality only at $\tilde x = x$.
 
 Proposition~\ref{prop:sufficient} is the licence for everything in
 Sections~\ref{sec:pdas} and~\ref{sec:sweep}. A point equipped with multipliers
-passing the four conditions is not merely a plausible answer to be checked
-further: it is \emph{the} answer, and a method that produces candidates may
-therefore be as unprincipled as one likes provided each candidate is tested. The
-sufficiency is what makes an unguaranteed method safe rather than merely
+passing the four conditions is \emph{the} answer, so a method that produces
+candidates may be as unprincipled as one likes provided each candidate is
+tested. Sufficiency is what makes an unguaranteed method safe rather than
 usually right.
 
 \subsection{The working-set subproblem}
@@ -122,16 +121,16 @@ and works towards the second.
 For $\Active = \emptyset$ the subproblem is unconstrained and~\eqref{eq:subsol}
 degenerates to $x = x_u = G^{-1}a$ with an empty multiplier vector. The sign
 condition holds vacuously, so this state satisfies the method's invariant with no
-work beyond one Cholesky factorisation. That is the whole of the phase-one problem
-for a dual method. The objective there is
+work beyond one Cholesky factorisation. A dual method's phase-one problem is
+nothing more. The objective there is
 $f(x_u) = \tfrac12 x_u\T G x_u - a\T x_u = -\tfrac12 a\T x_u$, which the
 implementation uses as the initial value of the running objective.
 \end{remark}
 
 \subsection{The dual problem}
 
-The method's name is earned by the following, which also explains why the
-objective value can be tracked as a running total and why it increases.
+The following explains the method's name, and also why the objective value can be
+tracked as a running total and why it increases.
 
 \begin{proposition}[Dual function]\label{prop:dual}
 The Lagrangian dual of~\eqref{eq:qp2} is the concave program
@@ -154,8 +153,8 @@ $b\T\lambda = (Gx - a)\T x$; adding the two yields $f(x)$.
 
 So along any sequence of states of the form~\eqref{eq:subsol} the tracked value is
 at once the primal objective at the subproblem minimiser and the dual objective at
-the current multipliers. That is what makes the strict increase of
-Proposition~\ref{prop:increment} progress towards optimality rather than
-bookkeeping, and it gives the sandwich
+the current multipliers. The strict increase of Proposition~\ref{prop:increment}
+is therefore progress towards optimality rather than bookkeeping, and it gives
+the sandwich
 $\psi(\lambda) \le f(x^\star) \le f(\tilde x)$: the method approaches the optimal
 value from below, the mirror image of a primal active-set method.

@@ -20,8 +20,8 @@ $R \in \R^{k \times k}$ satisfying
   J\T G J &= I_n, \label{eq:inv1}\\
   J\T A &= \begin{bmatrix} R \\ 0 \end{bmatrix}. \label{eq:inv2}
 \end{align}
-Everything the iteration computes is a consequence of these two lines, so it is
-worth reading them slowly. Equation~\eqref{eq:inv1} is equivalent to
+Everything the iteration computes is a consequence of these two lines, so read
+them slowly. Equation~\eqref{eq:inv1} is equivalent to
 $J J\T = G^{-1}$ with $J$ nonsingular, and says that the columns of $J$ form a
 basis of $\R^n$ orthonormal in the inner product $\langle v,w\rangle_G = v\T G w$.
 Equation~\eqref{eq:inv2} says that in that basis the working-set normals are
@@ -84,9 +84,8 @@ and \eqref{eq:reduced} follows from $J_1J_1\T + J_2J_2\T = JJ\T = G^{-1}$.
 The matrix in~\eqref{eq:reduced} is the \emph{reduced inverse Hessian} of the
 working set: it inverts $G$ on the feasible subspace $\nullsp(A\T)$ and
 annihilates the complement. Carrying $J$ therefore means carrying that object in
-factored form, at no cost beyond the $n \times n$ array, and it is what turns the
-search directions of Section~\ref{sec:iteration} into single matrix--vector
-products.
+factored form, at no cost beyond the $n \times n$ array, which turns the search
+directions of Section~\ref{sec:iteration} into single matrix--vector products.
 
 \begin{remark}[Why fold the two factorisations together]\label{rem:fold}
 An alternative state is $R_G$ together with an explicit orthogonal factor $Q$ of
@@ -115,8 +114,8 @@ Different orthogonal reductions realise different points of that family: a chain
 of Givens rotations and a single Householder reflection annihilating the same
 vector produce factors differing in sign, and a differently ordered sequence of
 insertions and deletions produces a different $J_2$ outright. The following says
-this does not matter, and it is the licence for the implementation to choose its
-reduction on grounds of speed alone.
+this does not matter, so the implementation may choose its reduction on grounds of
+speed alone.
 
 \begin{proposition}[Invariance of the iterates]\label{prop:invariance}
 Let $(J,R)$ and $(\hat J,\hat R)$ both satisfy

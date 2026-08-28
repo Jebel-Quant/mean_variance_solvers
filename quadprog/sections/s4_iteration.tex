@@ -193,7 +193,7 @@ zero, and the sign conditions because $t_2 \le t_1$. If $t_1 < t_2$ the step is
 \emph{partial}: the multiplier of $i_{\mathrm{del}}$ reaches zero first, that
 constraint leaves the working set, the factorisation is downdated, and $z$ and $r$
 are recomputed, both having changed with $J$ and $R$, keeping the same
-entering constraint and its accumulated $u_*$. That is the inner loop. If both
+entering constraint and its accumulated $u_*$, and the loop repeats. If both
 limits are infinite the problem is infeasible; see
 Proposition~\ref{prop:farkas}.
 
@@ -235,10 +235,11 @@ Lemma~\ref{lem:directions}(ii), and $t(t/2 + u_*) > 0$ when $t$ and $u_*$ share 
 sign and $t \neq 0$.
 \end{proof}
 
-Three things are worth noting about~\eqref{eq:increment}. It is exact, so the
-objective can be carried as a running total at the cost of one multiplication per
-step instead of an $O(n^2)$ re-evaluation of the quadratic. It is expressed in
-quantities the iteration already holds, $n_*\T z$ being needed for $t_2$ anyway. And it handles the reversed step of Remark~\ref{rem:reverse} without a
+The increment~\eqref{eq:increment} is exact, so the objective can be carried as a
+running total at the cost of one multiplication per step instead of an $O(n^2)$
+re-evaluation of the quadratic. It is expressed in quantities the iteration
+already holds, $n_*\T z$ being needed for $t_2$ anyway. And it handles the
+reversed step of Remark~\ref{rem:reverse} without a
 special case: there $t < 0$ and $u_*$ accumulates negatively, so
 $t/2 + u_* < 0$ and the product with $t$ is again positive. The value therefore
 increases on every nonzero step, in both directions, which is the monotonicity
