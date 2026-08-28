@@ -158,13 +158,16 @@ a different thing from us. What it shares is the shape of the crossover, and wha
 it shows is that the shape is a property of the regime and not of any one
 implementation.
 
-\paragraph{Guessing the active set is worth more than the language.} The
+\paragraph{Guessing the active set is worth about what the language is.} The
 \texttt{fast} path is the quickest of everything measured at
-$n = \qpCmpNhi{}$ on every family, and it beats the exact walk by roughly a
-factor of two to three, more than the gap between the two implementations of the
-exact walk at the same size. Iterations, not the cost of an iteration, dominate
-at these sizes; Section~\ref{sec:pdas}'s argument arrives here from a different
-direction.
+$n = \qpCmpNhi{}$ on every family, and it beats the exact walk by
+$\qpCmpFastLo\times$ to $\qpCmpFastHi\times$. That is the same order as the gap
+between the two implementations of the exact walk at the same size,
+$\qpCmpVsRef\times$ on bounds and $\qpCmpVsRefDense\times$ on dense $C$, and the
+two orderings run opposite: guessing gains most on dense $C$, where the language
+gains least, and least on bounds, where it gains most. Iterations, not the cost of
+an iteration, dominate at these sizes; Section~\ref{sec:pdas}'s argument arrives
+here from a different direction.
 
 \paragraph{What this comparison is not.} These are dense problems of small to
 moderate size whose optima are vertices, which is the territory

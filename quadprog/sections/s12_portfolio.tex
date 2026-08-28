@@ -64,7 +64,8 @@ data that set is large. Every statement in Section~\ref{ssec:pdas} about the
 advantage of guessing the active set was therefore measured at the wrong end of
 its range: on the S\&P~500 the fast path settles in $\qpPfSpRepairs{}$ repairs
 against $\qpPfSpOuter{}$ outer iterations, and is $\qpPfFastSpeed\times$ faster
-than the exact walk rather than the two-to-three of the synthetic case.
+than the exact walk, against the $\qpCmpFastBudget\times$ of the synthetic family
+with the same constraint shape at $n = \qpCmpNhi{}$.
 
 The crossover of Section~\ref{ssec:compare} appears here too, with a point either
 side and on real instances constructed for neither purpose: on the S\&P~500 the

@@ -47,8 +47,9 @@ One observation generalises past this solver. Below a few hundred variables a
 solve costs what its array operations cost to dispatch, not what its
 arithmetic costs, so halving the flop count buys nothing and halving the
 \emph{iteration} count buys everything: the fast path of Section~\ref{sec:pdas}
-beats the exact walk by more than the gap between two implementations of that walk
-in different languages (Section~\ref{ssec:compare}). Effort spent on kernels is
+gains about as much over the exact walk as rewriting that walk in another language
+does, and gains most on the family where the rewrite gains least
+(Section~\ref{ssec:compare}). Effort spent on kernels is
 wasted where the bottleneck is the interpreter, and effort spent on iteration
 counts is wasted where it is not; knowing which regime one is in is the whole of
 the decision.
