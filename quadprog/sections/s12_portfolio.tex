@@ -63,8 +63,17 @@ iteration count grows with the size of the set the walk must reach, and on real
 data that set is large. Every statement in Section~\ref{ssec:pdas} about the
 advantage of guessing the active set was therefore measured at the wrong end of
 its range: on the S\&P~500 the fast path settles in $\qpPfSpRepairs{}$ repairs
-against $\qpPfSpOuter{}$ outer iterations, and is $\qpPfFastSpeed\times$ faster
-than the exact walk rather than the two-to-three of the synthetic case.
+against $\qpPfSpOuter{}$ outer iterations, a ratio no synthetic family here
+approaches.
+
+That ratio is not the speedup, and the gap between the two is worth stating. The
+fast path is $\qpPfFastSpeed\times$ faster than the exact walk on this problem,
+not $\qpPfSpOuter{}/\qpPfSpRepairs{}$ times faster, because a repair on a set of
+$\qpPfSpActive{}$ constraints is not the price of one walk iteration: it is a
+dense system of that order, where a walk iteration adds a single constraint to
+factors it already holds. Guessing trades iterations for arithmetic, and this is
+the problem in this paper where it buys the most iterations and pays the most
+arithmetic for them.
 
 The crossover of Section~\ref{ssec:compare} appears here too, with a point either
 side and on real instances constructed for neither purpose: on the S\&P~500 the

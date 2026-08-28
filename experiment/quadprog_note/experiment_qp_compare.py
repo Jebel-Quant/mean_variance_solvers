@@ -330,6 +330,10 @@ def emit(results) -> None:
         theirs = results[(family, biggest, other)]["time"]
         return theirs / mine if np.isfinite(theirs) and np.isfinite(mine) else float("nan")
 
+    def gain(family):
+        """Return what guessing the active set is worth against walking to it."""
+        return 1.0 / speedup(family, "cvx-quadprog, \\texttt{fast}")
+
     worst_exact = max(results[(f, n, "cvx-quadprog")]["resid"]
                       for f in FAMILIES for n in SIZES)
     worst_osqp = max(results[(f, n, "OSQP")]["resid"]
@@ -355,9 +359,20 @@ def emit(results) -> None:
         fh.write(f"\\newcommand{{\\qpCmpVsClarabel}}{{{speedup('box', 'Clarabel'):.0f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsOsqpDense}}{{{speedup('dense $C$', 'OSQP'):.1f}}}\n")
         fh.write(f"\\newcommand{{\\qpCmpVsClarabelDense}}{{{speedup('dense $C$', 'Clarabel'):.1f}}}\n")
+        # What guessing is worth, against what the language is worth. Both were
+        # quoted in the text as hand-written ranges until the fast path was
+        # rewritten and they moved; they are generated now so that they cannot go
+        # stale again silently.
+        gains = [gain(f) for f in FAMILIES]
+        fh.write(f"\\newcommand{{\\qpCmpFastGainLo}}{{{min(gains):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastGainHi}}{{{max(gains):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastGainBox}}{{{gain('box'):.1f}}}\n")
+        fh.write(f"\\newcommand{{\\qpCmpFastGainDense}}{{{gain('dense $C$'):.1f}}}\n")
         if quadprog_c is not None:
             ratio = speedup("box", "\\texttt{quadprog} (C)")
             fh.write(f"\\newcommand{{\\qpCmpVsRef}}{{{ratio:.1f}}}\n")
+            fh.write(f"\\newcommand{{\\qpCmpVsRefDense}}"
+                     f"{{{speedup('dense $C$', '\\texttt{quadprog} (C)'):.1f}}}\n")
             fh.write("\\newcommand{\\qpCmpHasRef}{yes}\n")
         else:
             fh.write("\\newcommand{\\qpCmpHasRef}{no}\n")

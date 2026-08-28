@@ -36,7 +36,13 @@ dependencies = [
     # cvx-quadprog: the dual active-set solver the quadprog note derives. Its
     # experiments verify that note's identities against the running code, so
     # the version matters -- see quadprog_note/ and the paper's Section 10.
-    "cvx-quadprog>=0.4.1",
+    #
+    # Pinned to a commit rather than a release: the working-set solve was
+    # rewritten to form C_A^T G^-1 C_A from one half of the Cholesky
+    # factorisation after v0.4.1 was tagged, and the paper's timings are of that
+    # code. Swap this back to a plain version pin once a release includes it, and
+    # say so in the paper's Reproducibility section.
+    "cvx-quadprog",
     # The reference C implementation the quadprog comparison measures against.
     # Needs a wheel or a C toolchain, which is exactly what cvx-quadprog exists
     # to avoid, so experiment_qp_compare.py treats it as optional and omits its
@@ -57,6 +63,7 @@ package = false
 
 [tool.uv.sources]
 nncg = { git = "https://github.com/Jebel-Quant/nncg", rev = "52346e12b4ec9f18f4ad497827867bbbaefccec9" }
+cvx-quadprog = { git = "https://github.com/Jebel-Quant/quadprog", rev = "aa33506fd713877a104a2c95a76dc9823dfb6aa9" }
 
 [dependency-groups]
 dev = ["pytest", "pytest-cov"]

@@ -444,16 +444,12 @@ wheels = [
 [[package]]
 name = "cvx-quadprog"
 version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/Jebel-Quant/quadprog?rev=aa33506fd713877a104a2c95a76dc9823dfb6aa9#aa33506fd713877a104a2c95a76dc9823dfb6aa9" }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e1/79/8251fa9cbe273cd14b3870a845e6f1515356dbe1e4fa6ffb5fc31fce9659/cvx_quadprog-0.4.1.tar.gz", hash = "sha256:5a564a186f2c4f0bf531c5c9a7c95753037def52fa1c8d451bd160e2df666d5b", size = 120143, upload-time = "2026-08-25T13:21:51.958Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/57/3b25ce95e27055f59036825e82f078a6aaa18ffcb80d007243616d2c83b4/cvx_quadprog-0.4.1-py3-none-any.whl", hash = "sha256:0a46144e9406512c3a63abf3198ffce0d1894420317ad1c5b93b1262d8b529d4", size = 61644, upload-time = "2026-08-25T13:21:50.838Z" },
 ]
 
 [[package]]
@@ -1096,7 +1092,7 @@ dev = [
 requires-dist = [
     { name = "clarabel" },
     { name = "cvx-linalg" },
-    { name = "cvx-quadprog", specifier = ">=0.4.1" },
+    { name = "cvx-quadprog", git = "https://github.com/Jebel-Quant/quadprog?rev=aa33506fd713877a104a2c95a76dc9823dfb6aa9" },
     { name = "cvxpy" },
     { name = "daqp" },
     { name = "lxml" },

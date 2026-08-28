@@ -46,10 +46,29 @@ against the solver's own internal state and not a reimplementation:
 residual $\qpIdentWorst$. Two come out exactly zero, and one of those is
 Remark~\ref{rem:scaleexact}.
 
-\paragraph{Software under study.} \texttt{cvx-quadprog}, version
-$0.4.1$~\cite{cvxquadprog}, archived with a DOI. The measurements are tied to that
-version rather than to the latest release, so that the reference keeps pointing at
-the code that produced them. The experiments import the package's private modules
+\paragraph{Software under study.} \texttt{cvx-quadprog}~\cite{cvxquadprog}, at
+commit \verb|aa33506|. That is not a tagged release, and the departure from the
+archived DOI is deliberate rather than an oversight. After $0.4.1$ was archived,
+the working-set solve of Section~\ref{sec:pdas} was rewritten to form
+$C_\Active\T G^{-1}C_\Active$ as $Z\T Z$ with $Z = U^{-\top}C_\Active$, where
+$G = U\T U$, and to keep those columns across repairs instead of re-solving for
+them: the same quantity by an identity, at half the flops and without the
+repetition. It makes the \texttt{fast} rows of Table~\ref{tab:compare} between a
+tenth and a half quicker than the archived release produces, so timing $0.4.1$
+would have meant reporting a solver that no longer exists. The pin becomes a
+version again when a release contains that work.
+
+What moved with it is the timings, and with them the two claims that are about
+timings: the ordering of Section~\ref{ssec:compare} and the cost of a rejected
+guess in Section~\ref{ssec:transform}. The counts did not. Repairs, outer
+iterations and active-set sizes are properties of the algorithm and of the data
+rather than of the arrangement of the linear algebra underneath, and they are
+unchanged to the digit. In between sit the residuals, whose last digit or two
+move because the arithmetic is ordered differently --- and with them the handful
+of borderline candidates inside Section~\ref{ssec:transform}'s transition band,
+where whether the certificate accepts is a question about rounding and the two
+arrangements answer it differently. The band does not move; which instances
+inside it fail does. The experiments import the package's private modules
 where the claims are about private state, namely $J$, the packed $R$, and the
 vectors $d$, $z$, $r$, and they instrument the shipped routines by wrapping them
 instead of reimplementing them, so what is measured is what runs.

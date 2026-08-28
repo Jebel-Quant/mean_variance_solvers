@@ -145,9 +145,11 @@ one ill-conditioned $G$, where $\qpTfFamilyRejected{}$ of the
 $\qpTfFamilyTerms{}$ guesses are rejected, guessing every time costs
 $\qpTfFamilyAlways$\,ms, stopping after the first rejection costs
 $\qpTfFamilyCached$\,ms, and never guessing costs $\qpTfFamilyNever$\,ms: the
-rule recovers $\qpTfFamilySaving$\% of the waste and leaves a percent of the
-floor on the table, in exchange for keeping the whole speedup on families where
-guessing works.
+rule recovers $\qpTfFamilySaving$\% of the waste, which is the whole of it. The
+two are within a percent of each other, a difference below what these timings
+resolve, so stopping after one rejection costs what never guessing costs --- and
+unlike never guessing it keeps the whole speedup on families where guessing
+works.
 
 \subsection{Against other solvers, and against the same method done differently}
 \label{ssec:compare}
@@ -237,13 +239,21 @@ a different thing from us. What it shares is the shape of the crossover, and wha
 it shows is that the shape is a property of the regime and not of any one
 implementation.
 
-\paragraph{Guessing the active set is worth more than the language.} The
+\paragraph{What guessing is worth, against what the language is worth.} The
 \texttt{fast} path is the quickest of everything measured at
-$n = \qpCmpNhi{}$ on every family, and it beats the exact walk by roughly a
-factor of two to three, more than the gap between the two implementations of the
-exact walk at the same size. Iterations, not the cost of an iteration, dominate
-at these sizes; Section~\ref{sec:pdas}'s argument arrives here from a different
-direction. This ordering is the well-conditioned one, and it reverses:
+$n = \qpCmpNhi{}$ on every family, beating the exact walk by
+$\qpCmpFastGainLo\times$ to $\qpCmpFastGainHi\times$ according to the shape of
+$C$. Whether that is worth more than the choice of language is a question per
+family, and the answer is not uniform. On dense $C$ guessing is worth
+$\qpCmpFastGainDense\times$ against the $\qpCmpVsRefDense\times$ that separates
+two implementations of the same walk, so the algorithm dominates; on bounds it is
+the other way round, $\qpCmpFastGainBox\times$ against $\qpCmpVsRef\times$, and
+the language dominates. Bounds are where an iteration is cheapest, its slack
+product being a gather rather than a matrix--vector product, so they are where
+compiled code keeps most of its advantage and where there is least left for a
+better algorithm to take. Iterations, not the cost of an iteration, dominate at
+these sizes either way; Section~\ref{sec:pdas}'s argument arrives here from a
+different direction. This ordering is the well-conditioned one, and it reverses:
 Section~\ref{ssec:transform} locates the conditioning at which the certificate
 begins rejecting the guess, past which the \texttt{fast} path is the slowest of
 the four in-family rows rather than the quickest.
