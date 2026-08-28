@@ -4,8 +4,8 @@
 Each iteration changes the working set by one column, and the factors must follow.
 Recomputing them from scratch costs a QR factorisation of $J\T A$, $O(nk^2)$; the
 updates below cost $O(n^2)$ and $O(nk)$ respectively. Over the $O(n)$ iterations
-of a run that is the difference between $O(n^3)$ and $O(n^4)$, and it is the whole
-reason the factors are carried and not rebuilt.
+of a run that is the difference between $O(n^3)$ and $O(n^4)$, and the whole reason
+the factors are carried and not rebuilt.
 
 Both updates work the same way. The invariant~\eqref{eq:inv1} is preserved by
 post-multiplying $J$ with any orthogonal $W$, since $(JW)\T G (JW) = W\T W = I$;
@@ -48,8 +48,8 @@ extended by $\alpha$, so it is nonsingular, and ${R'}\T R' = {A'}\T G^{-1}A'$ is
 positive definite, which forces $A'$ to have full column rank.
 \end{proof}
 
-The proposition is worth pausing on: the algorithm never has to test for
-linear dependence among the working-set normals. The step rules exclude it. A
+The algorithm therefore never has to test for linear dependence among the
+working-set normals. The step rules exclude it. A
 constraint whose normal lies in the span of those already held has $z = 0$ by
 Lemma~\ref{lem:directions}(iv), so its step is limited by $t_1$ and it can only
 be added after enough partial steps have removed the dependence. This is the
@@ -101,10 +101,10 @@ A sequence of Householder reflections is normally applied as a block. The WY
 representation of Bischof and Van Loan~\cite{bischof1987}, and its storage-efficient
 form due to Schreiber and Van Loan~\cite{schreiber1989}, write a product
 $W_1 W_2 \cdots W_j$ as $I + WY\T$, so that $j$ reflections reach a matrix in one
-level-3 update rather than $j$ level-2 ones. That is what makes blocked QR
-factorisation fast, and it is the first thing to reach for here.
+level-3 update rather than $j$ level-2 ones. Blocked QR factorisation is fast for
+that reason, and the first thing to reach for here.
 
-It is not available, for a structural reason, not an implementation one.
+It is not available, for a structural reason rather than an implementation one.
 Blocking requires the $j$ reflections to be known before any is applied. In this
 iteration the reflection that inserts a constraint is determined by
 $d = J\T n_*$, which depends on $J$ \emph{after} the previous insertion; and
@@ -113,9 +113,8 @@ decide which constraint enters next, and whether it enters at all. The updates a
 interleaved with reads of what they produce, so there is no window in which two
 reflections are simultaneously known and unapplied.
 
-This is the same obstruction as in the deletion chase below, and it is why the
-method stays a level-2 computation no matter how it is coded, which is worth
-knowing before reaching for a blocked update. A variant
+This is the same obstruction as in the deletion chase below, and the reason the
+method stays a level-2 computation no matter how it is coded. A variant
 that inserted several constraints per iteration would open the window; the dual
 method's step rules, which admit one constraint at a time by construction, close
 it.
@@ -170,6 +169,6 @@ $j(j+1)/2 + i$, so its leading $k \times k$ block, which the solve for $r$ reads
 once per iteration, is a contiguous run at every $k$. Insertion writes one column,
 contiguous in that layout; deletion mixes two \emph{rows} across a range of
 columns, which is a strided gather because column offsets grow with the index. The
-asymmetry is deliberate, and it is the right way round. It is a property of the
+asymmetry is deliberate, and the right way round. It is a property of the
 layout rather than of the derivation, to which the mathematics is indifferent.
 \end{remark}

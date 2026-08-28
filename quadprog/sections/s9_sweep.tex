@@ -50,7 +50,7 @@ same working set instead costs $k$ insertions at $O(n^2)$ each, so the saving is
 factor of order $k$, largest exactly where it matters: a long-only optimum is a
 vertex at which most bounds bind.
 
-The $O(n^2)$ is worth insisting on, because the natural experiment cannot see it.
+The exponent is easy to get wrong, because the natural experiment cannot see it.
 On a box family the active set grows with $n$, so $O(nk)$ and $O(n^2)$ predict the
 same curve and either reading fits; holding $k$ fixed at $\qpSweepFixedK{}$ while
 $n$ grows separates them, and the measured local exponent
@@ -60,7 +60,7 @@ an overhead floor, a hit there costing what its dozen array operations cost to
 dispatch, and it ends where the $n^2$ overtakes dispatch.
 
 Whether $(x,u)$ from~\eqref{eq:recover} is the answer to the \emph{full} program
-is then one certificate away, and it is the same certificate as before: the
+is then one certificate away, the same certificate as before: the
 multipliers of the working-set inequalities must be non-negative and no constraint
 outside the working set may be violated. By
 Proposition~\ref{prop:sufficient} that is a proof. Note the asymmetry in cost: the

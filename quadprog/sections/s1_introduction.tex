@@ -97,8 +97,8 @@ subspace and $J_2J_2\T$ is the reduced inverse Hessian.
 $(J_1S, J_2V, SR)$ for a sign matrix $S$ and an orthogonal $V$. Both quantities
 the iteration consumes are invariant under all of it
 (Proposition~\ref{prop:invariance}), and exactly so in IEEE arithmetic in the
-sign case. That is what licenses choosing the orthogonal reduction on grounds of
-speed alone.
+sign case. The implementation is therefore free to pick its orthogonal reduction
+for speed alone.
 
 \item \textbf{An exact objective increment.} A step of length $t$ changes the
 objective by $t(t/2 + u_*)\,z\T G z$ (Proposition~\ref{prop:increment}), so the
@@ -113,7 +113,7 @@ infeasible problem; it proves the problem infeasible.
 
 \item \textbf{Linear dependence is unreachable.} The step rules make the
 working-set normals full column rank for free, so no rank test is needed anywhere
-(Proposition~\ref{prop:rank}), and that is what guessing gives up.
+(Proposition~\ref{prop:rank}), and guessing forfeits it.
 
 \item \textbf{The cost of a warm start, corrected.} Recovery from cached factors
 is $O(n^2)$ and not $O(nk)$, the $n^2$ residing entirely in $x_u = JJ\T a$
