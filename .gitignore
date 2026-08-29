@@ -28,3 +28,6 @@ out/
 .coverage
 .coverage.*
 htmlcov/
+
+# book build output
+book/
