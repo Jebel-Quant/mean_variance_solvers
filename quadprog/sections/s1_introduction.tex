@@ -74,6 +74,15 @@ under nondegeneracy is not special to this method either: Forsgren, Gill and
 Wong~\cite{forsgren2016} prove it for paired primal and dual active-set methods in
 a more general setting.
 
+The guessing methods of Section~\ref{sec:pdas} have a literature of their own, and
+it is where the first claim below has to be placed. Curtis, Han and
+Robinson~\cite{curtis2015pdas} give a primal--dual active-set framework that is
+globally convergent on convex quadratic programs, obtained by carrying an index set
+auxiliary to the active-set estimate to hold the indices that would otherwise
+cycle. That the plain block exchange needs such a repair on general constraints is
+therefore known. What Section~\ref{sec:pdas} adds is why, in terms of the
+working-set system, and Section~\ref{ssec:pdas} what it costs when it is ignored.
+
 The modern successor is not a reimplementation but a different factorisation.
 Arnstr\"om, Bemporad and Axehill~\cite{arnstrom2022daqp} carry the same dual walk on
 recursive $LDL^\top$ updates rather than the $(J,R)$ pair used here, handle
@@ -91,9 +100,10 @@ Proposition~\ref{prop:ascent} is general but conditional on nondegeneracy.
 
 \begin{enumerate}
 \item \textbf{Why finite termination does not survive the general constraint
-class. This is the one claim here we believe to be new, and it is an observation
-rather than a theory: the rank condition it turns on is the same one that governs
-Proposition~\ref{prop:sub}.} For bound constraints the
+class. That the plain block exchange needs repairing there is
+known~\cite{curtis2015pdas}; the mechanism is the one claim here we believe to be
+new, and it is an observation rather than a theory, turning on the same rank
+condition as Proposition~\ref{prop:sub}.} For bound constraints the
 working-set system is a principal submatrix of $G^{-1}$, hence positive definite
 whatever the guess, and that $P$-matrix property is the hypothesis under which
 block principal pivoting terminates finitely~\cite{judice1994,murty1988,%

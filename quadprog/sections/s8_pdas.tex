@@ -90,6 +90,18 @@ appeal to, and correspondingly no theorem to inherit. Contrast
 Proposition~\ref{prop:rank}: the dual method's step rules make dependence
 unreachable, and guessing forfeits that protection.
 
+That the plain exchange fails on general constraints is not news, and the repair
+the literature offers says where the difficulty sits. Curtis, Han and
+Robinson~\cite{curtis2015pdas} recover global convergence by carrying an index set
+auxiliary to the active-set estimate, which holds the indices that would otherwise
+cycle. That changes what the method carries, not the order in which it exchanges,
+and it has to: no rule for choosing the next set can recover the bound-constrained
+theorem when the subproblem on the chosen set may be singular. What is claimed here
+is the mechanism and its price. The rank condition is the one already governing
+Proposition~\ref{prop:sub}, it is a property of the guess and not of the data, and
+Section~\ref{ssec:pdas} measures both how invisible it is on random instances and
+how quickly a repeated column makes it certain.
+
 The implementation treats the Cholesky factorisation of
 $C_\Active\T G^{-1}C_\Active$ as the rank test, where a dependent guess fails
 instead of returning something plausible, and the least-index rule as a way of
