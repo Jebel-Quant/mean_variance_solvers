@@ -2,8 +2,8 @@
 \label{sec:reproducibility}
 \addcontentsline{toc}{section}{Reproducibility}
 
-Every number in this paper is produced by a committed script, and no figure or
-table was edited by hand. The scripts write the files the paper \verb|\input|s, so
+Every number in this note is produced by a committed script, and no figure or
+table was edited by hand. The scripts write the files the note \verb|\input|s, so
 a stale figure cannot survive a regeneration unnoticed.
 
 \begin{center}
@@ -28,7 +28,7 @@ Script (\texttt{quadprog\_note/}) & Figure & Table & Used in \\
 \noindent
 Each row's table entry stands for both the tabular fragment and the
 \verb|_defs| file of macros beside it, where the script writes both. The identity
-script writes no figure, and the sweep script writes one the paper does not
+script writes no figure, and the sweep script writes one the note does not
 include: its cost curves are the natural way to inspect the two regimes
 \S\ref{sec:sweep} describes in words, so the figure is left in place for a reader
 who wants to see them.
@@ -52,7 +52,7 @@ where the claims are about private state, namely $J$, the packed $R$, and the
 vectors $d$, $z$, $r$, and they instrument the shipped routines by wrapping them
 instead of reimplementing them, so what is measured is what runs.
 
-\paragraph{Regenerating everything.} From the paper's source tree, \verb|make figures|
+\paragraph{Regenerating everything.} From this note's source tree, \verb|make figures|
 runs all five scripts and rewrites every generated file; \verb|make compile| then
 rebuilds this document. Each script also runs standalone as a module. Setting
 \verb|EXPERIMENT_SMOKE=1| shrinks every sweep so that the whole set completes in
@@ -70,7 +70,7 @@ and those defaults differ between libraries by more than the effects measured he
 Accelerate exposes no thread control, so there was nothing to set; on a library
 that does, the same experiment can read differently. The residuals of
 the identity check below and the counts of \S\ref{ssec:pdas} are machine-independent
-to the last digit or two of rounding, and are what the paper rests on.
+to the last digit or two of rounding, and are what the note rests on.
 
 \paragraph{Optional dependency.} The comparison in \S\ref{ssec:compare} includes
 the reference C implementation where a wheel for it is installed; building it needs

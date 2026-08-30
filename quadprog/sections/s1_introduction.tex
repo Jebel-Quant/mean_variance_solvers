@@ -19,13 +19,29 @@ whose distinguishing property is that it needs no phase-one problem: the
 unconstrained minimiser $G^{-1}a$ is dual feasible for free, so the iteration can
 start there and drive primal infeasibility to zero.
 
-This paper derives that method in the form the \texttt{cvx-quadprog}
+This note derives that method in the form the \texttt{cvx-quadprog}
 package~\cite{cvxquadprog} implements it, together with the two extensions that
 package adds. Its aim is to state every identity the solver depends on, derive
 it, and name the degenerate cases. Section~\ref{sec:experiments} then checks each
 one against the code that ships, which is a different question from whether it is
 true. Every empirical claim made
 anywhere below is measured there; none is quoted from elsewhere.
+
+\subsection{What this note is, and is not}
+\label{ssec:status}
+
+It is a working note, written to document a package, and not a submission. The
+mathematics of Sections~\ref{sec:problem} to~\ref{sec:updates} is Goldfarb and
+Idnani's, published in 1983 and taught since; we re-derive it because a solver
+should have its identities and its degenerate cases written down in one place,
+with proofs, and because the two extensions in Sections~\ref{sec:pdas}
+and~\ref{sec:sweep} cannot be stated without them. Of the items listed below,
+one is a claim we believe to be new. The others are corrections, closed forms and
+readings that are known to people who know the method well; we have not found them
+set down together, and the extensions depend on them, which is why they are
+listed rather than assumed. A reader looking for a new algorithm or a new theorem
+about quadratic programming should stop here. A reader who has to implement,
+debug or trust one of these solvers is who the note is written for.
 
 \subsection{Why the dual method}
 
@@ -71,11 +87,13 @@ different in kind: theirs is computational and per-family, enumerating the
 subproblem sequences an algorithm visits over a parameter set, where
 Proposition~\ref{prop:ascent} is general but conditional on nondegeneracy.
 
-\subsection{Contributions}
+\subsection{What the note claims}
 
 \begin{enumerate}
 \item \textbf{Why finite termination does not survive the general constraint
-class, which is the one claim here we believe to be new.} For bound constraints the
+class. This is the one claim here we believe to be new, and it is an observation
+rather than a theory: the rank condition it turns on is the same one that governs
+Proposition~\ref{prop:sub}.} For bound constraints the
 working-set system is a principal submatrix of $G^{-1}$, hence positive definite
 whatever the guess, and that $P$-matrix property is the hypothesis under which
 block principal pivoting terminates finitely~\cite{judice1994,murty1988,%

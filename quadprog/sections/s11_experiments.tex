@@ -9,11 +9,11 @@ own buffer, correct only while that view stays contiguous. A sign error in the
 packed indexing would leave every proposition above true and the running solver
 wrong, and wrong quietly: the invariants are maintained across a run, not
 recomputed, and a solver drifting from $J\T G J = I$ still returns a vector that is
-very nearly right. The second is the set of quantities the paper reasons about but
+very nearly right. The second is the set of quantities the note reasons about but
 cannot predict: how often a guessed active set is certifiable, how many repairs it
 takes, what a warm-started solve costs. All measurements are on the implementation
 at the version recorded in Section~\ref{sec:reproducibility}, by scripts
-distributed with this paper's sources.
+distributed with this note's sources.
 
 \subsection{The guessed active set, and what the certificate catches}
 \label{ssec:pdas}
@@ -124,7 +124,7 @@ is arithmetic.}
 \paragraph{The same algorithm in two languages crosses over.} The C reference is
 the fastest solver here at $n = 50$ and among the slowest at
 $n = \qpCmpNhi{}$, where it is $\qpCmpVsRef\times$ slower than the
-implementation measured in this paper. Nothing algorithmic separates them: they
+implementation measured here. Nothing algorithmic separates them: they
 walk the same active sets in the same order. What separates them is that below a
 few hundred variables a solve costs what its operations cost to dispatch, and
 above it a solve costs arithmetic, which reaches vendor-tuned kernels in one and

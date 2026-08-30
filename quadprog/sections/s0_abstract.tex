@@ -1,33 +1,41 @@
 \begin{abstract}
 \noindent
-Guessing a whole active set at once and repairing it from the signs that come back,
-as primal--dual active set and block principal pivoting do, terminates finitely for
-the bound-constrained quadratic program. The system solved on a candidate set is
-then a principal submatrix of $G^{-1}$, and inherits that matrix's $P$-matrix
-property. Our first result is that the general constraint class costs exactly
-that. For $C\T x \ge b$ the working-set system is
+The dual active-set method of Goldfarb and Idnani solves the strictly convex
+quadratic program by adding and dropping one constraint at a time, and needs no
+phase one. Primal--dual active set and block principal pivoting skip the walk
+altogether: they guess a whole active set at once and repair it from the signs
+that come back.
+
+For bound constraints the guess is safe. The system solved on a candidate set is
+a principal submatrix of $G^{-1}$, positive definite whatever the guess, and that
+$P$-matrix property is the hypothesis under which the guessing methods terminate
+finitely. Our one new claim is that the general constraint class costs exactly
+this. For $C\T x \ge b$ the working-set system is
 $C_\Active\T G^{-1} C_\Active$, positive definite only when $C_\Active$ has full
 column rank, which is a property of the \emph{guess} and not of the data. The
-$P$-matrix property is lost, and with it the guarantee. The obstruction is
-structural, not a missing anti-cycling rule.
+$P$-matrix property is lost and the guarantee with it, and the obstruction is
+structural, not a missing anti-cycling rule. What keeps such a method usable
+anyway is that strict convexity makes the KKT conditions sufficient: a candidate
+set is certified rather than trusted.
 
-That exposure is easy to mistake for a technicality, and we show it is not. Over six
-hundred random instances across four constraint families it never occurs, which is
-why it can be overlooked. Duplicating columns of $C$, as any programmatically
-assembled model may, raises it to $93\%$, and the certified fraction then collapses
-from $100\%$ to nothing.
+The exposure is easy to mistake for a technicality, so we measure it. Over six
+hundred random instances across four constraint families it never occurs, which
+is why it can be overlooked. Duplicating columns of $C$, as any programmatically
+assembled model may, raises it to $93\%$, and the certified fraction falls from
+$100\%$ to nothing. The measurements are on the shipped code and not only on
+synthetic problems: on long-only portfolio data the active set reaches
+$\qpPfSpActive{}$ of $\qpPfSpN{}+1$ constraints, against the small sets produced
+by the synthetic families common in this literature.
 
-To make the argument precise we first give a self-contained derivation of the
-Goldfarb--Idnani dual method, organised around a single matrix $J$ satisfying
-$J\T G J = I$ and $J\T A = [R;0]$. Every quantity the iteration computes follows
-from those two lines and admits a representation-free closed form, so any $(J,R)$
-meeting the invariants produces the same iterate. The objective increment along a
-step of length $t$ is exactly $t(t/2 + u_*)\,z\T G z$. And when the primal cannot
-move and no multiplier can be reduced, the vector $r$ the solver already holds is a
-Farkas certificate, so the infeasibility verdict is a proof.
-
-What makes the unguaranteed methods usable is that strict convexity makes the KKT
-conditions sufficient, so every candidate can be certified. On long-only portfolio
-data the active set reaches $\qpPfSpActive{}$ of $\qpPfSpN{}+1$ constraints, against
-the small sets produced by the synthetic families common in this literature.
+Making the argument precise needs the method itself written down, and we derive
+it from scratch around a single matrix $J$ satisfying $J\T G J = I$ and
+$J\T A = [R;0]$. Every quantity the iteration computes follows from those two
+lines. Each has a representation-free closed form, so any $(J,R)$ meeting the
+invariants produces the same iterate. A step of length $t$ changes the objective
+by exactly $t(t/2 + u_*)\,z\T G z$. And when the primal cannot move and no
+multiplier can be reduced, the vector $r$ the solver already holds is a Farkas
+certificate, so the infeasibility verdict is a proof rather than a failure to
+converge. That derivation is Goldfarb and Idnani's. This is a working note
+documenting the mathematics of the package that implements it, and of the claims
+above only the first is new.
 \end{abstract}
