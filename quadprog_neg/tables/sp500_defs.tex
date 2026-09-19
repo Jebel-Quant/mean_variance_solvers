@@ -1,0 +1,20 @@
+\def\dataSpNoshrink{%
+cvxpy (Clarabel)                    &    1.878 &     11 &    1.0x \\
+cvxpy (OSQP)                        &    0.635 &    100 &    3.0x \\
+Clarabel (direct API)               &   0.0828 &     12 &   22.7x \\
+OSQP (direct API)                   &    0.101 &    275 &   18.6x \\
+CG (SPD)                            &   0.0220 &    919 &   85.4x \\
+}
+\def\dataSpLwHalf{%
+cvxpy (Clarabel)                    &    2.589 &     16 &    1.0x \\
+cvxpy (OSQP)                        &    0.601 &     75 &    4.3x \\
+Clarabel (direct API)               &    0.106 &     17 &   24.5x \\
+OSQP (direct API)                   &   0.0624 &    100 &   41.5x \\
+KKT (Cholesky)                      &   0.0296 &      6 &   87.6x \\
+CG (SPD)                            &   0.0118 &    158 &  218.7x \\
+}
+\def\dataSpLwOracle{%
+cvxpy (Clarabel)                    &    1.924 &     11 &    1.0x \\
+KKT (Cholesky)                      &   0.0247 &      8 &   78.0x \\
+CG (SPD)                            &   0.0231 &    705 &   83.2x \\
+}

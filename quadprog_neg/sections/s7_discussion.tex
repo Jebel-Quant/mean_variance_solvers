@@ -1,0 +1,49 @@
+\section{Discussion}
+\label{sec:discussion}
+
+The result is a small one and it is worth stating its size accurately.
+Proposition~\ref{prop:guessrank} is an elementary rank observation with a two-line
+proof. That the plain block exchange fails on general convex quadratic programs is
+known, and repaired, in~\cite{curtis2015pdas}. What is added here is the location
+of the failure and the price of ignoring it: the working-set system is positive
+definite exactly when the guessed normals are independent, which is a property of
+the guess rather than of the data, so the $P$-matrix structure that carries the
+bound-constrained theorem is gone and no reordering brings it back; and the guess
+that breaks is the one the method's own starting rule produces on duplicated
+constraints, at a rate of $\qpPdasSingularDup\%$ where random instances show
+$\qpPdasSingularBox\%$.
+
+Three consequences seem worth drawing.
+
+\emph{The bound-constrained intuition does not transfer, and the reason is
+specific.} Block principal pivoting on $x \ge 0$ is safe not because the pivots
+are small or the sets well chosen but because $G^{-1}$ is a $P$-matrix, which is a
+statement about all $2^n$ candidate sets at once. Reading across from that setting
+to $C\T x \ge b$ replaces a statement about the data with a statement about each
+guess, and the two are not the same kind of hypothesis.
+
+\emph{A rank test is not optional, and the factorisation already is one.} An
+implementation that solves~\eqref{eq:pdassolve} by a route tolerant of rank
+deficiency will return a plausible vector on a dependent guess and has converted a
+detectable failure into a silent one. Cholesky refuses, which is the behaviour to
+want.
+
+\emph{Certification is the right replacement, not a fallback of last resort.}
+Strict convexity makes the Karush--Kuhn--Tucker conditions sufficient
+(Proposition~\ref{prop:sufficient}), so the exchange can be run as a heuristic
+proposer whose output is verified at $O(nm)$ and discarded when it fails. On the
+families measured, that arrangement gives the iteration count of the guess and the
+guarantees of the walk, and the two are not in tension because they are sequential
+rather than alternative. The general form of the observation is that a
+method which may fail but can recognise its own success needs a certificate and
+not a convergence theory.
+
+Two limits should be kept in view. The scope here is $G \succ 0$; the dual walk
+extends to semidefinite $G$ with finite termination by Boland~\cite{boland1997}
+and by proximal regularisation in~\cite{arnstrom2022daqp}, and we have not asked
+what the rank condition looks like there, where $G^{-1}$ does not exist and the
+dual Hessian must be formed differently. And the diagnosis in
+Section~\ref{ssec:structural} quantifies over rules for choosing the next set, not
+over algorithms: a method that carries state beyond the active-set estimate, which
+is precisely what~\cite{curtis2015pdas} does, is outside its scope and is not
+contradicted by it.

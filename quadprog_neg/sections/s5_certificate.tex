@@ -1,0 +1,57 @@
+\section{What replaces the guarantee}
+\label{sec:certificate}
+
+A method that may fail, and that may fail by stabilising on a set that is simply
+not optimal, is usable when the answer is checked. Here
+Proposition~\ref{prop:sufficient} carries the argument: a candidate $(x,\lambda)$
+satisfying
+\begin{equation}
+  \norm{G x - a - C\lambda}_\infty \le \varepsilon,
+  \quad |c_i\T x - b_i| \le \varepsilon \ (i \le m_{\mathrm{eq}}),
+  \quad c_i\T x - b_i \ge -\varepsilon, \ \ \lambda_i \ge -\varepsilon,
+  \ \ |\lambda_i (c_i\T x - b_i)| \le \varepsilon
+  \label{eq:certificate}
+\end{equation}
+on the inequalities, with $\varepsilon$ scaled by the data, \emph{is} the answer
+to that tolerance. Stationarity is checked against $G$ directly and not inferred
+from the construction, since the construction is what an ill-conditioned working
+set corrupts. A candidate that fails is discarded and an exact
+method runs instead, so guessing can never degrade the answer: it produces the
+minimiser or nothing.
+
+This is the trade the rest of the note is about. One gives up finite termination,
+which on general constraints was not available anyway, and buys back correctness
+by verification. The asymmetry that makes the trade worth taking is that
+verifying~\eqref{eq:certificate} costs $O(nm)$ for a dense $C$, one pass over the
+constraints, against the $O(n^3)$ of the fallback solve.
+
+Two implementation points follow, and they are the ones a reader who has to build
+such a solver will want.
+
+\begin{remark}[The rank test is the factorisation]
+There is no need for a separate rank decision. Attempting the Cholesky
+factorisation of $C_\Active\T G^{-1}C_\Active$ \emph{is} the test: by
+Proposition~\ref{prop:guessrank} the matrix is positive definite exactly when the
+guess has full column rank, so a dependent guess fails the factorisation rather
+than returning something plausible. What an implementation must not do is solve
+the system by a method that tolerates rank deficiency and returns a least-squares
+answer, because that converts a detected failure into an undetected one.
+\end{remark}
+
+\begin{remark}[Two tolerances with very different jobs]
+\label{rem:tolerances}
+The tolerance in~\eqref{eq:repair} decides which set is tried next. A bad choice
+there costs a repair or a fallback and can never cost correctness, so it is not
+delicate. The tolerance in~\eqref{eq:certificate} is the only thing standing
+between a non-optimal point and the caller, and is therefore the one to reason
+about. It is nonetheless not delicate either, because the quantity it thresholds
+is bimodal: a candidate constructed from a well-conditioned working set satisfies
+\eqref{eq:certificate} to a few multiples of the machine epsilon, and one built on
+a set that is not has no reason to come close. Section~\ref{sec:measurement}
+measures the accepted population, whose worst residual is $\qpPdasAcceptWorst$.
+\end{remark}
+
+The least-index rule keeps a role under this reading, but a demoted one. It is a
+way of making progress where block exchange oscillates, and not a termination
+proof. Neither it nor the rank test substitutes for the guarantee. The certificate
+does.

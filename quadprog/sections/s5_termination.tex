@@ -41,9 +41,10 @@ iterations.
 
 \begin{proof}
 The iteration's total increment is the sum of~\eqref{eq:increment} over its inner
-passes, each positive by Proposition~\ref{prop:increment}, since the accumulated $u_*$ and
-each step $t$ share a sign throughout by Remark~\ref{rem:reverse}, and the
-final term is nonzero because $t_2 \neq 0$. For the second claim, a working set
+passes, each non-negative by Proposition~\ref{prop:increment}, since the
+accumulated $u_*$ and each step $t$ share a sign throughout by
+Remark~\ref{rem:reverse}; a partial step with $t_1 = 0$ contributes exactly zero,
+and the final term is strictly positive because $t_2 \neq 0$. For the second claim, a working set
 determines $(x,u)$ uniquely by Proposition~\ref{prop:sub}, hence determines the
 objective; that value strictly increases from one outer iteration to the next, so
 no working set recurs. There are finitely many subsets of $\{1,\dots,m\}$, and the
