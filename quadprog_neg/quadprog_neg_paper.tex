@@ -1,0 +1,58 @@
+\documentclass[11pt]{article}
+
+% Latin Modern: scalable Type 1 throughout, so microtype's font expansion never
+% meets a bitmap font.
+\usepackage{lmodern}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{authblk}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\T}{^{\top}}
+\newcommand{\Active}{\mathcal{A}}
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\rank}{rank}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{remark}{Remark}[section]
+
+\title{Guessing the active set:\\a rank obstruction on general convex quadratic programs}
+
+\author[1]{Thomas Schmelzer}
+\author[2]{Martin Stoll}
+
+\affil[1]{\small Jebel Quant Research, Abu Dhabi}
+\affil[2]{\small Faculty of Mathematics, TU Chemnitz, Germany}
+
+\date{}
+
+% Generated numbers from experiment/quadprog_note/. Regenerate with
+% `make figures` at the repository root.
+\input{tables/quadprog_pdas_defs}
+
+\begin{document}
+\maketitle
+
+\input{sections/s0_abstract}
+\input{sections/s1_introduction}
+\input{sections/s2_problem}
+\input{sections/s3_exchange}
+\input{sections/s4_obstruction}
+\input{sections/s5_certificate}
+\input{sections/s6_measurement}
+\input{sections/s7_discussion}
+
+{\footnotesize
+\bibliographystyle{plain}
+\bibliography{../matrix_free/bib/refs}
+}
+
+\end{document}

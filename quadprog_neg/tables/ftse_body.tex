@@ -1,0 +1,15 @@
+cvxpy (Clarabel)                    &    0.596 &     16 &    1.0x \\
+cvxpy (OSQP)                        &   0.0753 &    100 &    7.9x \\
+Clarabel (direct API)               &   0.0041 &     16 &  144.7x \\
+OSQP (direct API)                   &   0.0224 &   4000 &   26.7x \\
+CG (SPD)                            &   0.0101 &    870 &   58.9x \\
+Proximal gradient$^\dagger$         &   0.0289 &   1879 &   20.6x \\
+\midrule
+\multicolumn{4}{l}{\textit{With LW shrinkage ($\alpha = 0.5$, $\kappa \approx 27$)}} \\[2pt]
+cvxpy (Clarabel)                    &    0.373 &     11 &    1.0x \\
+cvxpy (OSQP)                        &   0.0756 &     75 &    4.9x \\
+Clarabel (direct API)               &   0.0024 &     11 &  154.5x \\
+OSQP (direct API)                   &   0.0013 &    100 &  295.5x \\
+CG (SPD)                            &   0.0008 &     42 &  440.6x \\
+Proximal gradient$^\dagger$         &   0.0042 &    221 &   87.9x \\
+\bottomrule

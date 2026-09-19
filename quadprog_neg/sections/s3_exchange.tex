@@ -1,0 +1,62 @@
+\section{Block exchange on a guessed active set}
+\label{sec:exchange}
+
+Given a candidate set $\Active$, Proposition~\ref{prop:sub} gives the working-set
+solution directly:
+\begin{equation}
+  \bigl(C_\Active\T G^{-1} C_\Active\bigr)\lambda_\Active
+   = b_\Active - C_\Active\T x_u,
+  \qquad
+  x = x_u + G^{-1}C_\Active \lambda_\Active,
+  \qquad x_u = G^{-1}a,
+  \label{eq:pdassolve}
+\end{equation}
+with $\lambda_i = 0$ for $i \notin \Active$. Both solves go through one Cholesky
+factorisation of $G$, computed once, and one of the $k \times k$ dual Hessian,
+computed per repair. The repair rule reads the two conditions that
+\eqref{eq:pdassolve} leaves open, \eqref{eq:dfeas} and \eqref{eq:pfeas}, as
+instructions:
+\begin{equation}
+  \Active' = \{1,\dots,m_{\mathrm{eq}}\} \;\cup\;
+  \bigl\{\, i > m_{\mathrm{eq}} \;:\;
+    (i \in \Active \text{ and } \lambda_i \ge 0)
+    \ \text{ or }\
+    (c_i\T x < b_i) \,\bigr\},
+  \label{eq:repair}
+\end{equation}
+that is: an active constraint whose multiplier has gone negative does not belong
+in the set and leaves it; an inactive constraint that is violated at $x$ does
+belong and joins it; equalities are always in. If $\Active' = \Active$ then
+\eqref{eq:pfeas}--\eqref{eq:comp} hold to the tolerance used, and
+\eqref{eq:pdassolve} supplies \eqref{eq:stat} by construction, so the pair is
+optimal by Proposition~\ref{prop:sufficient}.
+
+The starting guess is the one the rule itself dictates when nothing has been tried:
+
+\begin{equation}
+  \Active_0 = \{1,\dots,m_{\mathrm{eq}}\} \;\cup\;
+  \bigl\{\, i > m_{\mathrm{eq}} \;:\; c_i\T x_u < b_i \,\bigr\},
+  \label{eq:start}
+\end{equation}
+the equalities together with whatever the unconstrained minimiser violates, which
+is already the answer when it violates nothing.
+
+Two features of this iteration matter for what follows. The whole set is exchanged
+at once, so the number of repairs is not tied to the number of constraints that
+have to change status, and in practice it is nearly independent of $n$
+(Section~\ref{sec:measurement}). And the set is named rather than reached: nothing
+in \eqref{eq:repair} or \eqref{eq:start} consults the geometry of the normals it
+selects.
+
+\begin{remark}[The contrast with the walk]\label{rem:walk}
+A dual active-set method modifies $\Active$ by one index per step, and the step
+rules of~\cite{goldfarb1983} are exactly what make $C_\Active$ full column rank
+for free. A constraint whose normal lies in the span of those already held admits
+no primal movement, so its step is limited by the multiplier ratio test rather
+than by the primal one, and it can be added only after enough partial steps have
+removed the dependence. Linear dependence is therefore unreachable, and no rank
+test appears anywhere in such an implementation. This is the protection that
+guessing forfeits, and it is worth naming as a property rather than an accident,
+because it explains why the difficulty of Section~\ref{sec:obstruction} has no
+counterpart in the classical method.
+\end{remark}

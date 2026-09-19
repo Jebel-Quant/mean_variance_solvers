@@ -1,0 +1,30 @@
+\begin{abstract}
+\noindent
+Primal--dual active-set methods and block principal pivoting solve a strictly
+convex quadratic program by guessing a whole active set at once and repairing it
+from the signs the working-set subproblem returns. For bound constraints the
+guess is safe: the system solved on a candidate set is a principal submatrix of
+$G^{-1}$, positive definite whatever the guess, and that $P$-matrix property is
+the hypothesis under which the exchange terminates finitely. For general
+constraints $C\T x \ge b$ the hypothesis fails. The system is
+$C_\Active\T G^{-1} C_\Active$, positive definite exactly when $C_\Active$ has
+full column rank, which is a property of the guess and not of the data.
+
+That the plain exchange needs repairing on general constraints is known: Curtis,
+Han and Robinson recover global convergence by carrying an index set auxiliary to
+the active-set estimate. What we add is the mechanism and its price. The
+obstruction is structural rather than a missing anti-cycling rule, because no rule
+for choosing the next set can recover the bound-constrained theorem when the
+subproblem on the chosen set may be singular; and the singular guess is reached by
+the method's own starting rule, not only by an adversarial one. What keeps such a
+method usable is that strict convexity makes the Karush--Kuhn--Tucker conditions
+sufficient, so a candidate set is certified rather than trusted.
+
+The exposure is easy to mistake for a technicality, so we measure it on a shipped
+solver. Over the $600$ instances of four constraint families it never
+occurs, which is why it can be overlooked. Duplicating columns of $C$, as any
+programmatically assembled model may, raises it to $\qpPdasSingularDup\%$, and the
+certified fraction on that family falls from $\qpPdasCertSmall\%$ at
+$n = \qpPdasNsmall{}$ to $\qpPdasCertBig\%$ at $n = \qpPdasNbig{}$, against
+$100\%$ everywhere else.
+\end{abstract}

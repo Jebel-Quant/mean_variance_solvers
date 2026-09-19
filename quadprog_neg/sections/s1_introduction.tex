@@ -1,0 +1,108 @@
+\section{Introduction}
+\label{sec:intro}
+
+The strictly convex quadratic program
+\begin{equation}
+  \min_{x \in \R^n} \; \tfrac12 x\T G x - a\T x
+  \qquad \text{subject to} \qquad C\T x \ge b,
+  \label{eq:qp}
+\end{equation}
+with $G \in \R^{n \times n}$ symmetric positive definite, $C \in \R^{n \times m}$
+and the first $m_{\mathrm{eq}}$ of the $m$ constraints understood as equalities,
+is solved a great many times a day. Mean--variance portfolio
+selection~\cite{markowitz1952} is exactly~\eqref{eq:qp}; so is every step of a
+sequential quadratic programming method and every horizon of a linear model
+predictive controller. For dense instances of small to moderate size the method of
+choice has for forty years been the dual active-set algorithm of Goldfarb and
+Idnani~\cite{goldfarb1982,goldfarb1983}, which reaches the optimal active set one
+constraint at a time and needs no phase-one problem.
+
+Walking to the active set is not the only option. The alternative is to guess the
+whole set at once, solve the equality-constrained subproblem it induces, and
+repair the guess from the signs that come back. This is the semismooth Newton
+method of Hinterm\"uller, Ito and Kunisch~\cite{hintermuller2002} read as a
+primal--dual active-set strategy, and block principal pivoting on the associated
+linear complementarity problem~\cite{judice1994,murty1988,cottle1992} read as a
+rule for exchanging several indices at a time. Where the walk takes a number of
+iterations that grows with $n$, the guess converges in a handful of repairs
+almost independently of $n$; Section~\ref{sec:measurement} measures the gap.
+
+For bound constraints the exchange comes with a theorem. This note is about what
+happens to that theorem when the bounds are replaced by general linear
+constraints, and about what an implementation is left with instead.
+
+\subsection{What is already known}
+\label{ssec:known}
+
+That the plain block exchange can fail on general convex quadratic programs is
+established. Curtis, Han and Robinson~\cite{curtis2015pdas} give a primal--dual
+active-set framework that is globally convergent on this problem class, obtained
+by carrying an index set auxiliary to the active-set estimate which holds the
+indices that would otherwise cycle; the framework exists because plain
+primal--dual active set does not converge without it. Their repair is the
+reference point for everything below, and it is the reason the contribution here
+is a mechanism and not an existence result.
+
+Related bounds run in a different direction. Forsgren, Gill and
+Wong~\cite{forsgren2016} prove finite termination under nondegeneracy for paired
+primal and dual active-set methods in a general setting, and Arnstr\"om and
+Axehill~\cite{arnstrom2022certification} compute the exact worst-case iteration
+count of an active-set method on a parametric family of quadratic programs by
+enumerating the subproblem sequences it visits. Both concern methods that walk.
+Neither speaks to a method that guesses.
+
+\subsection{What this note adds}
+\label{ssec:claims}
+
+\begin{enumerate}
+\item \textbf{The mechanism.} On bound constraints the working-set system is a
+principal submatrix of $G^{-1}$, hence positive definite whatever the guess, so
+$G^{-1}$ is a $P$-matrix; that is the hypothesis under which block principal
+pivoting with a least-index guard terminates finitely at the unique
+solution~\cite{judice1994,murty1988}. On general constraints the system is
+$C_\Active\T G^{-1} C_\Active$, which is positive definite exactly when
+$C_\Active$ has full column rank. Rank of a submatrix of $C$ is a property of the
+\emph{guess}: a guess may name $k > n$ constraints, or $k \le n$ dependent ones.
+There is no $P$-matrix to appeal to, and correspondingly no theorem to inherit
+(Section~\ref{sec:obstruction}).
+
+\item \textbf{The obstruction is structural.} It is not a missing anti-cycling
+rule. A rule chooses which set to try next, and no such rule can recover the
+bound-constrained theorem when the subproblem on the chosen set may be singular.
+This is consistent with~\cite{curtis2015pdas}, whose repair changes what the
+method carries rather than the order in which it exchanges, and we read that
+agreement as evidence for the diagnosis rather than against the claim.
+
+\item \textbf{The singular guess is reachable by the method's own rule.} The
+standard starting guess is the equality constraints together with whatever the
+unconstrained minimiser violates. Duplicated columns of $C$ are violated together,
+so the starting guess names both copies and is dependent before a single repair
+has been performed (Proposition~\ref{prop:reachable}). No adversary is required.
+
+\item \textbf{What replaces the guarantee.} Strict convexity makes the
+Karush--Kuhn--Tucker conditions sufficient, so a candidate pair $(x,\lambda)$ can
+be checked rather than trusted (Section~\ref{sec:certificate}). A method with no
+convergence theorem is safe when it recognises its own success and falls back when
+it does not: it returns the minimiser or nothing.
+
+\item \textbf{The price, measured.} The exposure is invisible on the random
+families one would naturally test and unavoidable on a family one would
+naturally build (Section~\ref{sec:measurement}).
+\end{enumerate}
+
+We claim no new algorithm and no new convergence theory. The observation in
+item~1 turns on a rank condition that is already the hypothesis of the standard
+subproblem solution (Proposition~\ref{prop:sub}), and its proof is two lines. Its
+interest is that it identifies what is lost, says where in the method it is lost,
+and shows what the loss costs on problems that are not contrived.
+
+\subsection{Notation}
+
+Vectors are columns. For an index set $\Active \subseteq \{1,\dots,m\}$ of size
+$k$ we write $C_\Active \in \R^{n \times k}$ for the matrix of the corresponding
+constraint normals, $b_\Active$ for the corresponding right-hand sides, and $c_i$
+for the $i$-th column of $C$. The linear term in~\eqref{eq:qp} is subtracted, so
+the unconstrained minimiser is $x_u = G^{-1}a$, and constraints are held
+column-wise, so the program reads $C\T x \ge b$; both conventions are inherited
+from the reference implementation of~\cite{goldfarb1983} and neither affects
+anything below beyond signs.
