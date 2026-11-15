@@ -1,15 +1,16 @@
-"""Fetch FTSE 100 daily returns via yfinance and save to parquet."""
+"""Fetch FTSE 100 daily returns via polars-yahoo and save to parquet."""
 
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "yfinance",
+#     "polars-yahoo>=0.2.0",
 #     "pandas",
 #     "pyarrow",
 # ]
 # ///
 
-import yfinance as yf
+import pandas as pd
+import polars_yahoo as yh
 
 # FTSE 100 constituents as of 2025 (with .L suffix for LSE)
 # Source: Wikipedia / FTSE Russell June 2025
@@ -126,13 +127,16 @@ END = "2026-05-30"
 MAX_MISSING_FRAC = 0.10
 
 print(f"Downloading {len(FTSE100_TICKERS)} tickers from {START} to {END}...")
-raw = yf.download(
-    FTSE100_TICKERS,
-    start=START,
-    end=END,
-    auto_adjust=True,
-    progress=True,
-)["Close"]
+bars = yh.download(FTSE100_TICKERS, period=None, start=START, end=END)
+# adj_close is the split- and dividend-adjusted close (yfinance's auto_adjust "Close").
+raw = (
+    bars.pivot(on="ticker", index="date", values="adj_close")
+    .sort("date")
+    .to_pandas()
+    .set_index("date")
+    .sort_index(axis=1)
+)
+raw.index = pd.DatetimeIndex(raw.index, name="Date")
 
 print(f"\nRaw shape: {raw.shape}")
 

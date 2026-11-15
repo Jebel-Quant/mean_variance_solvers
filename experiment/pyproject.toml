@@ -47,7 +47,7 @@ dependencies = [
     # Goldfarb/Idnani J-and-R pair. The comparison the quadprog paper most needs.
     "daqp",
     # fetch_sp500.py / fetch_ftse100.py (raw data download)
-    "yfinance",
+    "polars-yahoo>=0.2.0",
     "lxml",
     "requests",
 ]
