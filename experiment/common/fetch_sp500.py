@@ -1,9 +1,9 @@
-"""Fetch S&P 500 constituent returns for the last 5 years via yfinance."""
+"""Fetch S&P 500 constituent returns for the last 5 years via polars-yahoo."""
 
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "yfinance",
+#     "polars-yahoo>=0.2.0",
 #     "pandas",
 #     "numpy",
 #     "lxml",
@@ -16,8 +16,8 @@ import io
 from pathlib import Path
 
 import pandas as pd
+import polars_yahoo as yh
 import requests
-import yfinance as yf
 
 # ── 1. S&P 500 tickers from Wikipedia ─────────────────────────────────────────
 
@@ -33,14 +33,19 @@ print(f"Found {len(tickers)} tickers in the S&P 500 index")
 
 # ── 2. Download 5 years of adjusted close prices ──────────────────────────────
 
-raw = yf.download(
-    tickers,
-    auto_adjust=True,
-    progress=True,
-    threads=True,
-    start=pd.Timestamp("2021-06-01"),
-    end=pd.Timestamp("2026-06-01"),
-)["Close"]
+# adj_close is Yahoo's split- and dividend-adjusted close, the same series
+# yfinance returned as "Close" under auto_adjust=True. Symbols Yahoo cannot
+# serve are skipped with a warning; the missing-data filter below would have
+# dropped them anyway.
+bars = yh.download(tickers, period=None, start="2021-06-01", end="2026-06-01")
+raw = (
+    bars.pivot(on="ticker", index="date", values="adj_close")
+    .sort("date")
+    .to_pandas()
+    .set_index("date")
+    .sort_index(axis=1)
+)
+raw.index = pd.DatetimeIndex(raw.index, name="Date")
 
 print(f"\nRaw download: {raw.shape[0]} trading days x {raw.shape[1]} tickers")
 
